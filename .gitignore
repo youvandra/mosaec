@@ -1,0 +1,36 @@
+# Private working files
+/notes
+/research
+NEXT.md
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+
+# Environment
+.env
+.env.*
+!.env.example
+*.payload.json
+
+# Rust
+target/
+fuzz/artifacts/
+*.wasm
+!contracts/res/*.wasm
+
+# Node
+node_modules/
+.next/
+.turbo/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Media
+video/
+*.mp4
+
+# OS
+.DS_Store
