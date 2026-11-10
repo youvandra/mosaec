@@ -173,7 +173,7 @@ pub fn is_disruption(paused: Option<&HashSet<String>>, locked: bool) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use mosaec_shared::constants::{CapProfile, DAY_NS, GRACE_NS, USDC, ZEC};
+    use mosaec_shared::constants::{DAY_NS, GRACE_NS, Network, USDC, ZEC};
     use mosaec_shared::contents::{ContentLine, Contents};
 
     use super::*;
@@ -191,7 +191,7 @@ mod tests {
                     token_id: ZEC.into(),
                     amount: U128(50_000_000),
                 }],
-                CapProfile::Production,
+                Network::Mainnet,
             )
             .unwrap(),
         }

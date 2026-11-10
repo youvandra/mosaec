@@ -12,14 +12,14 @@ mod position;
 use std::collections::HashSet;
 
 use mosaec_shared::constants::{
-    BATCH_MAX_TOKENS, COMMAND_GAS, CapProfile, FILL_DECIDE_GAS, FILL_GAS, GAS_DELIVERY_CALLBACK,
+    BATCH_MAX_TOKENS, COMMAND_GAS, FILL_DECIDE_GAS, FILL_GAS, GAS_DELIVERY_CALLBACK,
     GAS_NFT_RESOLVE, GAS_VERIFIER_VIEW, MAX_ACCOUNT_ID_LEN, MAX_PAGE, MINT_DEPOSIT, MINT_GAS,
-    NFT_TRANSFER_CALL_GAS, PACK_OPS_RESERVE, PACK_STORAGE, token_rule,
+    NFT_TRANSFER_CALL_GAS, Network, PACK_OPS_RESERVE, PACK_STORAGE, token_rule,
 };
 use mosaec_shared::contents::Contents;
 use mosaec_shared::error::ensure;
 use mosaec_shared::events::{CancelReason, MosaecEvent};
-use mosaec_shared::promise::{read_json, succeeded, then_self, verifier_id};
+use mosaec_shared::promise::{read_json, succeeded, then_self};
 use mosaec_shared::types::{Destination, NftKind, Terms, TransferMsg};
 use mosaec_shared::{MosaecError, MosaecResult};
 use near_sdk::json_types::{Base58CryptoHash, U128};
@@ -50,7 +50,9 @@ const PREFIX_POSITIONS: &[u8] = b"p";
 pub struct Registry {
     guardian: AccountId,
     pack_code_hash: CryptoHash,
-    profile: CapProfile,
+    network: Network,
+    /// The NEAR Intents verifier every pack of this registry holds its balances in.
+    verifier: AccountId,
     paused: bool,
     next_index: u64,
     positions: LookupMap<AccountId, Position>,
@@ -63,7 +65,8 @@ pub struct Registry {
 pub struct Config {
     pub guardian: AccountId,
     pub pack_code_hash: Base58CryptoHash,
-    pub profile: CapProfile,
+    pub network: Network,
+    pub verifier: AccountId,
     pub paused: bool,
     pub packs_created: u64,
     pub mint_deposit: NearToken,
@@ -96,15 +99,26 @@ pub struct JsonToken {
     reason = "contract methods receive owned arguments deserialized by the SDK"
 )]
 impl Registry {
-    /// Deploy-time init. `pack_code_hash` names the global pack contract every pack runs.
+    /// Deploy-time init. `pack_code_hash` names the global pack contract every pack runs. A
+    /// mainnet registry accepts only `intents.near` as its verifier, and every registry must sit
+    /// under its network's top-level suffix, so a testnet build can never run as mainnet.
     #[init]
     #[private]
     #[must_use]
-    pub fn new(guardian: AccountId, pack_code_hash: Base58CryptoHash, profile: CapProfile) -> Self {
+    pub fn new(
+        guardian: AccountId,
+        pack_code_hash: Base58CryptoHash,
+        network: Network,
+        verifier: AccountId,
+    ) -> Self {
+        if let Err(error) = check_network(network, &verifier) {
+            error.panic();
+        }
         Self {
             guardian,
             pack_code_hash: pack_code_hash.into(),
-            profile,
+            network,
+            verifier,
             paused: false,
             next_index: 0,
             positions: LookupMap::new(PREFIX_POSITIONS),
@@ -236,7 +250,7 @@ impl Registry {
         msg: String,
     ) {
         let _ = previous_owner_ids;
-        if env::predecessor_account_id() != verifier_id() {
+        if env::predecessor_account_id() != self.verifier {
             MosaecError::NotVerifier.panic();
         }
         match self.route_fill(&sender_id, &token_ids, &amounts, &msg) {
@@ -283,7 +297,12 @@ impl Registry {
         let payout = position.payout.as_mut().ok_or(MosaecError::State)?;
         ensure(!payout.in_flight, MosaecError::Pending)?;
         payout.in_flight = true;
-        let send = calls::verifier_transfer(&payout.maker_id, &payout.token_id, payout.amount);
+        let send = calls::verifier_transfer(
+            &self.verifier,
+            &payout.maker_id,
+            &payout.token_id,
+            payout.amount,
+        );
         self.positions.insert(pack.clone(), position);
         let _ = then_self(
             send,
@@ -670,7 +689,8 @@ impl Registry {
         Config {
             guardian: self.guardian.clone(),
             pack_code_hash: self.pack_code_hash.into(),
-            profile: self.profile,
+            network: self.network,
+            verifier: self.verifier.clone(),
             paused: self.paused,
             packs_created: self.next_index,
             mint_deposit: MINT_DEPOSIT,
@@ -768,7 +788,7 @@ impl Registry {
         self.next_index = index.saturating_add(1);
         calls::refund_near(&owner_id, attached.saturating_sub(MINT_DEPOSIT));
         let funding = PACK_STORAGE.saturating_add(PACK_OPS_RESERVE);
-        let create = calls::create_pack(&pack, funding, &self.pack_code_hash);
+        let create = calls::create_pack(&pack, funding, &self.pack_code_hash, &self.verifier);
         let args = json!({ "pack": pack, "owner_id": owner_id, "index": index });
         Ok(then_self(
             create,
@@ -799,10 +819,10 @@ impl Registry {
             request.price,
             request.offer_expires_at_ns,
             env::block_timestamp(),
-            self.profile,
+            self.network,
         )?;
         self.nft.set_pending(&position.title_id);
-        let read = calls::balances(pack, &request.token_ids);
+        let read = calls::balances(&self.verifier, pack, &request.token_ids);
         let args = json!({ "pack": pack, "maker_id": maker_id, "request": request });
         Ok(then_self(
             read,
@@ -825,7 +845,7 @@ impl Registry {
             MosaecError::Holder,
         )?;
         let balances: Vec<U128> = read_json(0).ok_or(MosaecError::Contents)?;
-        let contents = Contents::from_balances(request.token_ids, &balances, self.profile)?;
+        let contents = Contents::from_balances(request.token_ids, &balances, self.network)?;
         let offer = Offer {
             maker_id: maker_id.clone(),
             terms: request.terms,
@@ -892,7 +912,7 @@ impl Registry {
             MosaecError::Holder,
         )?;
         self.nft.set_pending(&position.title_id);
-        let reads = calls::fill_reads(&fill.pack, &offer.contents.token_ids());
+        let reads = calls::fill_reads(&self.verifier, &fill.pack, &offer.contents.token_ids());
         let args = json!({ "pack": fill.pack, "taker_id": taker_id, "price": paid });
         Ok(mosaec_shared::promise::then(
             reads,
@@ -940,7 +960,12 @@ impl Registry {
         }
         .emit();
         if let Some(payout) = payout {
-            let send = calls::verifier_transfer(&payout.maker_id, &payout.token_id, payout.amount);
+            let send = calls::verifier_transfer(
+                &self.verifier,
+                &payout.maker_id,
+                &payout.token_id,
+                payout.amount,
+            );
             let _ = then_self(
                 send,
                 "on_paid",
@@ -974,7 +999,7 @@ impl Registry {
         position.check_withdraw()?;
         ensure(amount.0 > 0, MosaecError::Amount)?;
         if matches!(destination, Destination::HomeChain { .. }) {
-            let rule = token_rule(token_id).ok_or(MosaecError::Token)?;
+            let rule = token_rule(self.network, token_id).ok_or(MosaecError::Token)?;
             let minimum = rule.min_home_withdraw.ok_or(MosaecError::MinWithdraw)?;
             ensure(amount.0 >= minimum, MosaecError::MinWithdraw)?;
         }
@@ -1090,6 +1115,19 @@ fn send_encumbrance(
         &args.to_string(),
         GAS_DELIVERY_CALLBACK,
     );
+}
+
+/// A registry's network fixes its account suffix and, on mainnet, its verifier.
+fn check_network(network: Network, verifier: &AccountId) -> MosaecResult<()> {
+    let suffix = network.account_suffix();
+    ensure(
+        env::current_account_id().as_str().ends_with(suffix) && verifier.as_str().ends_with(suffix),
+        MosaecError::NotVerifier,
+    )?;
+    match network.required_verifier() {
+        Some(required) => ensure(verifier.as_str() == required, MosaecError::NotVerifier),
+        None => Ok(()),
+    }
 }
 
 fn require_gas(required: Gas) -> MosaecResult<()> {

@@ -5,7 +5,7 @@
 use near_sdk::json_types::U128;
 use near_sdk::{env, near};
 
-use crate::constants::{BATCH_MAX_TOKENS, CapProfile, TokenRole, token_rule};
+use crate::constants::{BATCH_MAX_TOKENS, Network, TokenRole, token_rule};
 use crate::error::{MosaecError, MosaecResult, ensure};
 
 /// One token and amount in a pack's contents.
@@ -25,13 +25,13 @@ pub struct ContentLine {
 pub struct Contents(Vec<ContentLine>);
 
 impl Contents {
-    /// Validates `lines` as pawn collateral under `profile` and puts them in canonical order.
+    /// Validates `lines` as pawn collateral under `network` and puts them in canonical order.
     ///
     /// # Errors
     /// `E_BATCH` for an empty set, more than the verifier batch limit, or a repeated token;
-    /// `E_AMOUNT` for a zero line; `E_TOKEN` for a token that is not allowlisted collateral;
+    /// `E_TOKEN` for a token that is not allowlisted collateral; `E_AMOUNT` for a zero line;
     /// `E_CAP` for an amount above the token's per-pack cap.
-    pub fn new(mut lines: Vec<ContentLine>, profile: CapProfile) -> MosaecResult<Self> {
+    pub fn new(mut lines: Vec<ContentLine>, network: Network) -> MosaecResult<Self> {
         ensure(
             !lines.is_empty() && lines.len() <= BATCH_MAX_TOKENS,
             MosaecError::Batch,
@@ -42,7 +42,7 @@ impl Contents {
             MosaecError::Batch,
         )?;
         for line in &lines {
-            check_line(line, profile)?;
+            check_line(line, network)?;
         }
         Ok(Self(lines))
     }
@@ -54,7 +54,7 @@ impl Contents {
     pub fn from_balances(
         token_ids: Vec<String>,
         balances: &[U128],
-        profile: CapProfile,
+        network: Network,
     ) -> MosaecResult<Self> {
         ensure(token_ids.len() == balances.len(), MosaecError::Contents)?;
         let lines = token_ids
@@ -65,7 +65,7 @@ impl Contents {
                 amount: *amount,
             })
             .collect();
-        Self::new(lines, profile)
+        Self::new(lines, network)
     }
 
     /// The lines in canonical order.
@@ -114,11 +114,11 @@ impl Contents {
     }
 }
 
-fn check_line(line: &ContentLine, profile: CapProfile) -> MosaecResult<()> {
-    ensure(line.amount.0 > 0, MosaecError::Amount)?;
-    let rule = token_rule(&line.token_id).ok_or(MosaecError::Token)?;
+fn check_line(line: &ContentLine, network: Network) -> MosaecResult<()> {
+    let rule = token_rule(network, &line.token_id).ok_or(MosaecError::Token)?;
     ensure(rule.role == TokenRole::Collateral, MosaecError::Token)?;
-    ensure(line.amount.0 <= rule.cap(profile), MosaecError::Cap)
+    ensure(line.amount.0 > 0, MosaecError::Amount)?;
+    ensure(line.amount.0 <= rule.cap, MosaecError::Cap)
 }
 
 /// Lengths here are bounded by `BATCH_MAX_TOKENS` and the verifier's 127-byte token id limit.
@@ -151,8 +151,8 @@ mod tests {
 
     #[test]
     fn order_does_not_change_the_hash() {
-        let a = Contents::new(vec![line(ZEC, 5), line(BTC, 7)], CapProfile::Production).unwrap();
-        let b = Contents::new(vec![line(BTC, 7), line(ZEC, 5)], CapProfile::Production).unwrap();
+        let a = Contents::new(vec![line(ZEC, 5), line(BTC, 7)], Network::Mainnet).unwrap();
+        let b = Contents::new(vec![line(BTC, 7), line(ZEC, 5)], Network::Mainnet).unwrap();
         assert_eq!(a, b);
         assert_eq!(a.hash_hex(), b.hash_hex());
         assert_eq!(a.hash_hex().len(), 64);
@@ -160,21 +160,21 @@ mod tests {
 
     #[test]
     fn hash_equals_borsh_encoding() {
-        let c = Contents::new(vec![line(ZEC, 5), line(BTC, 7)], CapProfile::Production).unwrap();
+        let c = Contents::new(vec![line(ZEC, 5), line(BTC, 7)], Network::Mainnet).unwrap();
         let borsh = near_sdk::borsh::to_vec(c.lines()).unwrap();
         assert_eq!(c.hash_hex(), hex_lower(&env::sha256_array(&borsh)));
     }
 
     #[test]
     fn amount_changes_the_hash() {
-        let a = Contents::new(vec![line(ZEC, 5)], CapProfile::Production).unwrap();
-        let b = Contents::new(vec![line(ZEC, 6)], CapProfile::Production).unwrap();
+        let a = Contents::new(vec![line(ZEC, 5)], Network::Mainnet).unwrap();
+        let b = Contents::new(vec![line(ZEC, 6)], Network::Mainnet).unwrap();
         assert_ne!(a.hash_hex(), b.hash_hex());
     }
 
     #[test]
     fn refuses_bad_sets() {
-        let p = CapProfile::Production;
+        let p = Network::Mainnet;
         assert_eq!(Contents::new(vec![], p), Err(MosaecError::Batch));
         assert_eq!(
             Contents::new(vec![line(ZEC, 1), line(ZEC, 2)], p),
@@ -197,15 +197,17 @@ mod tests {
     }
 
     #[test]
-    fn caps_follow_the_profile() {
+    fn caps_and_ids_follow_the_network() {
         let one_zec = vec![line(ZEC, 100_000_000)];
-        assert!(Contents::new(one_zec.clone(), CapProfile::Production).is_ok());
+        assert!(Contents::new(one_zec.clone(), Network::Mainnet).is_ok());
         assert_eq!(
-            Contents::new(one_zec, CapProfile::Staging),
-            Err(MosaecError::Cap)
+            Contents::new(one_zec, Network::Testnet),
+            Err(MosaecError::Token)
         );
+        let test_zec = vec![line(crate::constants::TESTNET_ZEC, 100_000_000)];
+        assert!(Contents::new(test_zec, Network::Testnet).is_ok());
         assert_eq!(
-            Contents::new(vec![line(SOL, 5_000_000_001)], CapProfile::Production),
+            Contents::new(vec![line(SOL, 5_000_000_001)], Network::Mainnet),
             Err(MosaecError::Cap)
         );
     }
@@ -215,19 +217,19 @@ mod tests {
         let c = Contents::from_balances(
             vec![ZEC.into(), BTC.into()],
             &[U128(5), U128(7)],
-            CapProfile::Production,
+            Network::Mainnet,
         )
         .unwrap();
         assert_eq!(c.lines()[0], line(BTC, 7));
         assert_eq!(
-            Contents::from_balances(vec![ZEC.into()], &[], CapProfile::Production),
+            Contents::from_balances(vec![ZEC.into()], &[], Network::Mainnet),
             Err(MosaecError::Contents)
         );
     }
 
     #[test]
     fn coverage_allows_dust_and_refuses_shortfall() {
-        let c = Contents::new(vec![line(BTC, 7), line(ZEC, 5)], CapProfile::Production).unwrap();
+        let c = Contents::new(vec![line(BTC, 7), line(ZEC, 5)], Network::Mainnet).unwrap();
         assert!(c.covered_by(&[U128(7), U128(6)]));
         assert!(!c.covered_by(&[U128(7), U128(4)]));
         assert!(!c.covered_by(&[U128(7)]));

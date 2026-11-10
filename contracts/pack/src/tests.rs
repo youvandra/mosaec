@@ -1,9 +1,13 @@
-use mosaec_shared::constants::{CapProfile, DAY_NS, GRACE_NS, USDC, ZEC};
+use mosaec_shared::constants::{DAY_NS, GRACE_NS, Network, USDC, ZEC};
 use mosaec_shared::contents::{ContentLine, Contents};
 use near_sdk::test_utils::VMContextBuilder;
 use near_sdk::{PromiseResult, RuntimeFeesConfig, test_vm_config, testing_env};
 
 use super::*;
+
+fn verifier_id() -> AccountId {
+    "intents.near".parse().unwrap()
+}
 
 const T: u64 = 500 * DAY_NS;
 const K: u128 = 107_500_000;
@@ -52,7 +56,7 @@ fn encumbrance() -> Encumbrance {
                 token_id: ZEC.into(),
                 amount: U128(ZEC_AMOUNT),
             }],
-            CapProfile::Production,
+            Network::Mainnet,
         )
         .unwrap(),
     }
@@ -60,7 +64,7 @@ fn encumbrance() -> Encumbrance {
 
 fn new_pack() -> Pack {
     set(&registry(), 0);
-    Pack::new(registry())
+    Pack::new(registry(), verifier_id())
 }
 
 fn written_pack() -> Pack {
@@ -78,7 +82,7 @@ fn exercise(pack: &mut Pack, now_ns: u64, amount: u128, msg: &str) -> Inbound {
 #[should_panic(expected = "E_NOT_REGISTRY")]
 fn init_refuses_outside_caller() {
     set(&alice(), 0);
-    let _ = Pack::new(registry());
+    let _ = Pack::new(registry(), verifier_id());
 }
 
 #[test]
@@ -86,7 +90,7 @@ fn init_refuses_outside_caller() {
 fn init_refuses_registry_that_is_not_the_parent() {
     let other: AccountId = "v1.mosaec.near".parse().unwrap();
     set(&other, 0);
-    let _ = Pack::new(other);
+    let _ = Pack::new(other, verifier_id());
 }
 
 #[test]

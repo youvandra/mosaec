@@ -28,15 +28,30 @@ Sell the Title and keep the Ticket: a fixed-term loan with no price oracle and n
                                        desk (autonomous lender, MCP server)
 ```
 
-| Account               | Code                                 | Keys                                       | Role                                                                                                  |
-| --------------------- | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `mosaec.near`         | none                                 | owner key (later multisig)                 | Root. Creates registries. Guardian of each registry                                                   |
-| `v0.mosaec.near`      | `registry`                           | none after the first full production cycle | NEP-171 collection for Titles and Tickets, offers, settlement                                         |
-| `<n>.v0.mosaec.near`  | `pack`, global contract by code hash | none, ever                                 | Holds verifier balances; enforces its own encumbrance                                                 |
-| `staging.mosaec.near` | `registry`                           | keyed                                      | Mainnet staging registry with low caps and short terms, so a rehearsal reaches expiry within the hour |
-| `desk.mosaec.near`    | none                                 | one key on the desk server                 | Team-run lender; holds only its budget                                                                |
+| Account              | Code                                 | Keys                                       | Role                                                          |
+| -------------------- | ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------- |
+| `mosaec.near`        | none                                 | owner key (later multisig)                 | Root. Creates registries. Guardian of each registry           |
+| `v0.mosaec.near`     | `registry`                           | none after the first full production cycle | NEP-171 collection for Titles and Tickets, offers, settlement |
+| `<n>.v0.mosaec.near` | `pack`, global contract by code hash | none, ever                                 | Holds verifier balances; enforces its own encumbrance         |
+| `v0.mosaec.testnet`  | `registry`                           | keyed                                      | Testnet registry against our verifier deploy (section 2.1)    |
+| `desk.mosaec.near`   | none                                 | one key on the desk server                 | Team-run lender; holds only its budget                        |
 
 Upgrades never mutate a live registry. A new version deploys at `v1.mosaec.near`; `v0` packs run to term under `v0` code.
+
+### 2.1 Networks
+
+The registry takes its `network` and its `verifier` at init and passes the verifier to every pack it creates. A mainnet registry accepts only `intents.near`; every registry and verifier must sit under its network's top-level suffix (`.near` or `.testnet`), so a testnet build can never run as mainnet.
+
+|                                  | Mainnet                                   | Testnet                                                                            |
+| -------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| Root                             | `mosaec.near`                             | `mosaec.testnet`                                                                   |
+| Registry                         | `v0.mosaec.near`                          | `v0.mosaec.testnet`                                                                |
+| Verifier                         | `intents.near`                            | `intents.mosaec.testnet`, our deploy of the mainnet v0.4.5 bytes (`contracts/res`) |
+| Collateral and settlement tokens | mainnet ids (ZEC, BTC, SOL, USDC)         | test tokens `zec`, `btc`, `sol`, `usdc` `.mosaec.testnet`                          |
+| Shortest term                    | 7 days                                    | 10 minutes                                                                         |
+| Home-chain withdrawals           | closed until bridge minimums are measured | closed (no bridge)                                                                 |
+
+NEAR Intents runs on mainnet only, so testnet uses its own copy of the verifier; the flows, the receipt chains and every refusal are the same code on both. `mosaec-deploy` builds either network from an empty root and is the same path the sandbox tests run.
 
 ## 3. Design principle: decide in one receipt, deliver by retryable promises
 
@@ -219,11 +234,11 @@ Defined once in `contracts/shared/src/constants.rs`; measured values filled befo
 | Name                                                               | Value                                                                                                                                                                              |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GRACE_NS`                                                         | 24 h                                                                                                                                                                               |
-| Term bounds, default term                                          | Production 7 d to 180 d, default 90 d; Staging 10 min to 1 d                                                                                                                       |
+| Term bounds, default term                                          | 7 d to 180 d, default 90 d; testnet from 10 min                                                                                                                                    |
 | `BATCH_MAX_TOKENS`                                                 | 10 (verifier limit)                                                                                                                                                                |
 | `FILL_GAS`, `EXERCISE_GAS`, `DECIDE_GAS_RESERVE`                   | measured, 30% headroom                                                                                                                                                             |
 | `PACK_STORAGE`, `PACK_OPS_RESERVE`, `NFT_STORAGE`, `OFFER_STORAGE` | measured                                                                                                                                                                           |
-| Caps per pack                                                      | Production ZEC 1, BTC 0.01, SOL 5, USDC 1,000; Staging ZEC 0.05, BTC 0.0007, SOL 0.6, USDC 50                                                                                      |
+| Caps per pack                                                      | ZEC 1, BTC 0.01, SOL 5, USDC 1,000 (same on testnet)                                                                                                                               |
 | `MIN_WITHDRAW` per token                                           | from the bridge, measured                                                                                                                                                          |
 | Token ids                                                          | ZEC `nep141:zec.omft.near` (8), BTC `nep141:btc.omft.near` (8), SOL `nep141:sol.omft.near` (9), USDC `nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1` (6) |
 

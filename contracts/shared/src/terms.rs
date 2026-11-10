@@ -3,19 +3,19 @@
 
 use near_sdk::json_types::U128;
 
-use crate::constants::{CapProfile, GRACE_NS, TokenRole, token_rule};
+use crate::constants::{GRACE_NS, Network, TokenRole, token_rule};
 use crate::error::{MosaecError, MosaecResult, ensure};
 use crate::types::Terms;
 
-/// Checks a settlement amount (principal or repayment) under `profile`.
+/// Checks a settlement amount (principal or repayment) under `network`.
 ///
 /// # Errors
 /// `E_TOKEN` unless `token_id` is the settlement token, `E_AMOUNT` for zero, `E_CAP` above the cap.
-pub fn check_settlement(token_id: &str, amount: U128, profile: CapProfile) -> MosaecResult<()> {
-    let rule = token_rule(token_id).ok_or(MosaecError::Token)?;
+pub fn check_settlement(token_id: &str, amount: U128, network: Network) -> MosaecResult<()> {
+    let rule = token_rule(network, token_id).ok_or(MosaecError::Token)?;
     ensure(rule.role == TokenRole::Settlement, MosaecError::Token)?;
     ensure(amount.0 > 0, MosaecError::Amount)?;
-    ensure(amount.0 <= rule.cap(profile), MosaecError::Cap)
+    ensure(amount.0 <= rule.cap, MosaecError::Cap)
 }
 
 /// Checks the terms and the principal of a new offer.
@@ -23,20 +23,20 @@ pub fn check_settlement(token_id: &str, amount: U128, profile: CapProfile) -> Mo
 /// # Errors
 /// As [`check_settlement`] for both amounts; `E_TERMS` when the principal is in a different token
 /// from the repayment, the repayment is below the principal, the term is outside
-/// the profile's term bounds, or the offer has already expired at `now_ns`.
+/// the network's term bounds, or the offer has already expired at `now_ns`.
 pub fn check_offer(
     terms: &Terms,
     pay_token: &str,
     price: U128,
     offer_expires_at_ns: u64,
     now_ns: u64,
-    profile: CapProfile,
+    network: Network,
 ) -> MosaecResult<()> {
-    check_settlement(&terms.k_token, terms.k_amount, profile)?;
-    check_settlement(pay_token, price, profile)?;
+    check_settlement(&terms.k_token, terms.k_amount, network)?;
+    check_settlement(pay_token, price, network)?;
     ensure(pay_token == terms.k_token, MosaecError::Terms)?;
     ensure(terms.k_amount.0 >= price.0, MosaecError::Terms)?;
-    let (shortest, longest) = profile.term_bounds();
+    let (shortest, longest) = network.term_bounds();
     ensure(
         (shortest..=longest).contains(&terms.term_ns),
         MosaecError::Terms,
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn offer_checks() {
-        let p = CapProfile::Production;
+        let p = Network::Mainnet;
         let ok = terms(107_500_000, DEFAULT_TERM_NS);
         assert!(check_offer(&ok, USDC, U128(100_000_000), 10, 5, p).is_ok());
         assert_eq!(
@@ -154,17 +154,29 @@ mod tests {
     }
 
     #[test]
-    fn term_bounds_follow_the_profile() {
+    fn term_bounds_follow_the_network() {
         let ten_minutes = terms(1, 10 * crate::constants::MINUTE_NS);
-        assert!(check_offer(&ten_minutes, USDC, U128(1), 10, 5, CapProfile::Staging).is_ok());
+        let testnet_usdc = crate::constants::TESTNET_USDC;
+        let mut testnet_terms = ten_minutes.clone();
+        testnet_terms.k_token = testnet_usdc.into();
+        assert!(
+            check_offer(
+                &testnet_terms,
+                testnet_usdc,
+                U128(1),
+                10,
+                5,
+                Network::Testnet
+            )
+            .is_ok()
+        );
         assert_eq!(
-            check_offer(&ten_minutes, USDC, U128(1), 10, 5, CapProfile::Production),
+            check_offer(&ten_minutes, USDC, U128(1), 10, 5, Network::Mainnet),
             Err(MosaecError::Terms)
         );
-        let ninety_days = terms(1, DEFAULT_TERM_NS);
         assert_eq!(
-            check_offer(&ninety_days, USDC, U128(1), 10, 5, CapProfile::Staging),
-            Err(MosaecError::Terms)
+            check_offer(&ten_minutes, USDC, U128(1), 10, 5, Network::Testnet),
+            Err(MosaecError::Token)
         );
     }
 

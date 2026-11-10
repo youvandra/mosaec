@@ -10,6 +10,8 @@ publish.workspace = true
 
 [dependencies]
 anyhow = "1"
+mosaec-shared.workspace = true
+near-sdk = { workspace = true, features = ["non-contract-usage"] }
 near-crypto = "0.38"
 near-jsonrpc-client = "0.23"
 near-jsonrpc-primitives = "0.38"

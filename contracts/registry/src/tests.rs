@@ -13,6 +13,9 @@ const ZEC_AMOUNT: u128 = 50_000_000;
 fn acc(s: &str) -> AccountId {
     s.parse().unwrap()
 }
+fn verifier_id() -> AccountId {
+    acc("intents.near")
+}
 fn registry_id() -> AccountId {
     acc("v0.mosaec.near")
 }
@@ -81,7 +84,12 @@ fn request() -> OfferRequest {
 
 fn fresh() -> Registry {
     set(&registry_id(), NOW);
-    let mut r = Registry::new(guardian(), [7u8; 32].into(), CapProfile::Production);
+    let mut r = Registry::new(
+        guardian(),
+        [7u8; 32].into(),
+        Network::Mainnet,
+        verifier_id(),
+    );
     set_paying(&maker(), MINT_DEPOSIT);
     assert!(r.try_mint().is_ok());
     set_results(NOW, vec![PromiseResult::Successful(vec![])]);
@@ -649,4 +657,46 @@ fn enumeration() {
     assert_eq!(mine.len(), 1);
     assert_eq!(mine[0].token_id, "t0");
     assert_eq!(r.nft_tokens(Some(U128(1)), Some(5)).len(), 1);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Network guard
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+#[should_panic(expected = "E_NOT_VERIFIER")]
+fn mainnet_registry_refuses_another_verifier() {
+    set(&registry_id(), NOW);
+    let _ = Registry::new(
+        guardian(),
+        [7u8; 32].into(),
+        Network::Mainnet,
+        acc("fake.near"),
+    );
+}
+
+#[test]
+#[should_panic(expected = "E_NOT_VERIFIER")]
+fn testnet_registry_refuses_a_mainnet_account() {
+    set(&registry_id(), NOW);
+    let _ = Registry::new(
+        guardian(),
+        [7u8; 32].into(),
+        Network::Testnet,
+        acc("intents.mosaec.testnet"),
+    );
+}
+
+#[test]
+fn testnet_registry_takes_its_own_verifier() {
+    let mut c = ctx(&acc("v0.mosaec.testnet"), NOW, NearToken::from_yoctonear(0));
+    c.current_account_id(acc("v0.mosaec.testnet"));
+    testing_env!(c.build());
+    let r = Registry::new(
+        acc("mosaec.testnet"),
+        [7u8; 32].into(),
+        Network::Testnet,
+        acc("intents.mosaec.testnet"),
+    );
+    assert_eq!(r.config().verifier, acc("intents.mosaec.testnet"));
 }
