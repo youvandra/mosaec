@@ -1,0 +1,8 @@
+{
+  "extends": "@mosaec/config/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["next-env.d.ts", "next.config.ts", "app", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
