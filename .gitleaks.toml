@@ -1,0 +1,8 @@
+title = "mosaec"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Lockfiles and pinned contract bytes"
+paths = ['''(^|/)pnpm-lock\.yaml$''', '''(^|/)Cargo\.lock$''', '''^contracts/res/.*\.wasm$''']

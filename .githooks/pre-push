@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+while read -r _ local_sha _ _; do
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+  scripts/check-private.sh "$local_sha" --not --remotes
+done
+gitleaks protect --staged --redact 2>/dev/null || gitleaks git --redact --log-opts="-1"
