@@ -38,6 +38,8 @@ pub enum MosaecError {
     NotVerifier,
     /// The predecessor is not a pack of this registry.
     NotPack,
+    /// The predecessor is not the pack's registry.
+    NotRegistry,
     /// The token is not on the allowlist for this role.
     Token,
     /// An amount is zero or differs from the required value.
@@ -64,7 +66,7 @@ pub enum MosaecError {
 
 impl MosaecError {
     /// Every variant, in catalog order. Used by the catalog parity test.
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 24] = [
         Self::Keys,
         Self::PredAuthOff,
         Self::VerifierLocked,
@@ -77,6 +79,7 @@ impl MosaecError {
         Self::Cap,
         Self::NotVerifier,
         Self::NotPack,
+        Self::NotRegistry,
         Self::Token,
         Self::Amount,
         Self::Msg,
@@ -106,6 +109,7 @@ impl MosaecError {
             Self::Cap => "E_CAP",
             Self::NotVerifier => "E_NOT_VERIFIER",
             Self::NotPack => "E_NOT_PACK",
+            Self::NotRegistry => "E_NOT_REGISTRY",
             Self::Token => "E_TOKEN",
             Self::Amount => "E_AMOUNT",
             Self::Msg => "E_MSG",
@@ -136,6 +140,7 @@ impl MosaecError {
             Self::Cap => "amount is above the per-pack cap",
             Self::NotVerifier => "predecessor is not the verifier",
             Self::NotPack => "predecessor is not a pack of this registry",
+            Self::NotRegistry => "predecessor is not the pack's registry",
             Self::Token => "token is not allowed here",
             Self::Amount => "amount is zero or wrong",
             Self::Msg => "message could not be parsed",
