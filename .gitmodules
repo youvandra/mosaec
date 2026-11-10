@@ -1,0 +1,3 @@
+[submodule "vendor/intents"]
+	path = vendor/intents
+	url = https://github.com/near/intents

@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Resolve only versions published at least 14 days ago (value in minutes).
+minimumReleaseAge: 20160
+
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+
+ignoredBuiltDependencies:
+  - unrs-resolver

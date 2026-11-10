@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
+
+  wasm:
+    name: Wasm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+      - name: Install cargo-near
+        env:
+          VERSION: 0.22.0
+          SHA256: 9429064e30a427e96523f539cb255f3688d2345e5000d7d4e4873a8247247d1a
+          ARCHIVE: cargo-near-x86_64-unknown-linux-gnu.tar.gz
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSLo "$RUNNER_TEMP/$ARCHIVE" \
+            "https://github.com/near/cargo-near/releases/download/cargo-near-v$VERSION/$ARCHIVE"
+          echo "$SHA256  $RUNNER_TEMP/$ARCHIVE" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$ARCHIVE" -C "$RUNNER_TEMP" --strip-components=1
+          install "$RUNNER_TEMP/cargo-near" "$HOME/.cargo/bin/cargo-near"
+      - name: Build reproducible wasm
+        run: |
+          for crate in pack registry; do
+            (cd "$crate" && cargo near build reproducible-wasm)
+          done
+      - name: Print and compare sha256
+        run: |
+          status=0
+          for wasm in target/near/*/*.wasm; do
+            sum=$(sha256sum "$wasm" | cut -d' ' -f1)
+            name=$(basename "$wasm")
+            echo "$sum  $name"
+            pinned="res/$name.sha256"
+            if [ -f "$pinned" ] && [ "$sum" != "$(cat "$pinned")" ]; then
+              echo "$name differs from $pinned"
+              status=1
+            fi
+          done
+          exit "$status"
+      - name: Verify pinned bytes in res
+        run: |
+          for pinned in res/*.sha256; do
+            [ -f "${pinned%.sha256}" ] || continue
+            [ "$(sha256sum "${pinned%.sha256}" | cut -d' ' -f1)" = "$(cat "$pinned")" ]
+          done
+
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  private:
+    name: Private check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check tracked files and commit messages
+        env:
+          RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}', github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}^!', github.sha) }}
+        run: scripts/check-private.sh "$RANGE"
+      - name: Test the check
+        run: scripts/check-private.test.sh
+
+  pr-title:
+    name: PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check title and body
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: scripts/check-pr-text.sh
+
+  gitleaks:
+    name: Secrets scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

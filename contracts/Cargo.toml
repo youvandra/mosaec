@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = ["shared", "pack", "registry", "tests"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+license = "MIT"
+repository = "https://github.com/youvandra/mosaec"
+publish = false
+
+[workspace.dependencies]
+mosaec-shared = { path = "shared" }
+near-sdk = "5.30"
+
+[workspace.lints.rust]
+missing_debug_implementations = "warn"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+expect_used = "deny"
+unwrap_used = "deny"
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+strip = "symbols"
+panic = "abort"
+overflow-checks = true
