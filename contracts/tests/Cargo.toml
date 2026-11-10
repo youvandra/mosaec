@@ -10,3 +10,20 @@ publish.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+# Sandbox tests need the built pack and registry wasm and a local sandbox node.
+sandbox = []
+
+[dev-dependencies]
+anyhow = "1"
+mosaec-shared.workspace = true
+near-workspaces = { version = "0.24", default-features = false, features = ["install"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+near-crypto = "0.38"
+near-jsonrpc-client = "0.23"
+near-jsonrpc-primitives = "0.38"
+near-primitives = "0.38"
+near-sandbox = "0.4"
+near-sdk = { workspace = true, features = ["non-contract-usage"] }
