@@ -1,0 +1,4 @@
+{
+  "extends": "@mosaec/config/tsconfig/react-library.json",
+  "include": ["src"]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "mosaec",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "eslint --max-warnings 0 . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "prettier": "@mosaec/config/prettier",
+  "devDependencies": {
+    "@mosaec/config": "workspace:*",
+    "eslint": "^10.0.0",
+    "prettier": "^3.6.0",
+    "turbo": "^2.5.0",
+    "typescript": "~5.9.3"
+  }
+}

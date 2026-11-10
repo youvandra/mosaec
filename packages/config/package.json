@@ -1,0 +1,32 @@
+{
+  "name": "@mosaec/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./env": "./env.ts",
+    "./eslint": "./eslint.js",
+    "./prettier": "./prettier.js",
+    "./vitest": "./vitest.js",
+    "./tsconfig/*": "./tsconfig/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@next/eslint-plugin-next": "^15.5.0",
+    "@types/node": "^22.15.0",
+    "eslint-config-prettier": "^10.1.0",
+    "eslint-import-resolver-typescript": "^4.4.0",
+    "eslint-plugin-import-x": "^4.16.0",
+    "globals": "^16.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.0.0"
+  }
+}
