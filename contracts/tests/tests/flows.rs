@@ -303,24 +303,6 @@ async fn pack_is_keyless_and_runs_the_global_code() -> Result<()> {
     Ok(())
 }
 
-/// Block time of the latest block, in nanoseconds.
-async fn now_ns(world: &World) -> Result<u64> {
-    Ok(world.worker.view_block().await?.timestamp())
-}
-
-/// Advances the sandbox until its block time passes `target_ns`.
-async fn advance_past(world: &World, target_ns: u64) -> Result<()> {
-    loop {
-        let now = now_ns(world).await?;
-        if now > target_ns {
-            return Ok(());
-        }
-        // One block per second of block time is the sandbox's production rate; jump in chunks.
-        let gap_s = (target_ns - now) / 1_000_000_000 + 1;
-        world.worker.fast_forward(gap_s.min(500_000)).await?;
-    }
-}
-
 async fn expires_at(world: &World, pack: &AccountId) -> Result<u64> {
     let status = world.pack_status(pack).await?;
     Ok(status["exercise_deadline_ns"].as_u64().unwrap_or_default())
@@ -342,7 +324,7 @@ async fn expire_after_t_gives_lender_the_pack() -> Result<()> {
     let t = expires_at(w, &p.pack).await?;
     let res = expire(w, &p.lender, &p.pack).await?;
     assert!(res.is_failure(), "expire before T must fail");
-    advance_past(w, t).await?;
+    common::advance_past(w, t).await?;
     let late = w
         .transfer_call(&p.borrower, &p.pack, USDC, K, "\"exercise\"")
         .await?;
@@ -372,7 +354,7 @@ async fn grace_exercise_after_verifier_pause_recorded() -> Result<()> {
     let p = written_for(MIN_TERM_NS).await?;
     let w = &p.world;
     let t = expires_at(w, &p.pack).await?;
-    advance_past(w, t - HOUR_NS).await?;
+    common::advance_past(w, t - HOUR_NS).await?;
 
     let pause = json!({ "key": "mt_transfer" });
     checked(
@@ -404,7 +386,7 @@ async fn grace_exercise_after_verifier_pause_recorded() -> Result<()> {
             .await?,
     )?;
 
-    advance_past(w, t + HOUR_NS).await?;
+    common::advance_past(w, t + HOUR_NS).await?;
     let res = expire(w, &p.lender, &p.pack).await?;
     let stage = w.position(&p.pack).await?["position"]["stage"]["state"].clone();
     assert_eq!(
