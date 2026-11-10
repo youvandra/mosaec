@@ -1171,6 +1171,7 @@ dependencies = [
 name = "mosaec-registry"
 version = "0.1.0"
 dependencies = [
+ "mosaec-shared",
  "near-sdk",
 ]
 

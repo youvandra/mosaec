@@ -5,27 +5,12 @@
 
 use mosaec_shared::constants::{
     GAS_CROSS_CALL, GAS_VERIFIER_TRANSFER, GAS_VERIFIER_VIEW, GAS_VERIFIER_WITHDRAW, ONE_YOCTO,
-    VERIFIER_ID,
 };
+pub use mosaec_shared::promise::then_self;
+use mosaec_shared::promise::{NO_DEPOSIT, call as create, verifier_id};
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
-use near_sdk::{AccountId, AccountIdRef, Gas, NearToken, PromiseIndex, env};
-
-/// The NEAR Intents verifier account.
-#[must_use]
-pub fn verifier_id() -> AccountId {
-    AccountIdRef::new_or_panic(VERIFIER_ID).to_owned()
-}
-
-fn create(
-    receiver: AccountId,
-    method: &str,
-    args: &str,
-    deposit: NearToken,
-    gas: Gas,
-) -> PromiseIndex {
-    env::promise_create(receiver, method, args.as_bytes(), deposit, gas)
-}
+use near_sdk::{AccountId, PromiseIndex, env};
 
 /// `intents.near::mt_batch_transfer`, attaching 1 yoctoNEAR as NEP-245 requires.
 #[must_use]
@@ -64,14 +49,14 @@ pub fn verifier_pause_and_lock(pack: &AccountId) -> PromiseIndex {
         verifier_id(),
         "pa_all_paused",
         "{}",
-        NearToken::from_yoctonear(0),
+        NO_DEPOSIT,
         GAS_VERIFIER_VIEW,
     );
     let locked = create(
         verifier_id(),
         "is_account_locked",
         &json!({ "account_id": pack }).to_string(),
-        NearToken::from_yoctonear(0),
+        NO_DEPOSIT,
         GAS_VERIFIER_VIEW,
     );
     env::promise_and(&[paused, locked])
@@ -89,7 +74,7 @@ pub fn registry_begin_exercise(
         registry.clone(),
         "begin_exercise",
         &args.to_string(),
-        NearToken::from_yoctonear(0),
+        NO_DEPOSIT,
         GAS_CROSS_CALL,
     )
 }
@@ -102,20 +87,7 @@ pub fn registry_end_exercise(registry: &AccountId, pack: &AccountId, ok: bool) -
         registry.clone(),
         "end_exercise",
         &args.to_string(),
-        NearToken::from_yoctonear(0),
+        NO_DEPOSIT,
         GAS_CROSS_CALL,
-    )
-}
-
-/// A callback on this pack after `after`, with no deposit.
-#[must_use]
-pub fn then_self(after: PromiseIndex, method: &str, args: &str, gas: Gas) -> PromiseIndex {
-    env::promise_then(
-        after,
-        env::current_account_id(),
-        method,
-        args.as_bytes(),
-        NearToken::from_yoctonear(0),
-        gas,
     )
 }

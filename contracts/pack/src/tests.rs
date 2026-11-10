@@ -69,7 +69,7 @@ fn written_pack() -> Pack {
     pack
 }
 
-fn exercise(pack: &Pack, now_ns: u64, amount: u128, msg: &str) -> Inbound {
+fn exercise(pack: &mut Pack, now_ns: u64, amount: u128, msg: &str) -> Inbound {
     set(&verifier_id(), now_ns);
     pack.route_inbound(&alice(), &[USDC.into()], &[U128(amount)], msg)
 }
@@ -175,48 +175,48 @@ fn exercise_refuses_non_verifier() {
 
 #[test]
 fn non_exercise_transfer_refunded() {
-    let pack = written_pack();
+    let mut pack = written_pack();
     assert_eq!(
-        exercise(&pack, 1, K, "hello"),
+        exercise(&mut pack, 1, K, "hello"),
         Inbound::Refund(MosaecError::Msg)
     );
     let fill = r#"{"fill":{"pack":"7.v0.mosaec.near","terms":{"k_token":"x","k_amount":"1","term_ns":1},"contents_hash":""}}"#;
     assert_eq!(
-        exercise(&pack, 1, K, fill),
+        exercise(&mut pack, 1, K, fill),
         Inbound::Refund(MosaecError::State)
     );
 }
 
 #[test]
 fn late_exercise_refunded() {
-    let pack = written_pack();
+    let mut pack = written_pack();
     assert_eq!(
-        exercise(&pack, T + 1, K, "\"exercise\""),
+        exercise(&mut pack, T + 1, K, "\"exercise\""),
         Inbound::Refund(MosaecError::Expired)
     );
 }
 
 #[test]
 fn short_pay_refunded() {
-    let pack = written_pack();
+    let mut pack = written_pack();
     assert_eq!(
-        exercise(&pack, T, K - 1, "\"exercise\""),
+        exercise(&mut pack, T, K - 1, "\"exercise\""),
         Inbound::Refund(MosaecError::Amount)
     );
 }
 
 #[test]
 fn exercise_on_free_pack_refunded() {
-    let pack = new_pack();
+    let mut pack = new_pack();
     assert_eq!(
-        exercise(&pack, 1, K, "\"exercise\""),
+        exercise(&mut pack, 1, K, "\"exercise\""),
         Inbound::Refund(MosaecError::State)
     );
 }
 
 #[test]
 fn exercise_without_gas_refunded() {
-    let pack = written_pack();
+    let mut pack = written_pack();
     let mut ctx = context(&verifier_id(), 1);
     ctx.prepaid_gas(Gas::from_tgas(50));
     testing_env!(ctx.build());
@@ -228,9 +228,9 @@ fn exercise_without_gas_refunded() {
 
 #[test]
 fn valid_exercise_starts_the_chain() {
-    let pack = written_pack();
+    let mut pack = written_pack();
     assert!(matches!(
-        exercise(&pack, T, K, "\"exercise\""),
+        exercise(&mut pack, T, K, "\"exercise\""),
         Inbound::Exercise(_)
     ));
     assert!(matches!(pack.status().phase, Phase::Written { .. }));
@@ -314,12 +314,12 @@ fn grace_exercise_after_pause_recorded() {
     );
     assert!(pack.on_disruption_checked());
     assert_eq!(pack.status().exercise_deadline_ns, Some(T + GRACE_NS));
-    assert!(matches!(
-        exercise(&pack, T + GRACE_NS, K, "\"exercise\""),
-        Inbound::Exercise(_)
-    ));
     set(&registry(), T + 1);
     assert_eq!(pack.unencumber(), Err(MosaecError::Grace));
+    assert!(matches!(
+        exercise(&mut pack, T + GRACE_NS, K, "\"exercise\""),
+        Inbound::Exercise(_)
+    ));
 }
 
 #[test]
@@ -349,4 +349,23 @@ fn lock_is_a_disruption_even_if_pause_view_fails() {
         vec![PromiseResult::Failed, PromiseResult::Successful(locked)],
     );
     assert!(pack.on_disruption_checked());
+}
+
+#[test]
+fn second_exercise_and_unencumber_wait_for_the_first() {
+    let mut pack = written_pack();
+    assert!(matches!(
+        exercise(&mut pack, T, K, "\"exercise\""),
+        Inbound::Exercise(_)
+    ));
+    assert!(pack.status().exercise_in_flight);
+    assert_eq!(
+        exercise(&mut pack, T, K, "\"exercise\""),
+        Inbound::Refund(MosaecError::Pending)
+    );
+    set(&registry(), T + 1);
+    assert_eq!(pack.unencumber(), Err(MosaecError::Pending));
+    set_with_results(&pack_id(), T + 1, vec![PromiseResult::Successful(vec![])]);
+    assert_eq!(pack.on_begin_exercise(alice(), U128(K)), vec![U128(0)]);
+    assert!(!pack.status().exercise_in_flight);
 }

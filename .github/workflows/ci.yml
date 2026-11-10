@@ -63,6 +63,11 @@ jobs:
           for crate in pack registry; do
             (cd "$crate" && cargo near build reproducible-wasm)
           done
+      - name: Check promise actions in wasm imports
+        run: |
+          python3 -I ../scripts/check-wasm-imports.py \
+            pack=target/near/mosaec_pack/mosaec_pack.wasm \
+            registry=target/near/mosaec_registry/mosaec_registry.wasm
       - name: Print and compare sha256
         run: |
           status=0
