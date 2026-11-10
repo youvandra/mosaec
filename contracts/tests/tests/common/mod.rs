@@ -6,9 +6,12 @@
 #![allow(dead_code, reason = "each test file uses a different subset")]
 
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use anyhow::{Context, Result, ensure};
+use mosaec_deploy::keychain::DeployKey;
+use mosaec_deploy::plan::plan;
+use mosaec_deploy::rpc::Rpc;
+use mosaec_deploy::target::{Env, Target};
 use mosaec_shared::constants::{MINT_DEPOSIT, USDC, ZEC};
 use near_workspaces::network::Sandbox;
 use near_workspaces::result::ExecutionFinalResult;
@@ -18,6 +21,8 @@ use serde_json::{Value, json};
 
 pub const ONE_YOCTO: NearToken = NearToken::from_yoctonear(1);
 pub const MAX_GAS: Gas = Gas::from_tgas(300);
+const PATCH_VISIBLE_ATTEMPTS: u32 = 100;
+const PATCH_VISIBLE_POLL_MS: u64 = 200;
 
 /// Workspace root, so tests find the built binaries wherever cargo runs them from.
 fn contracts_dir() -> PathBuf {
@@ -59,7 +64,17 @@ pub struct World {
 }
 
 impl World {
+    /// A world with the production registry at `v0.mosaec.near`.
     pub async fn new() -> Result<Self> {
+        Self::with(Env::Production).await
+    }
+
+    /// A world with the staging registry at `staging.mosaec.near` (staging caps and terms).
+    pub async fn staging() -> Result<Self> {
+        Self::with(Env::Staging).await
+    }
+
+    async fn with(env: Env) -> Result<Self> {
         let (node, worker) = start_sandbox().await?;
         let key = SecretKey::from_random(KeyType::ED25519);
 
@@ -95,24 +110,7 @@ impl World {
         let usdc = new_token(&worker, &key, USDC, &ft, &verifier).await?;
 
         let root = patch_account(&worker, &key, "mosaec.near", None).await?;
-        let pack_wasm = read("target/near/mosaec_pack/mosaec_pack.wasm")?;
-        let pack_code_hash = deploy_global_by_hash(&worker, &root, &key, pack_wasm).await?;
-
-        let registry = patch_account(
-            &worker,
-            &key,
-            "v0.mosaec.near",
-            Some(&read("target/near/mosaec_registry/mosaec_registry.wasm")?),
-        )
-        .await?;
-        let init = json!({ "guardian": root.id(), "pack_code_hash": pack_code_hash, "profile": "Production" });
-        checked(
-            registry
-                .call(registry.id(), "new")
-                .args_json(init)
-                .transact()
-                .await?,
-        )?;
+        let (registry, pack_code_hash) = deploy_with_tool(&worker, &key, env).await?;
 
         Ok(Self {
             _node: node,
@@ -304,67 +302,70 @@ async fn new_token(
     Ok(token)
 }
 
-/// Publishes `code` as a global contract under its hash and returns the base58 hash.
-async fn deploy_global_by_hash(
+/// Deploys the pack code and the registry with `mosaec-deploy`, the same code path as mainnet,
+/// then checks that a second run has nothing left to do.
+async fn deploy_with_tool(
     worker: &Worker<Sandbox>,
-    signer: &Account,
     key: &SecretKey,
-    code: Vec<u8>,
-) -> Result<String> {
-    use near_jsonrpc_client::{JsonRpcClient, methods};
-    use near_primitives::action::{Action, DeployGlobalContractAction, GlobalContractDeployMode};
-    use near_primitives::transaction::{Transaction, TransactionV0};
-    use near_primitives::types::{BlockReference, Finality};
-    use near_primitives::views::{QueryRequest, TxExecutionStatus};
-
-    let hash = near_primitives::hash::CryptoHash::hash_bytes(&code);
-    let client = JsonRpcClient::connect(worker.rpc_addr());
-    let sk: near_crypto::SecretKey = key.to_string().parse()?;
-    let signer_key = near_crypto::InMemorySigner::from_secret_key(signer.id().clone(), sk);
-    let access = client
-        .call(methods::query::RpcQueryRequest {
-            block_reference: BlockReference::Finality(Finality::Final),
-            request: QueryRequest::ViewAccessKey {
-                account_id: signer.id().clone(),
-                public_key: signer_key.public_key(),
-            },
-        })
-        .await?;
-    let near_jsonrpc_primitives::types::query::QueryResponseKind::AccessKey(ak) = access.kind
-    else {
-        anyhow::bail!("no access key for {}", signer.id());
-    };
-    let tx = Transaction::V0(TransactionV0 {
-        signer_id: signer.id().clone(),
-        public_key: signer_key.public_key(),
-        nonce: ak.nonce + 1,
-        receiver_id: signer.id().clone(),
-        block_hash: access.block_hash,
-        actions: vec![Action::DeployGlobalContract(DeployGlobalContractAction {
-            code: Arc::from(code),
-            deploy_mode: GlobalContractDeployMode::CodeHash,
-        })],
-    });
-    let signed_tx = tx.sign(&signer_key);
-    let outcome = client
-        .call(methods::send_tx::RpcSendTransactionRequest {
-            signed_transaction: signed_tx,
-            wait_until: TxExecutionStatus::Final,
-        })
-        .await?;
-    let status = outcome
-        .final_execution_outcome
-        .context("no outcome")?
-        .into_outcome()
-        .status;
+    env: Env,
+) -> Result<(Account, String)> {
+    let target = Target::for_env(env, "mosaec.near")?;
+    let dir = contracts_dir();
+    let artifacts = mosaec_deploy::load_artifacts(
+        &dir.join("target/near/mosaec_pack/mosaec_pack.wasm")
+            .to_string_lossy(),
+        &dir.join("target/near/mosaec_registry/mosaec_registry.wasm")
+            .to_string_lossy(),
+    )?;
+    let deploy_key = DeployKey::new(key.to_string().parse()?);
+    let rpc = Rpc::connect(&worker.rpc_addr());
+    wait_until_final(&rpc, &target.root).await?;
+    let observed =
+        mosaec_deploy::observe(&rpc, &target, &artifacts, &deploy_key.public_key()).await?;
+    let steps = plan(&target, &artifacts, &observed)?;
     ensure!(
-        matches!(
-            status,
-            near_primitives::views::FinalExecutionStatus::SuccessValue(_)
-        ),
-        "global deploy failed: {status:?}"
+        steps.len() == 3,
+        "fresh chain should need three steps, got {steps:?}"
     );
-    Ok(hash.to_string())
+    mosaec_deploy::apply(&rpc, &target, &artifacts, &deploy_key, &steps).await?;
+    mosaec_deploy::verify(&rpc, &target, &artifacts).await?;
+    let again = mosaec_deploy::observe(&rpc, &target, &artifacts, &deploy_key.public_key()).await?;
+    ensure!(
+        plan(&target, &artifacts, &again)?.is_empty(),
+        "deploy is not idempotent"
+    );
+    let registry = Account::from_secret_key(target.registry.clone(), key.clone(), worker);
+    Ok((registry, artifacts.pack_hash().to_string()))
+}
+
+/// Block time of the latest block, in nanoseconds.
+pub async fn now_ns(world: &World) -> Result<u64> {
+    Ok(world.worker.view_block().await?.timestamp())
+}
+
+/// Advances the sandbox until its block time passes `target_ns`.
+pub async fn advance_past(world: &World, target_ns: u64) -> Result<()> {
+    loop {
+        let now = now_ns(world).await?;
+        if now > target_ns {
+            return Ok(());
+        }
+        // One block per second of block time is the sandbox's production rate; jump in chunks.
+        let gap_s = (target_ns - now) / 1_000_000_000 + 1;
+        world.worker.fast_forward(gap_s.min(500_000)).await?;
+    }
+}
+
+/// State patches land in the next block; the deploy tool reads final blocks. Waits until `id`
+/// is visible there.
+async fn wait_until_final(rpc: &Rpc, id: &AccountId) -> Result<()> {
+    for _ in 0..PATCH_VISIBLE_ATTEMPTS {
+        if rpc.account(id).await?.is_some() {
+            return Ok(());
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(PATCH_VISIBLE_POLL_MS)).await;
+    }
+    anyhow::bail!("{id} never became visible at final finality")
 }
 
 /// Fails with every receipt failure when the transaction or any receipt failed; for calls whose

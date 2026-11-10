@@ -3,7 +3,7 @@
 
 use near_sdk::json_types::U128;
 
-use crate::constants::{CapProfile, GRACE_NS, MAX_TERM_NS, MIN_TERM_NS, TokenRole, token_rule};
+use crate::constants::{CapProfile, GRACE_NS, TokenRole, token_rule};
 use crate::error::{MosaecError, MosaecResult, ensure};
 use crate::types::Terms;
 
@@ -23,7 +23,7 @@ pub fn check_settlement(token_id: &str, amount: U128, profile: CapProfile) -> Mo
 /// # Errors
 /// As [`check_settlement`] for both amounts; `E_TERMS` when the principal is in a different token
 /// from the repayment, the repayment is below the principal, the term is outside
-/// `[MIN_TERM_NS, MAX_TERM_NS]`, or the offer has already expired at `now_ns`.
+/// the profile's term bounds, or the offer has already expired at `now_ns`.
 pub fn check_offer(
     terms: &Terms,
     pay_token: &str,
@@ -36,8 +36,9 @@ pub fn check_offer(
     check_settlement(pay_token, price, profile)?;
     ensure(pay_token == terms.k_token, MosaecError::Terms)?;
     ensure(terms.k_amount.0 >= price.0, MosaecError::Terms)?;
+    let (shortest, longest) = profile.term_bounds();
     ensure(
-        (MIN_TERM_NS..=MAX_TERM_NS).contains(&terms.term_ns),
+        (shortest..=longest).contains(&terms.term_ns),
         MosaecError::Terms,
     )?;
     ensure(offer_expires_at_ns > now_ns, MosaecError::Expired)
@@ -149,6 +150,21 @@ mod tests {
                 p
             ),
             Err(MosaecError::Cap)
+        );
+    }
+
+    #[test]
+    fn term_bounds_follow_the_profile() {
+        let ten_minutes = terms(1, 10 * crate::constants::MINUTE_NS);
+        assert!(check_offer(&ten_minutes, USDC, U128(1), 10, 5, CapProfile::Staging).is_ok());
+        assert_eq!(
+            check_offer(&ten_minutes, USDC, U128(1), 10, 5, CapProfile::Production),
+            Err(MosaecError::Terms)
+        );
+        let ninety_days = terms(1, DEFAULT_TERM_NS);
+        assert_eq!(
+            check_offer(&ninety_days, USDC, U128(1), 10, 5, CapProfile::Staging),
+            Err(MosaecError::Terms)
         );
     }
 

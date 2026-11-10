@@ -1787,6 +1787,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mosaec-deploy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "near-crypto",
+ "near-jsonrpc-client",
+ "near-jsonrpc-primitives",
+ "near-primitives",
+ "near-token",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "mosaec-pack"
 version = "0.1.0"
 dependencies = [
@@ -1814,11 +1828,8 @@ name = "mosaec-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "mosaec-deploy",
  "mosaec-shared",
- "near-crypto",
- "near-jsonrpc-client",
- "near-jsonrpc-primitives",
- "near-primitives",
  "near-sandbox",
  "near-sdk",
  "near-workspaces",

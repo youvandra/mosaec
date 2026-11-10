@@ -24,10 +24,16 @@ pub const HOUR_NS: u64 = 3_600 * 1_000_000_000;
 pub const DAY_NS: u64 = 24 * HOUR_NS;
 /// Length of the disruption window before `T` and of the grace period after it.
 pub const GRACE_NS: u64 = 24 * HOUR_NS;
-/// Shortest term an offer may carry.
+/// One minute in nanoseconds.
+pub const MINUTE_NS: u64 = 60 * 1_000_000_000;
+/// Shortest term an offer may carry on the production registry.
 pub const MIN_TERM_NS: u64 = 7 * DAY_NS;
-/// Longest term an offer may carry.
+/// Longest term an offer may carry on the production registry.
 pub const MAX_TERM_NS: u64 = 180 * DAY_NS;
+/// Shortest term on the staging registry, so a mainnet rehearsal sees an expiry the same hour.
+pub const STAGING_MIN_TERM_NS: u64 = 10 * MINUTE_NS;
+/// Longest term on the staging registry.
+pub const STAGING_MAX_TERM_NS: u64 = DAY_NS;
 /// Term the app proposes by default.
 pub const DEFAULT_TERM_NS: u64 = 90 * DAY_NS;
 
@@ -65,7 +71,7 @@ pub const MAX_PROMISE_RESULT_LEN: usize = 4_096;
 /// The verifier moves at most this many tokens in one batch transfer.
 pub const BATCH_MAX_TOKENS: usize = 10;
 
-/// Which cap table a registry enforces. Fixed at registry init.
+/// Which caps and term bounds a registry enforces. Fixed at registry init.
 #[near_sdk::near(serializers = [borsh, json])]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapProfile {
@@ -73,6 +79,17 @@ pub enum CapProfile {
     Production,
     /// `staging.mosaec.near`.
     Staging,
+}
+
+impl CapProfile {
+    /// Inclusive `(shortest, longest)` term an offer may carry.
+    #[must_use]
+    pub const fn term_bounds(self) -> (u64, u64) {
+        match self {
+            Self::Production => (MIN_TERM_NS, MAX_TERM_NS),
+            Self::Staging => (STAGING_MIN_TERM_NS, STAGING_MAX_TERM_NS),
+        }
+    }
 }
 
 /// Role a token may play in a position.
@@ -275,6 +292,8 @@ const _: () = assert!(FILL_GAS.as_gas() + GAS_VERIFIER_RESOLVE.as_gas() < MAX_TX
 const _: () = assert!(EXERCISE_GAS.as_gas() + GAS_VERIFIER_RESOLVE.as_gas() < MAX_TX_GAS.as_gas());
 const _: () = assert!(MIN_TERM_NS < DEFAULT_TERM_NS && DEFAULT_TERM_NS < MAX_TERM_NS);
 const _: () = assert!(GRACE_NS < MIN_TERM_NS);
+const _: () =
+    assert!(STAGING_MIN_TERM_NS < STAGING_MAX_TERM_NS && STAGING_MAX_TERM_NS < MIN_TERM_NS);
 const _: () = assert!(MINT_GAS.as_gas() < MAX_TX_GAS.as_gas());
 
 #[cfg(test)]

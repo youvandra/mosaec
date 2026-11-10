@@ -28,13 +28,13 @@ Sell the Title and keep the Ticket: a fixed-term loan with no price oracle and n
                                        desk (autonomous lender, MCP server)
 ```
 
-| Account               | Code                                 | Keys                                       | Role                                                          |
-| --------------------- | ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------- |
-| `mosaec.near`         | none                                 | owner key (later multisig)                 | Root. Creates registries. Guardian of each registry           |
-| `v0.mosaec.near`      | `registry`                           | none after the first full production cycle | NEP-171 collection for Titles and Tickets, offers, settlement |
-| `<n>.v0.mosaec.near`  | `pack`, global contract by code hash | none, ever                                 | Holds verifier balances; enforces its own encumbrance         |
-| `staging.mosaec.near` | `registry`                           | keyed                                      | Mainnet staging registry with low caps                        |
-| `desk.mosaec.near`    | none                                 | one key on the desk server                 | Team-run lender; holds only its budget                        |
+| Account               | Code                                 | Keys                                       | Role                                                                                                  |
+| --------------------- | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `mosaec.near`         | none                                 | owner key (later multisig)                 | Root. Creates registries. Guardian of each registry                                                   |
+| `v0.mosaec.near`      | `registry`                           | none after the first full production cycle | NEP-171 collection for Titles and Tickets, offers, settlement                                         |
+| `<n>.v0.mosaec.near`  | `pack`, global contract by code hash | none, ever                                 | Holds verifier balances; enforces its own encumbrance                                                 |
+| `staging.mosaec.near` | `registry`                           | keyed                                      | Mainnet staging registry with low caps and short terms, so a rehearsal reaches expiry within the hour |
+| `desk.mosaec.near`    | none                                 | one key on the desk server                 | Team-run lender; holds only its budget                                                                |
 
 Upgrades never mutate a live registry. A new version deploys at `v1.mosaec.near`; `v0` packs run to term under `v0` code.
 
@@ -89,7 +89,7 @@ Contents arrive in the pack by a plain `intents.near::mt_transfer(receiver = pac
 ### 5.3 Offer and cancel
 
 `Title holder -> registry::offer(pack, token_ids, terms { k_token, k_amount, term_ns }, pay_token, price, offer_expires_at_ns)`:
-checks token count at most 10 (`E_BATCH`), `pay_token` equals `k_token` and is the settlement token, `price <= k_amount`, `MIN_TERM_NS <= term_ns <= MAX_TERM_NS` (`E_TERMS`), `offer_expires_at_ns > now` (`E_EXPIRED`), not paused (`E_PAUSED`), Title not `Pending`, no earlier maker's payout still undelivered (`E_PENDING`); reads `mt_batch_balance_of(pack, token_ids)`; the callback builds the contents from those balances, each token allowlisted collateral under its cap (`E_TOKEN`, `E_CAP`, `E_AMOUNT` for a zero balance); reads `mt_batch_balance_of(pack)`; callback stores the offer with the contents vector and its hash; state `Offered`. `price` is the principal, `k_amount` the repayment. `cancel` returns the pack to `Free` and is never blocked by a pause; a Title transfer cancels too (section 4).
+checks token count at most 10 (`E_BATCH`), `pay_token` equals `k_token` and is the settlement token, `price <= k_amount`, `term_ns` inside the registry profile's term bounds (`E_TERMS`), `offer_expires_at_ns > now` (`E_EXPIRED`), not paused (`E_PAUSED`), Title not `Pending`, no earlier maker's payout still undelivered (`E_PENDING`); reads `mt_batch_balance_of(pack, token_ids)`; the callback builds the contents from those balances, each token allowlisted collateral under its cap (`E_TOKEN`, `E_CAP`, `E_AMOUNT` for a zero balance); the callback stores the offer with the contents vector and its hash; state `Offered`. `price` is the principal, `k_amount` the repayment. `cancel` returns the pack to `Free` and is never blocked by a pause; a Title transfer cancels too (section 4).
 
 ### 5.4 Fill
 
@@ -219,11 +219,11 @@ Defined once in `contracts/shared/src/constants.rs`; measured values filled befo
 | Name                                                               | Value                                                                                                                                                                              |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GRACE_NS`                                                         | 24 h                                                                                                                                                                               |
-| `MIN_TERM_NS`, `MAX_TERM_NS`, default term                         | 7 d, 180 d, 90 d                                                                                                                                                                   |
+| Term bounds, default term                                          | Production 7 d to 180 d, default 90 d; Staging 10 min to 1 d                                                                                                                       |
 | `BATCH_MAX_TOKENS`                                                 | 10 (verifier limit)                                                                                                                                                                |
 | `FILL_GAS`, `EXERCISE_GAS`, `DECIDE_GAS_RESERVE`                   | measured, 30% headroom                                                                                                                                                             |
 | `PACK_STORAGE`, `PACK_OPS_RESERVE`, `NFT_STORAGE`, `OFFER_STORAGE` | measured                                                                                                                                                                           |
-| Caps per pack                                                      | ZEC 1, BTC 0.01, SOL 5, USDC 1,000                                                                                                                                                 |
+| Caps per pack                                                      | Production ZEC 1, BTC 0.01, SOL 5, USDC 1,000; Staging ZEC 0.05, BTC 0.0007, SOL 0.6, USDC 50                                                                                      |
 | `MIN_WITHDRAW` per token                                           | from the bridge, measured                                                                                                                                                          |
 | Token ids                                                          | ZEC `nep141:zec.omft.near` (8), BTC `nep141:btc.omft.near` (8), SOL `nep141:sol.omft.near` (9), USDC `nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1` (6) |
 
