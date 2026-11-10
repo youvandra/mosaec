@@ -88,8 +88,8 @@ Contents arrive in the pack by a plain `intents.near::mt_transfer(receiver = pac
 
 ### 5.3 Offer and cancel
 
-`Title holder -> registry::offer(pack, k_token, k_amount, term_ns, offer_expires_at, pay_token, price)`:
-checks token count at most 10 (`E_BATCH`), each token has a cap row and is under its cap (`E_CAP`), `MIN_TERM_NS <= term_ns <= MAX_TERM_NS` and `offer_expires_at > now` (`E_TERMS`), a prepaid storage slot exists (`E_STORAGE`), not paused (`E_PAUSED`), Title not `Pending`; reads `mt_batch_balance_of(pack)`; callback stores the offer with the contents vector and its hash; state `Offered`. `price` is the principal, `k_amount` the repayment. `cancel` returns the pack to `Free` and is never blocked by a pause; a Title transfer cancels too (section 4).
+`Title holder -> registry::offer(pack, token_ids, terms { k_token, k_amount, term_ns }, pay_token, price, offer_expires_at_ns)`:
+checks token count at most 10 (`E_BATCH`), `pay_token` equals `k_token` and is the settlement token, `price <= k_amount`, `MIN_TERM_NS <= term_ns <= MAX_TERM_NS` (`E_TERMS`), `offer_expires_at_ns > now` (`E_EXPIRED`), not paused (`E_PAUSED`), Title not `Pending`, no earlier maker's payout still undelivered (`E_PENDING`); reads `mt_batch_balance_of(pack, token_ids)`; the callback builds the contents from those balances, each token allowlisted collateral under its cap (`E_TOKEN`, `E_CAP`, `E_AMOUNT` for a zero balance); reads `mt_batch_balance_of(pack)`; callback stores the offer with the contents vector and its hash; state `Offered`. `price` is the principal, `k_amount` the repayment. `cancel` returns the pack to `Free` and is never blocked by a pause; a Title transfer cancels too (section 4).
 
 ### 5.4 Fill
 
@@ -133,7 +133,9 @@ pack::on_begin (decide)
 
 After release the pack holds `K`; the Title holder owns a `Free` pack. The Ticket burns in `end_exercise`. Withdraw stays refused while the pack is `Releasing`.
 
-`registry::finalize_exercise(pack)` is permissionless and reads `pack::state()`: `Releasing` or released burns the Ticket; `Written` (the decide receipt failed, so the verifier refunded `K`) clears `Pending`. A failed decide therefore never leaves a Ticket frozen. A pack locked by the verifier admin keeps `K` and owes the contents until the lock lifts; `pack::claim` delivers then.
+The pack sets `exercise_in_flight` when it accepts a payment and clears it in the decide receipt. While it is set, a second exercise and `unencumber` are refused with `E_PENDING`, so an exercise accepted before `T` can never lose to an `expire` that lands after `T`.
+
+`registry::finalize_exercise(pack)` is permissionless and reads `pack::status()`: `Releasing` or `Free` burns the Ticket; `Written` with no exercise in flight (the decide receipt failed, so the verifier refunded `K`) clears `Pending`. A failed decide therefore never leaves a Ticket frozen. A pack locked by the verifier admin keeps `K` and owes the contents until the lock lifts; `pack::claim` delivers then.
 
 ### 5.6 Grace window
 
@@ -141,14 +143,14 @@ After release the pack holds `K`; the Title holder owns a `Free` pack. The Ticke
 
 ### 5.7 Expire
 
-`anyone -> registry::expire(pack)` after `T` (or after `T + 24 h` in grace), refused while the Ticket is `Pending`: Ticket burns, state `Free`, detached `pack::unencumber()` (retry: `sync_encumbrance`, which pushes the registry's state to the pack in either direction). Never blocked by a pause.
+`anyone -> registry::expire(pack)` after `T`, refused while the Ticket is `Pending`: `registry -> pack::unencumber()`, which succeeds only after the exercise deadline the pack computes itself (`T`, or `T + 24 h` with a recorded disruption) and with no exercise in flight. Only on that success does the callback burn the Ticket and set the position `Free`; a refusal (`E_GRACE`, `E_PENDING`) changes nothing and `expire` can run again later. Never blocked by a pause.
 
 ### 5.8 Withdraw
 
 `Title holder -> registry::withdraw(pack, token, amount, destination)` on a `Free` pack:
 
 - to a verifier account: `pack -> intents.near::mt_batch_transfer`;
-- to a home chain: `pack -> intents.near::ft_withdraw(token, receiver_id = token, amount, memo = "WITHDRAW_TO:<address>")`, refused under the token's minimum (`E_MIN_WITHDRAW`). ZEC (`zec.omft.near`) runs the Omni bridge token contract, which forwards such a transfer to its relayer; the exact minimum and fee are measured on mainnet before launch.
+- to a home chain: `pack -> intents.near::ft_withdraw(token, receiver_id = token, amount, memo = "WITHDRAW_TO:<address>")`, refused under the token's minimum (`E_MIN_WITHDRAW`). ZEC (`zec.omft.near`) runs the Omni bridge token contract, which forwards such a transfer to its relayer. Home-chain withdrawals of a token stay closed (`E_MIN_WITHDRAW`) until its minimum is measured on mainnet and written into the token table.
   The Title is `Pending` until the callback; a Title sale in that window returns `E_PENDING`.
 
 ### 5.9 Guardian
@@ -158,8 +160,8 @@ After release the pack holds `K`; the Title holder owns a `Free` pack. The Ticke
 ### 5.10 NFT transfers
 
 - `nft_transfer`: refused while the token is `Pending`. A Title transfer on an `Offered` pack cancels the offer in the same receipt.
-- `nft_transfer_call`: moves the token, sets it `Pending` until `nft_resolve_transfer` settles the owner, so no exercise, withdraw or offer runs against an owner that the resolve step may still revert. `clear_transfer_pending(token_id)` is permissionless and clears a flag whose resolve receipt is gone.
-- Approvals (NEP-178) follow the same rules; an approved marketplace transfer is still refused while `Pending`.
+- `nft_transfer_call`: moves the token, sets it `Pending` until `nft_resolve_transfer` settles the owner, so no exercise, withdraw or offer runs against an owner that the resolve step may still revert. The resolve step carries its own static gas, so it always runs and always clears the flag.
+- Approvals (NEP-178) are unsupported in v0: `approval_id` must be absent. Marketplaces list through `nft_transfer_call` or the verifier.
 - A Title or Ticket deposited in `intents.near` (for trading by `token_diff`) is owned by `intents.near`. Exercise, offer and withdraw need the direct owner, so the holder runs `nft_withdraw` first; the app does this in one step.
 
 ## 6. Invariants (property-tested)
@@ -227,7 +229,7 @@ Defined once in `contracts/shared/src/constants.rs`; measured values filled befo
 
 ## 10. Off-chain
 
-- **Indexer** polls finalized blocks, keeps receipts touching the registry and its packs, stores NEP-297 events idempotently by receipt id. Its keeper pushes the permissionless retries (`claim_payout`, `sync_encumbrance`, `pack::claim`, `finalize_exercise`, `clear_transfer_pending`) and `record_disruption`; any account can run the same calls.
+- **Indexer** polls finalized blocks, keeps receipts touching the registry and its packs, stores NEP-297 events idempotently by receipt id. Its keeper pushes the permissionless retries (`claim_payout`, `sync_encumbrance`, `pack::claim`, `finalize_exercise`) and `record_disruption`; any account can run the same calls.
 - **API** (routes, controllers, services, repositories) serves packs, positions, offers, quotes from the rate card, and NEP-413 sign-in. Pack checks shown in the app are also re-run in the browser against RPC.
 - **Web** serves the landing at `mosaec.finance` and the app at `app.mosaec.finance`.
 - **Desk** is a team-run autonomous lender behind an MCP server; its policy is enforced in code and its account holds only its budget.

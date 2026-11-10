@@ -15,7 +15,7 @@ use std::collections::HashSet;
 
 use mosaec_shared::constants::{
     CLAIM_GAS, DISRUPTION_GAS, EXERCISE_DECIDE_GAS, EXERCISE_GAS, GAS_DELIVERY_CALLBACK,
-    HOME_CHAIN_MEMO_PREFIX, MAX_HOME_ADDRESS_LEN, MAX_PROMISE_RESULT_LEN, NEP141_PREFIX,
+    HOME_CHAIN_MEMO_PREFIX, MAX_HOME_ADDRESS_LEN, NEP141_PREFIX,
 };
 use mosaec_shared::error::ensure;
 use mosaec_shared::events::MosaecEvent;
@@ -26,8 +26,8 @@ use near_sdk::json_types::U128;
 use near_sdk::serde_json::{self, json};
 use near_sdk::{AccountId, FunctionError, Gas, PanicOnDefault, PromiseIndex, env, near};
 
-use crate::ext::verifier_id;
 pub use crate::phase::Phase;
+use mosaec_shared::promise::{read_json, verifier_id};
 
 #[near(
     contract_state,
@@ -42,6 +42,9 @@ pub struct Pack {
     phase: Phase,
     /// True while a release transfer is in flight, so two retries never both deliver.
     delivery_in_flight: bool,
+    /// True from an accepted exercise payment until its decide receipt, so a second exercise or
+    /// an `unencumber` racing the deadline cannot run against the same encumbrance.
+    exercise_in_flight: bool,
 }
 
 /// Everything the registry, the indexer and the app read from a pack.
@@ -51,6 +54,7 @@ pub struct PackStatus {
     pub registry: AccountId,
     pub phase: Phase,
     pub delivery_in_flight: bool,
+    pub exercise_in_flight: bool,
     /// Last block time an exercise is accepted, while `Written`.
     pub exercise_deadline_ns: Option<u64>,
 }
@@ -79,6 +83,7 @@ impl Pack {
             registry,
             phase: Phase::Free,
             delivery_in_flight: false,
+            exercise_in_flight: false,
         }
     }
 
@@ -105,6 +110,7 @@ impl Pack {
     #[handle_result(aliased)]
     pub fn unencumber(&mut self) -> MosaecResult<()> {
         self.require_registry()?;
+        ensure(!self.exercise_in_flight, MosaecError::Pending)?;
         self.phase = self.phase.clone().unencumber(env::block_timestamp())?;
         emit_encumbrance(false);
         Ok(())
@@ -157,7 +163,8 @@ impl Pack {
     /// It never moves value itself and never panics on the registry's answer.
     #[private]
     pub fn on_begin_exercise(&mut self, sender_id: AccountId, k_amount: U128) -> Vec<U128> {
-        let begun = env::promise_result_checked(0, MAX_PROMISE_RESULT_LEN).is_ok();
+        self.exercise_in_flight = false;
+        let begun = mosaec_shared::promise::succeeded(0);
         if !begun {
             emit_refused(&sender_id, MosaecError::Holder);
             return vec![k_amount];
@@ -199,7 +206,7 @@ impl Pack {
     #[private]
     pub fn on_released(&mut self) {
         self.delivery_in_flight = false;
-        if env::promise_result_checked(0, MAX_PROMISE_RESULT_LEN).is_err() {
+        if !mosaec_shared::promise::succeeded(0) {
             return;
         }
         if let Phase::Releasing { owed_to, .. } = &self.phase {
@@ -229,8 +236,8 @@ impl Pack {
     /// Stores the disruption when either view shows one. Returns whether it was recorded.
     #[private]
     pub fn on_disruption_checked(&mut self) -> bool {
-        let paused: Option<HashSet<String>> = read_result(0).flatten();
-        let locked: bool = read_result(1).unwrap_or(false);
+        let paused: Option<HashSet<String>> = read_json(0).flatten();
+        let locked: bool = read_json(1).unwrap_or(false);
         if !phase::is_disruption(paused.as_ref(), locked) {
             return false;
         }
@@ -259,6 +266,7 @@ impl Pack {
             registry: self.registry.clone(),
             phase: self.phase.clone(),
             delivery_in_flight: self.delivery_in_flight,
+            exercise_in_flight: self.exercise_in_flight,
             exercise_deadline_ns: self.exercise_deadline_ns(),
         }
     }
@@ -296,14 +304,17 @@ impl Pack {
     }
 
     fn route_inbound(
-        &self,
+        &mut self,
         sender_id: &AccountId,
         token_ids: &[String],
         amounts: &[U128],
         msg: &str,
     ) -> Inbound {
         match self.check_exercise(token_ids, amounts, msg) {
-            Ok(k_amount) => Inbound::Exercise(self.begin_exercise(sender_id, k_amount)),
+            Ok(k_amount) => {
+                self.exercise_in_flight = true;
+                Inbound::Exercise(self.begin_exercise(sender_id, k_amount))
+            }
             Err(error) => Inbound::Refund(error),
         }
     }
@@ -316,6 +327,7 @@ impl Pack {
     ) -> MosaecResult<U128> {
         let parsed: TransferMsg = serde_json::from_str(msg).map_err(|_| MosaecError::Msg)?;
         ensure(parsed == TransferMsg::Exercise, MosaecError::State)?;
+        ensure(!self.exercise_in_flight, MosaecError::Pending)?;
         require_gas(EXERCISE_GAS)?;
         self.phase
             .check_exercise(token_ids, amounts, env::block_timestamp())
@@ -386,13 +398,6 @@ impl Pack {
 fn require_gas(required: Gas) -> MosaecResult<()> {
     let left = env::prepaid_gas().saturating_sub(env::used_gas());
     ensure(left >= required, MosaecError::Gas)
-}
-
-/// Parses one bounded promise result, or `None` when it failed or does not parse.
-fn read_result<T: near_sdk::serde::de::DeserializeOwned>(index: u64) -> Option<T> {
-    env::promise_result_checked(index, MAX_PROMISE_RESULT_LEN)
-        .ok()
-        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
 }
 
 fn nep141_contract(token_id: &str) -> MosaecResult<AccountId> {

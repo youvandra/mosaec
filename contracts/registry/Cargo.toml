@@ -12,6 +12,7 @@ publish.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+mosaec-shared.workspace = true
 near-sdk.workspace = true
 
 [dev-dependencies]

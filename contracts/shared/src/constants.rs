@@ -44,6 +44,15 @@ pub const SOL: &str = "nep141:sol.omft.near";
 /// Native USDC on NEAR.
 pub const USDC: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 
+/// NFT token id prefix of a Title; the pack index follows (`t7`).
+pub const TITLE_PREFIX: &str = "t";
+/// NFT token id prefix of a Ticket; the pack index and the pawn round follow (`k7.2`).
+pub const TICKET_PREFIX: &str = "k";
+/// Longest account id NEAR accepts; pack ids must fit.
+pub const MAX_ACCOUNT_ID_LEN: usize = 64;
+/// Most offers, Titles or Tickets one enumeration call returns.
+pub const MAX_PAGE: u64 = 100;
+
 /// Prefix of a NEP-141 token id inside the verifier.
 pub const NEP141_PREFIX: &str = "nep141:";
 /// Memo prefix the bridge tokens read as the home-chain destination of an `ft_withdraw`.
@@ -51,7 +60,7 @@ pub const HOME_CHAIN_MEMO_PREFIX: &str = "WITHDRAW_TO:";
 /// Longest home-chain address passed to a bridge (Zcash unified addresses run past 100 chars).
 pub const MAX_HOME_ADDRESS_LEN: usize = 256;
 /// Most bytes read from a cross-contract result; bounds callback gas whatever the callee returns.
-pub const MAX_PROMISE_RESULT_LEN: usize = 1_024;
+pub const MAX_PROMISE_RESULT_LEN: usize = 4_096;
 
 /// The verifier moves at most this many tokens in one batch transfer.
 pub const BATCH_MAX_TOKENS: usize = 10;
@@ -88,6 +97,9 @@ pub struct TokenRule {
     pub production_cap: u128,
     /// Cap per pack on `staging.mosaec.near`.
     pub staging_cap: u128,
+    /// Smallest home-chain withdrawal the bridge accepts. `None` keeps home-chain withdrawals of
+    /// this token closed until the minimum has been measured on mainnet.
+    pub min_home_withdraw: Option<u128>,
 }
 
 impl TokenRule {
@@ -110,6 +122,7 @@ pub const TOKEN_RULES: [TokenRule; 4] = [
         role: TokenRole::Collateral,
         production_cap: 100_000_000, // 1 ZEC
         staging_cap: 5_000_000,      // 0.05 ZEC
+        min_home_withdraw: None,
     },
     TokenRule {
         token_id: BTC,
@@ -117,6 +130,7 @@ pub const TOKEN_RULES: [TokenRule; 4] = [
         role: TokenRole::Collateral,
         production_cap: 1_000_000, // 0.01 BTC
         staging_cap: 70_000,       // 0.0007 BTC
+        min_home_withdraw: None,
     },
     TokenRule {
         token_id: SOL,
@@ -124,6 +138,7 @@ pub const TOKEN_RULES: [TokenRule; 4] = [
         role: TokenRole::Collateral,
         production_cap: 5_000_000_000, // 5 SOL
         staging_cap: 600_000_000,      // 0.6 SOL
+        min_home_withdraw: None,
     },
     TokenRule {
         token_id: USDC,
@@ -131,6 +146,7 @@ pub const TOKEN_RULES: [TokenRule; 4] = [
         role: TokenRole::Settlement,
         production_cap: 1_000_000_000, // 1,000 USDC
         staging_cap: 50_000_000,       // 50 USDC
+        min_home_withdraw: None,
     },
 ];
 
@@ -161,14 +177,34 @@ pub const GAS_DECIDE_RESERVE: Gas = Gas::from_tgas(25);
 /// `BATCH_MAX_TOKENS`, kept back from every `mt_on_transfer` chain.
 pub const GAS_VERIFIER_RESOLVE: Gas = Gas::from_tgas(10 + 5 * BATCH_MAX_TOKENS as u64);
 
-/// Minimum prepaid gas for a fill: four joined views, the decide receipt and two deliveries.
-pub const FILL_GAS: Gas = Gas::from_tgas(
-    4 * GAS_VERIFIER_VIEW.as_tgas()
-        + GAS_DECIDE_RESERVE.as_tgas()
+/// Attached to the registry's fill decide receipt: its own work, the payout with its callback,
+/// and `encumber` on the pack with its callback.
+pub const FILL_DECIDE_GAS: Gas = Gas::from_tgas(
+    GAS_DECIDE_RESERVE.as_tgas()
         + GAS_VERIFIER_TRANSFER.as_tgas()
         + GAS_CROSS_CALL.as_tgas()
         + 2 * GAS_DELIVERY_CALLBACK.as_tgas(),
 );
+/// Minimum gas left to the registry's `mt_on_transfer` for a fill: four joined verifier views
+/// plus the decide receipt with everything it schedules.
+pub const FILL_GAS: Gas =
+    Gas::from_tgas(4 * GAS_VERIFIER_VIEW.as_tgas() + FILL_DECIDE_GAS.as_tgas());
+/// Gas for the pack's `new` inside the mint batch.
+pub const GAS_PACK_INIT: Gas = Gas::from_tgas(10);
+/// Minimum prepaid gas for `mint`: the create batch with the pack's init, and its callback.
+pub const MINT_GAS: Gas = Gas::from_tgas(
+    GAS_PACK_INIT.as_tgas() + GAS_CROSS_CALL.as_tgas() + GAS_DELIVERY_CALLBACK.as_tgas(),
+);
+/// Minimum prepaid gas for a registry-to-pack command with its callback (`expire`, `withdraw`,
+/// `sync_encumbrance`, `finalize_exercise`, `claim_payout`).
+pub const COMMAND_GAS: Gas = Gas::from_tgas(
+    GAS_VERIFIER_WITHDRAW.as_tgas() + GAS_CROSS_CALL.as_tgas() + GAS_DELIVERY_CALLBACK.as_tgas(),
+);
+/// Gas reserved for `nft_resolve_transfer` after an `nft_transfer_call`.
+pub const GAS_NFT_RESOLVE: Gas = Gas::from_tgas(10);
+/// Minimum prepaid gas for `nft_transfer_call`: the receiver's hook and the resolve step.
+pub const NFT_TRANSFER_CALL_GAS: Gas =
+    Gas::from_tgas(GAS_CROSS_CALL.as_tgas() + GAS_NFT_RESOLVE.as_tgas());
 /// Attached to the pack's exercise decide receipt: its own work, the release with its callback,
 /// and `end_exercise` on the registry.
 pub const EXERCISE_DECIDE_GAS: Gas = Gas::from_tgas(
@@ -201,6 +237,8 @@ pub const NFT_STORAGE: NearToken = NearToken::from_millinear(10);
 /// Storage for one offer with ten content lines.
 pub const OFFER_STORAGE: NearToken = NearToken::from_millinear(10);
 /// Deposit required by `mint`: the pack, its reserve, the Title, the Ticket and one offer.
+/// The pack's share is forwarded to it; the rest stays with the registry for NFT and offer
+/// storage across every pawn round of the pack.
 pub const MINT_DEPOSIT: NearToken = NearToken::from_millinear(
     PACK_STORAGE.as_millinear()
         + PACK_OPS_RESERVE.as_millinear()
@@ -237,6 +275,7 @@ const _: () = assert!(FILL_GAS.as_gas() + GAS_VERIFIER_RESOLVE.as_gas() < MAX_TX
 const _: () = assert!(EXERCISE_GAS.as_gas() + GAS_VERIFIER_RESOLVE.as_gas() < MAX_TX_GAS.as_gas());
 const _: () = assert!(MIN_TERM_NS < DEFAULT_TERM_NS && DEFAULT_TERM_NS < MAX_TERM_NS);
 const _: () = assert!(GRACE_NS < MIN_TERM_NS);
+const _: () = assert!(MINT_GAS.as_gas() < MAX_TX_GAS.as_gas());
 
 #[cfg(test)]
 mod tests {
