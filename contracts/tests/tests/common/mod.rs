@@ -1,7 +1,7 @@
-//! Sandbox world for the Mosaec flows: the mainnet `intents.near` v0.4.5 bytes, two NEP-141
-//! tokens at the exact mainnet ids the allowlist names, the pack as a global contract by code
-//! hash, and a registry at `v0.mosaec.near`. Accounts outside `test.near` are written with state
-//! patches, which only a sandbox allows.
+//! Sandbox worlds for the Mosaec flows. Mainnet: the `intents.near` v0.4.5 bytes and NEP-141
+//! tokens patched in at their mainnet ids, the tool deploying the pack code and `v0.mosaec.near`.
+//! Testnet: an empty `mosaec.testnet` root from which the tool deploys everything, exactly as it
+//! does on the real testnet. Accounts outside `test.near` are written with state patches.
 
 #![allow(dead_code, reason = "each test file uses a different subset")]
 
@@ -11,8 +11,8 @@ use anyhow::{Context, Result, ensure};
 use mosaec_deploy::keychain::DeployKey;
 use mosaec_deploy::plan::plan;
 use mosaec_deploy::rpc::Rpc;
-use mosaec_deploy::target::{Env, Target};
-use mosaec_shared::constants::{MINT_DEPOSIT, USDC, ZEC};
+use mosaec_deploy::target::{DEFAULT_TEST_ASSETS, Env, Target};
+use mosaec_shared::constants::{MINT_DEPOSIT, TESTNET_USDC, TESTNET_ZEC, USDC, ZEC};
 use near_workspaces::network::Sandbox;
 use near_workspaces::result::ExecutionFinalResult;
 use near_workspaces::types::{AccessKey, AccountDetailsPatch, Gas, KeyType, NearToken, SecretKey};
@@ -56,28 +56,22 @@ pub struct World {
     pub worker: Worker<Sandbox>,
     pub key: SecretKey,
     pub verifier: Account,
-    pub zec: Account,
-    pub usdc: Account,
     pub root: Account,
     pub registry: Account,
     pub pack_code_hash: String,
+    /// The deploy target, for tool calls such as `fund`.
+    pub target: Target,
+    /// Verifier token ids of the collateral and settlement tokens on this world's network.
+    pub zec_id: &'static str,
+    pub usdc_id: &'static str,
 }
 
 impl World {
-    /// A world with the production registry at `v0.mosaec.near`.
+    /// Mainnet as it stands: the verifier at `intents.near` and tokens at their mainnet ids are
+    /// patched in, and the tool deploys only the pack code and `v0.mosaec.near`.
     pub async fn new() -> Result<Self> {
-        Self::with(Env::Production).await
-    }
-
-    /// A world with the staging registry at `staging.mosaec.near` (staging caps and terms).
-    pub async fn staging() -> Result<Self> {
-        Self::with(Env::Staging).await
-    }
-
-    async fn with(env: Env) -> Result<Self> {
         let (node, worker) = start_sandbox().await?;
         let key = SecretKey::from_random(KeyType::ED25519);
-
         let verifier = patch_account(
             &worker,
             &key,
@@ -85,15 +79,16 @@ impl World {
             Some(&read("res/intents-0.4.5.wasm")?),
         )
         .await?;
+        let admin = ["intents.near"];
         let config = json!({ "config": {
             "wnear_id": "wrap.near",
             "fees": { "fee": 0, "fee_collector": "intents.near" },
-            "roles": { "super_admins": ["intents.near"], "grantees": {
-                "DAO": ["intents.near"],
-                "PauseManager": ["intents.near"],
-                "UnpauseManager": ["intents.near"],
-                "UnrestrictedAccountLocker": ["intents.near"],
-                "UnrestrictedAccountUnlocker": ["intents.near"]
+            "roles": { "super_admins": admin, "grantees": {
+                "DAO": admin,
+                "PauseManager": admin,
+                "UnpauseManager": admin,
+                "UnrestrictedAccountLocker": admin,
+                "UnrestrictedAccountUnlocker": admin
             }}
         }});
         checked(
@@ -104,24 +99,46 @@ impl World {
                 .transact()
                 .await?,
         )?;
-
         let ft = read("res/fungible-token.wasm")?;
-        let zec = new_token(&worker, &key, ZEC, &ft, &verifier).await?;
-        let usdc = new_token(&worker, &key, USDC, &ft, &verifier).await?;
-
+        new_token(&worker, &key, ZEC, &ft, &verifier).await?;
+        new_token(&worker, &key, USDC, &ft, &verifier).await?;
         let root = patch_account(&worker, &key, "mosaec.near", None).await?;
-        let (registry, pack_code_hash) = deploy_with_tool(&worker, &key, env).await?;
-
+        let target = Target::for_env(Env::Mainnet, None, &[])?;
+        let (registry, pack_code_hash) = deploy_with_tool(&worker, &key, &target).await?;
         Ok(Self {
             _node: node,
             worker,
             key,
             verifier,
-            zec,
-            usdc,
             root,
             registry,
             pack_code_hash,
+            target,
+            zec_id: ZEC,
+            usdc_id: USDC,
+        })
+    }
+
+    /// Testnet as the tool builds it from an empty root: the verifier copy, the test tokens, the
+    /// pack code and `v0.mosaec.testnet`, all through `mosaec-deploy`.
+    pub async fn testnet() -> Result<Self> {
+        let (node, worker) = start_sandbox().await?;
+        let key = SecretKey::from_random(KeyType::ED25519);
+        let root = patch_account(&worker, &key, "mosaec.testnet", None).await?;
+        let target = Target::for_env(Env::Testnet, None, &DEFAULT_TEST_ASSETS)?;
+        let (registry, pack_code_hash) = deploy_with_tool(&worker, &key, &target).await?;
+        let verifier = Account::from_secret_key(target.verifier.clone(), key.clone(), &worker);
+        Ok(Self {
+            _node: node,
+            worker,
+            key,
+            verifier,
+            root,
+            registry,
+            pack_code_hash,
+            target,
+            zec_id: TESTNET_ZEC,
+            usdc_id: TESTNET_USDC,
         })
     }
 
@@ -129,13 +146,23 @@ impl World {
         Ok(self.worker.dev_create_account().await?)
     }
 
-    /// Credits `amount` of `token_id` to `owner`'s verifier balance (an FT deposit by the token).
+    /// Credits `amount` of `token_id` to `owner`'s verifier balance. On testnet this is the
+    /// tool's `fund`; on the mainnet world the patched token deposits directly.
     pub async fn fund(&self, owner: &Account, token_id: &str, amount: u128) -> Result<()> {
-        let token = if token_id == ZEC {
-            &self.zec
-        } else {
-            &self.usdc
-        };
+        if self.target.deploys_verifier {
+            let asset = token_account(token_id)
+                .as_str()
+                .split('.')
+                .next()
+                .unwrap_or_default()
+                .to_owned();
+            let rpc = Rpc::connect(&self.worker.rpc_addr());
+            let key = DeployKey::new(self.key.to_string().parse()?);
+            mosaec_deploy::fund(&rpc, &self.target, &key, &asset, owner.id(), amount).await?;
+            return Ok(());
+        }
+        let token =
+            Account::from_secret_key(token_account(token_id), self.key.clone(), &self.worker);
         let args = json!({
             "receiver_id": self.verifier.id(),
             "amount": amount.to_string(),
@@ -307,31 +334,26 @@ async fn new_token(
 async fn deploy_with_tool(
     worker: &Worker<Sandbox>,
     key: &SecretKey,
-    env: Env,
+    target: &Target,
 ) -> Result<(Account, String)> {
-    let target = Target::for_env(env, "mosaec.near")?;
-    let dir = contracts_dir();
-    let artifacts = mosaec_deploy::load_artifacts(
-        &dir.join("target/near/mosaec_pack/mosaec_pack.wasm")
-            .to_string_lossy(),
-        &dir.join("target/near/mosaec_registry/mosaec_registry.wasm")
-            .to_string_lossy(),
-    )?;
+    let artifacts = mosaec_deploy::load_artifacts(&contracts_dir(), target)?;
+    let slots = mosaec_deploy::plan::slots(target, &artifacts)?;
     let deploy_key = DeployKey::new(key.to_string().parse()?);
     let rpc = Rpc::connect(&worker.rpc_addr());
     wait_until_final(&rpc, &target.root).await?;
     let observed =
-        mosaec_deploy::observe(&rpc, &target, &artifacts, &deploy_key.public_key()).await?;
-    let steps = plan(&target, &artifacts, &observed)?;
+        mosaec_deploy::observe(&rpc, target, &artifacts, &slots, &deploy_key.public_key()).await?;
+    let steps = plan(&slots, &observed, &target.root)?;
     ensure!(
-        steps.len() == 3,
-        "fresh chain should need three steps, got {steps:?}"
+        steps.len() == 1 + 2 * slots.len(),
+        "fresh chain should need every step, got {steps:?}"
     );
-    mosaec_deploy::apply(&rpc, &target, &artifacts, &deploy_key, &steps).await?;
-    mosaec_deploy::verify(&rpc, &target, &artifacts).await?;
-    let again = mosaec_deploy::observe(&rpc, &target, &artifacts, &deploy_key.public_key()).await?;
+    mosaec_deploy::apply(&rpc, target, &artifacts, &slots, &deploy_key, &steps).await?;
+    mosaec_deploy::verify(&rpc, target, &artifacts, &slots).await?;
+    let again =
+        mosaec_deploy::observe(&rpc, target, &artifacts, &slots, &deploy_key.public_key()).await?;
     ensure!(
-        plan(&target, &artifacts, &again)?.is_empty(),
+        plan(&slots, &again, &target.root)?.is_empty(),
         "deploy is not idempotent"
     );
     let registry = Account::from_secret_key(target.registry.clone(), key.clone(), worker);
@@ -350,7 +372,7 @@ pub async fn advance_past(world: &World, target_ns: u64) -> Result<()> {
         if now > target_ns {
             return Ok(());
         }
-        // One block per second of block time is the sandbox's production rate; jump in chunks.
+        // The sandbox produces about one block per second of block time; jump in chunks.
         let gap_s = (target_ns - now) / 1_000_000_000 + 1;
         world.worker.fast_forward(gap_s.min(500_000)).await?;
     }

@@ -6,7 +6,7 @@
 
 use near_sdk::{Gas, NearToken};
 
-/// Account id of the NEAR Intents verifier on mainnet.
+/// Account id of the NEAR Intents verifier on mainnet; mainnet registries accept no other.
 pub const VERIFIER_ID: &str = "intents.near";
 
 /// NEP-297 event standard name and version.
@@ -30,10 +30,8 @@ pub const MINUTE_NS: u64 = 60 * 1_000_000_000;
 pub const MIN_TERM_NS: u64 = 7 * DAY_NS;
 /// Longest term an offer may carry on the production registry.
 pub const MAX_TERM_NS: u64 = 180 * DAY_NS;
-/// Shortest term on the staging registry, so a mainnet rehearsal sees an expiry the same hour.
-pub const STAGING_MIN_TERM_NS: u64 = 10 * MINUTE_NS;
-/// Longest term on the staging registry.
-pub const STAGING_MAX_TERM_NS: u64 = DAY_NS;
+/// Shortest term on testnet, so a rehearsal reaches expiry within the hour.
+pub const TESTNET_MIN_TERM_NS: u64 = 10 * MINUTE_NS;
 /// Term the app proposes by default.
 pub const DEFAULT_TERM_NS: u64 = 90 * DAY_NS;
 
@@ -41,14 +39,23 @@ pub const DEFAULT_TERM_NS: u64 = 90 * DAY_NS;
 // Tokens (verifier token ids and decimals)
 // ---------------------------------------------------------------------------------------------
 
-/// Zcash, bridged by the Omni bridge.
+/// Zcash on mainnet, bridged by the Omni bridge.
 pub const ZEC: &str = "nep141:zec.omft.near";
-/// Bitcoin, bridged by the Omni bridge.
+/// Bitcoin on mainnet, bridged by the Omni bridge.
 pub const BTC: &str = "nep141:btc.omft.near";
-/// Solana, bridged by the Omni bridge.
+/// Solana on mainnet, bridged by the Omni bridge.
 pub const SOL: &str = "nep141:sol.omft.near";
-/// Native USDC on NEAR.
+/// Native USDC on mainnet.
 pub const USDC: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+
+/// Test tokens on testnet, deployed by `mosaec-deploy` under the testnet root.
+pub const TESTNET_ZEC: &str = "nep141:zec.mosaec.testnet";
+/// Test Bitcoin on testnet.
+pub const TESTNET_BTC: &str = "nep141:btc.mosaec.testnet";
+/// Test Solana on testnet.
+pub const TESTNET_SOL: &str = "nep141:sol.mosaec.testnet";
+/// Test USDC on testnet.
+pub const TESTNET_USDC: &str = "nep141:usdc.mosaec.testnet";
 
 /// NFT token id prefix of a Title; the pack index follows (`t7`).
 pub const TITLE_PREFIX: &str = "t";
@@ -71,23 +78,42 @@ pub const MAX_PROMISE_RESULT_LEN: usize = 4_096;
 /// The verifier moves at most this many tokens in one batch transfer.
 pub const BATCH_MAX_TOKENS: usize = 10;
 
-/// Which caps and term bounds a registry enforces. Fixed at registry init.
+/// The network a registry serves. Fixed at registry init; it selects the token ids, the term
+/// bounds and the verifier the registry accepts.
 #[near_sdk::near(serializers = [borsh, json])]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CapProfile {
-    /// `v0.mosaec.near`.
-    Production,
-    /// `staging.mosaec.near`.
-    Staging,
+pub enum Network {
+    /// NEAR mainnet: `v0.mosaec.near` against `intents.near`.
+    Mainnet,
+    /// NEAR testnet: our deploy of the mainnet verifier bytes and test tokens.
+    Testnet,
 }
 
-impl CapProfile {
+impl Network {
     /// Inclusive `(shortest, longest)` term an offer may carry.
     #[must_use]
     pub const fn term_bounds(self) -> (u64, u64) {
         match self {
-            Self::Production => (MIN_TERM_NS, MAX_TERM_NS),
-            Self::Staging => (STAGING_MIN_TERM_NS, STAGING_MAX_TERM_NS),
+            Self::Mainnet => (MIN_TERM_NS, MAX_TERM_NS),
+            Self::Testnet => (TESTNET_MIN_TERM_NS, MAX_TERM_NS),
+        }
+    }
+
+    /// Top-level account suffix every Mosaec account on this network ends with.
+    #[must_use]
+    pub const fn account_suffix(self) -> &'static str {
+        match self {
+            Self::Mainnet => ".near",
+            Self::Testnet => ".testnet",
+        }
+    }
+
+    /// The verifier a registry on this network must use, when the network fixes one.
+    #[must_use]
+    pub const fn required_verifier(self) -> Option<&'static str> {
+        match self {
+            Self::Mainnet => Some(VERIFIER_ID),
+            Self::Testnet => None,
         }
     }
 }
@@ -101,76 +127,78 @@ pub enum TokenRole {
     Settlement,
 }
 
-/// One allowlisted token with its per-pack caps, in the token's smallest unit.
+/// One allowlisted asset with its per-pack cap, in the token's smallest unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TokenRule {
-    /// Verifier token id.
-    pub token_id: &'static str,
+    /// Verifier token id on mainnet.
+    pub mainnet_id: &'static str,
+    /// Verifier token id on testnet.
+    pub testnet_id: &'static str,
     /// Decimals of the underlying token.
     pub decimals: u8,
     /// Role the token may play.
     pub role: TokenRole,
-    /// Cap per pack on `v0.mosaec.near`.
-    pub production_cap: u128,
-    /// Cap per pack on `staging.mosaec.near`.
-    pub staging_cap: u128,
+    /// Cap per pack.
+    pub cap: u128,
     /// Smallest home-chain withdrawal the bridge accepts. `None` keeps home-chain withdrawals of
     /// this token closed until the minimum has been measured on mainnet.
     pub min_home_withdraw: Option<u128>,
 }
 
 impl TokenRule {
-    /// The cap this rule enforces under `profile`.
+    /// This asset's verifier token id on `network`.
     #[must_use]
-    pub const fn cap(&self, profile: CapProfile) -> u128 {
-        match profile {
-            CapProfile::Production => self.production_cap,
-            CapProfile::Staging => self.staging_cap,
+    pub const fn token_id(&self, network: Network) -> &'static str {
+        match network {
+            Network::Mainnet => self.mainnet_id,
+            Network::Testnet => self.testnet_id,
         }
     }
 }
 
-/// The v0 allowlist. Production caps keep the owner's funds at risk under $500 in the first
-/// release; staging caps keep every mainnet rehearsal under $60.
+/// The v0 allowlist. Caps keep the owner's funds at risk under $500 in the first mainnet
+/// release; testnet uses the same caps so a rehearsal behaves like production.
 pub const TOKEN_RULES: [TokenRule; 4] = [
     TokenRule {
-        token_id: ZEC,
+        mainnet_id: ZEC,
+        testnet_id: TESTNET_ZEC,
         decimals: 8,
         role: TokenRole::Collateral,
-        production_cap: 100_000_000, // 1 ZEC
-        staging_cap: 5_000_000,      // 0.05 ZEC
+        cap: 100_000_000, // 1 ZEC
         min_home_withdraw: None,
     },
     TokenRule {
-        token_id: BTC,
+        mainnet_id: BTC,
+        testnet_id: TESTNET_BTC,
         decimals: 8,
         role: TokenRole::Collateral,
-        production_cap: 1_000_000, // 0.01 BTC
-        staging_cap: 70_000,       // 0.0007 BTC
+        cap: 1_000_000, // 0.01 BTC
         min_home_withdraw: None,
     },
     TokenRule {
-        token_id: SOL,
+        mainnet_id: SOL,
+        testnet_id: TESTNET_SOL,
         decimals: 9,
         role: TokenRole::Collateral,
-        production_cap: 5_000_000_000, // 5 SOL
-        staging_cap: 600_000_000,      // 0.6 SOL
+        cap: 5_000_000_000, // 5 SOL
         min_home_withdraw: None,
     },
     TokenRule {
-        token_id: USDC,
+        mainnet_id: USDC,
+        testnet_id: TESTNET_USDC,
         decimals: 6,
         role: TokenRole::Settlement,
-        production_cap: 1_000_000_000, // 1,000 USDC
-        staging_cap: 50_000_000,       // 50 USDC
+        cap: 1_000_000_000, // 1,000 USDC
         min_home_withdraw: None,
     },
 ];
 
-/// The rule for `token_id`, if the token is allowlisted.
+/// The rule for `token_id` on `network`, if the token is allowlisted there.
 #[must_use]
-pub fn token_rule(token_id: &str) -> Option<&'static TokenRule> {
-    TOKEN_RULES.iter().find(|rule| rule.token_id == token_id)
+pub fn token_rule(network: Network, token_id: &str) -> Option<&'static TokenRule> {
+    TOKEN_RULES
+        .iter()
+        .find(|rule| rule.token_id(network) == token_id)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -292,8 +320,7 @@ const _: () = assert!(FILL_GAS.as_gas() + GAS_VERIFIER_RESOLVE.as_gas() < MAX_TX
 const _: () = assert!(EXERCISE_GAS.as_gas() + GAS_VERIFIER_RESOLVE.as_gas() < MAX_TX_GAS.as_gas());
 const _: () = assert!(MIN_TERM_NS < DEFAULT_TERM_NS && DEFAULT_TERM_NS < MAX_TERM_NS);
 const _: () = assert!(GRACE_NS < MIN_TERM_NS);
-const _: () =
-    assert!(STAGING_MIN_TERM_NS < STAGING_MAX_TERM_NS && STAGING_MAX_TERM_NS < MIN_TERM_NS);
+const _: () = assert!(TESTNET_MIN_TERM_NS < MIN_TERM_NS);
 const _: () = assert!(MINT_GAS.as_gas() < MAX_TX_GAS.as_gas());
 
 #[cfg(test)]
@@ -302,11 +329,24 @@ mod tests {
 
     #[test]
     fn caps_match_owner_limits() {
-        let zec = token_rule(ZEC).unwrap();
-        assert_eq!(zec.cap(CapProfile::Production), 10u128.pow(8));
-        let usdc = token_rule(USDC).unwrap();
-        assert_eq!(usdc.cap(CapProfile::Production), 1_000 * 10u128.pow(6));
-        assert!(TOKEN_RULES.iter().all(|r| r.staging_cap < r.production_cap));
+        let zec = token_rule(Network::Mainnet, ZEC).unwrap();
+        assert_eq!(zec.cap, 10u128.pow(8));
+        let usdc = token_rule(Network::Mainnet, USDC).unwrap();
+        assert_eq!(usdc.cap, 1_000 * 10u128.pow(6));
+    }
+
+    #[test]
+    fn token_ids_belong_to_their_network() {
+        assert!(token_rule(Network::Testnet, ZEC).is_none());
+        assert!(token_rule(Network::Mainnet, TESTNET_ZEC).is_none());
+        assert_eq!(
+            token_rule(Network::Testnet, TESTNET_ZEC).map(|r| r.mainnet_id),
+            Some(ZEC)
+        );
+        for rule in TOKEN_RULES {
+            assert!(rule.testnet_id.ends_with(Network::Testnet.account_suffix()));
+            assert!(rule.mainnet_id.starts_with(NEP141_PREFIX));
+        }
     }
 
     #[test]
@@ -316,6 +356,12 @@ mod tests {
             .filter(|r| r.role == TokenRole::Settlement)
             .collect();
         assert_eq!(settlement.len(), 1);
-        assert_eq!(settlement[0].token_id, USDC);
+        assert_eq!(settlement[0].mainnet_id, USDC);
+    }
+
+    #[test]
+    fn only_mainnet_fixes_the_verifier() {
+        assert_eq!(Network::Mainnet.required_verifier(), Some("intents.near"));
+        assert_eq!(Network::Testnet.required_verifier(), None);
     }
 }

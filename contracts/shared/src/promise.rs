@@ -4,18 +4,12 @@
 //! deploy and delete account. Mosaec contracts build calls with these helpers instead, so their
 //! wasm imports no key, deploy or delete host function; a build check asserts it.
 
-use near_sdk::{AccountId, AccountIdRef, Gas, NearToken, PromiseIndex, env};
+use near_sdk::{AccountId, Gas, NearToken, PromiseIndex, env};
 
-use crate::constants::{MAX_PROMISE_RESULT_LEN, VERIFIER_ID};
+use crate::constants::MAX_PROMISE_RESULT_LEN;
 
 /// No deposit.
 pub const NO_DEPOSIT: NearToken = NearToken::from_yoctonear(0);
-
-/// The NEAR Intents verifier account.
-#[must_use]
-pub fn verifier_id() -> AccountId {
-    AccountIdRef::new_or_panic(VERIFIER_ID).to_owned()
-}
 
 /// A function call on `receiver` with JSON `args`.
 #[must_use]

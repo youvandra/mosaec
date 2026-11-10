@@ -7,21 +7,22 @@ use mosaec_shared::constants::{
     GAS_CROSS_CALL, GAS_VERIFIER_TRANSFER, GAS_VERIFIER_VIEW, GAS_VERIFIER_WITHDRAW, ONE_YOCTO,
 };
 pub use mosaec_shared::promise::then_self;
-use mosaec_shared::promise::{NO_DEPOSIT, call as create, verifier_id};
+use mosaec_shared::promise::{NO_DEPOSIT, call as create};
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
 use near_sdk::{AccountId, PromiseIndex, env};
 
-/// `intents.near::mt_batch_transfer`, attaching 1 yoctoNEAR as NEP-245 requires.
+/// The verifier's `mt_batch_transfer`, attaching 1 yoctoNEAR as NEP-245 requires.
 #[must_use]
 pub fn verifier_batch_transfer(
+    verifier: &AccountId,
     receiver_id: &AccountId,
     token_ids: &[String],
     amounts: &[U128],
 ) -> PromiseIndex {
     let args = json!({ "receiver_id": receiver_id, "token_ids": token_ids, "amounts": amounts });
     create(
-        verifier_id(),
+        verifier.clone(),
         "mt_batch_transfer",
         &args.to_string(),
         ONE_YOCTO,
@@ -29,12 +30,17 @@ pub fn verifier_batch_transfer(
     )
 }
 
-/// `intents.near::ft_withdraw` to the token's home chain through its bridge memo.
+/// The verifier's `ft_withdraw` to the token's home chain through its bridge memo.
 #[must_use]
-pub fn verifier_ft_withdraw(token: &AccountId, amount: U128, memo: &str) -> PromiseIndex {
+pub fn verifier_ft_withdraw(
+    verifier: &AccountId,
+    token: &AccountId,
+    amount: U128,
+    memo: &str,
+) -> PromiseIndex {
     let args = json!({ "token": token, "receiver_id": token, "amount": amount, "memo": memo });
     create(
-        verifier_id(),
+        verifier.clone(),
         "ft_withdraw",
         &args.to_string(),
         ONE_YOCTO,
@@ -42,18 +48,18 @@ pub fn verifier_ft_withdraw(token: &AccountId, amount: U128, memo: &str) -> Prom
     )
 }
 
-/// `intents.near::pa_all_paused` joined with `is_account_locked(pack)`.
+/// The verifier's `pa_all_paused` joined with `is_account_locked(pack)`.
 #[must_use]
-pub fn verifier_pause_and_lock(pack: &AccountId) -> PromiseIndex {
+pub fn verifier_pause_and_lock(verifier: &AccountId, pack: &AccountId) -> PromiseIndex {
     let paused = create(
-        verifier_id(),
+        verifier.clone(),
         "pa_all_paused",
         "{}",
         NO_DEPOSIT,
         GAS_VERIFIER_VIEW,
     );
     let locked = create(
-        verifier_id(),
+        verifier.clone(),
         "is_account_locked",
         &json!({ "account_id": pack }).to_string(),
         NO_DEPOSIT,

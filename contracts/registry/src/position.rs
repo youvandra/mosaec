@@ -4,7 +4,7 @@
 
 use std::collections::HashSet;
 
-use mosaec_shared::constants::CapProfile;
+use mosaec_shared::constants::Network;
 use mosaec_shared::contents::Contents;
 use mosaec_shared::error::ensure;
 use mosaec_shared::terms::{check_offer, expiry};
@@ -117,7 +117,7 @@ impl Position {
         price: U128,
         offer_expires_at_ns: u64,
         now_ns: u64,
-        profile: CapProfile,
+        network: Network,
     ) -> MosaecResult<()> {
         ensure(matches!(self.stage, Stage::Free), MosaecError::State)?;
         ensure(self.payout.is_none(), MosaecError::Pending)?;
@@ -127,7 +127,7 @@ impl Position {
             price,
             offer_expires_at_ns,
             now_ns,
-            profile,
+            network,
         )
     }
 
@@ -337,7 +337,7 @@ mod tests {
                 token_id: ZEC.into(),
                 amount: U128(50_000_000),
             }],
-            CapProfile::Production,
+            Network::Mainnet,
         )
         .unwrap()
     }
@@ -381,15 +381,8 @@ mod tests {
         assert_eq!(offered().open_offer(offer()), Err(MosaecError::State));
         let p = Position::new(1, "t1".into());
         assert!(
-            p.check_new_offer(
-                &terms(),
-                USDC,
-                U128(PRICE),
-                NOW + 1,
-                NOW,
-                CapProfile::Production
-            )
-            .is_ok()
+            p.check_new_offer(&terms(), USDC, U128(PRICE), NOW + 1, NOW, Network::Mainnet)
+                .is_ok()
         );
     }
 
@@ -504,14 +497,7 @@ mod tests {
         let (free, _) = filled.position.close_pawn().unwrap();
         assert_eq!(free.clone().open_offer(offer()), Err(MosaecError::Pending));
         assert_eq!(
-            free.check_new_offer(
-                &terms(),
-                USDC,
-                U128(PRICE),
-                NOW + 1,
-                NOW,
-                CapProfile::Production
-            ),
+            free.check_new_offer(&terms(), USDC, U128(PRICE), NOW + 1, NOW, Network::Mainnet),
             Err(MosaecError::Pending)
         );
     }

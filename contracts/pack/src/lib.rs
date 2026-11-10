@@ -27,7 +27,7 @@ use near_sdk::serde_json::{self, json};
 use near_sdk::{AccountId, FunctionError, Gas, PanicOnDefault, PromiseIndex, env, near};
 
 pub use crate::phase::Phase;
-use mosaec_shared::promise::{read_json, verifier_id};
+use mosaec_shared::promise::read_json;
 
 #[near(
     contract_state,
@@ -39,6 +39,8 @@ use mosaec_shared::promise::{read_json, verifier_id};
 #[derive(Debug, PanicOnDefault)]
 pub struct Pack {
     registry: AccountId,
+    /// The NEAR Intents verifier this pack holds its balances in, fixed at init by the registry.
+    verifier: AccountId,
     phase: Phase,
     /// True while a release transfer is in flight, so two retries never both deliver.
     delivery_in_flight: bool,
@@ -52,6 +54,7 @@ pub struct Pack {
 #[derive(Debug)]
 pub struct PackStatus {
     pub registry: AccountId,
+    pub verifier: AccountId,
     pub phase: Phase,
     pub delivery_in_flight: bool,
     pub exercise_in_flight: bool,
@@ -73,7 +76,7 @@ impl Pack {
     /// Called by the registry in the batch that creates this account.
     #[init]
     #[must_use]
-    pub fn new(registry: AccountId) -> Self {
+    pub fn new(registry: AccountId, verifier: AccountId) -> Self {
         let created_by_registry = env::predecessor_account_id() == registry
             && env::current_account_id().is_sub_account_of(&registry);
         if !created_by_registry {
@@ -81,6 +84,7 @@ impl Pack {
         }
         Self {
             registry,
+            verifier,
             phase: Phase::Free,
             delivery_in_flight: false,
             exercise_in_flight: false,
@@ -147,7 +151,7 @@ impl Pack {
     ) {
         // Part of the NEP-245 interface; the verifier rejects approvals, so it equals the sender.
         let _ = previous_owner_ids;
-        if env::predecessor_account_id() != verifier_id() {
+        if env::predecessor_account_id() != self.verifier {
             MosaecError::NotVerifier.panic();
         }
         match self.route_inbound(&sender_id, &token_ids, &amounts, &msg) {
@@ -264,6 +268,7 @@ impl Pack {
     pub fn status(&self) -> PackStatus {
         PackStatus {
             registry: self.registry.clone(),
+            verifier: self.verifier.clone(),
             phase: self.phase.clone(),
             delivery_in_flight: self.delivery_in_flight,
             exercise_in_flight: self.exercise_in_flight,
@@ -291,6 +296,7 @@ impl Pack {
         ensure(amount.0 > 0, MosaecError::Amount)?;
         match destination {
             Destination::Verifier { account_id } => Ok(ext::verifier_batch_transfer(
+                &self.verifier,
                 &account_id,
                 &[token_id],
                 &[amount],
@@ -298,7 +304,12 @@ impl Pack {
             Destination::HomeChain { address } => {
                 let token = nep141_contract(&token_id)?;
                 let memo = home_chain_memo(&address)?;
-                Ok(ext::verifier_ft_withdraw(&token, amount, &memo))
+                Ok(ext::verifier_ft_withdraw(
+                    &self.verifier,
+                    &token,
+                    amount,
+                    &memo,
+                ))
             }
         }
     }
@@ -356,6 +367,7 @@ impl Pack {
         };
         ensure(!self.delivery_in_flight, MosaecError::Pending)?;
         let transfer = ext::verifier_batch_transfer(
+            &self.verifier,
             owed_to,
             &encumbrance.contents.token_ids(),
             &encumbrance.contents.amounts(),
@@ -372,7 +384,7 @@ impl Pack {
     fn try_record_disruption(&self) -> MosaecResult<PromiseIndex> {
         require_gas(DISRUPTION_GAS)?;
         self.phase.check_disruption_window(env::block_timestamp())?;
-        let views = ext::verifier_pause_and_lock(&env::current_account_id());
+        let views = ext::verifier_pause_and_lock(&self.verifier, &env::current_account_id());
         Ok(ext::then_self(
             views,
             "on_disruption_checked",
