@@ -22,7 +22,7 @@ Status: in development. Nothing in this repository is deployed yet.
 
 ## Development
 
-Prerequisites: Node 22 (see `.nvmrc`), pnpm 10 (`corepack enable`), rustup (the toolchain in `contracts/rust-toolchain.toml` installs on first use), [cargo-near](https://github.com/near/cargo-near) 0.23 and [gitleaks](https://github.com/gitleaks/gitleaks) for the pre-push hook.
+Prerequisites: Node 22 (see `.nvmrc`), pnpm 10 (`corepack enable`), rustup (the toolchain in `contracts/rust-toolchain.toml` installs on first use), [cargo-near](https://github.com/near/cargo-near) 0.22 or later and [gitleaks](https://github.com/gitleaks/gitleaks) for the pre-push hook.
 
 ```sh
 git clone --recurse-submodules https://github.com/youvandra/mosaec.git
