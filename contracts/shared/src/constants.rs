@@ -44,6 +44,15 @@ pub const SOL: &str = "nep141:sol.omft.near";
 /// Native USDC on NEAR.
 pub const USDC: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 
+/// Prefix of a NEP-141 token id inside the verifier.
+pub const NEP141_PREFIX: &str = "nep141:";
+/// Memo prefix the bridge tokens read as the home-chain destination of an `ft_withdraw`.
+pub const HOME_CHAIN_MEMO_PREFIX: &str = "WITHDRAW_TO:";
+/// Longest home-chain address passed to a bridge (Zcash unified addresses run past 100 chars).
+pub const MAX_HOME_ADDRESS_LEN: usize = 256;
+/// Most bytes read from a cross-contract result; bounds callback gas whatever the callee returns.
+pub const MAX_PROMISE_RESULT_LEN: usize = 1_024;
+
 /// The verifier moves at most this many tokens in one batch transfer.
 pub const BATCH_MAX_TOKENS: usize = 10;
 
@@ -145,8 +154,8 @@ pub const GAS_VERIFIER_WITHDRAW: Gas = Gas::from_tgas(50);
 pub const GAS_CROSS_CALL: Gas = Gas::from_tgas(15);
 /// A callback that only records the outcome of a delivery.
 pub const GAS_DELIVERY_CALLBACK: Gas = Gas::from_tgas(10);
-/// Fixed reserve for the value-returning decide receipt. It writes state and schedules the
-/// detached deliveries, so it carries their gas as well as its own.
+/// The value-returning decide receipt's own work: reading the promise result, writing the
+/// decision and scheduling the deliveries. The deliveries' gas is attached on top of this.
 pub const GAS_DECIDE_RESERVE: Gas = Gas::from_tgas(25);
 /// The verifier's `mt_resolve_transfer` reserves 10 + 5n Tgas; this is that cost at
 /// `BATCH_MAX_TOKENS`, kept back from every `mt_on_transfer` chain.
@@ -160,14 +169,24 @@ pub const FILL_GAS: Gas = Gas::from_tgas(
         + GAS_CROSS_CALL.as_tgas()
         + 2 * GAS_DELIVERY_CALLBACK.as_tgas(),
 );
-/// Minimum prepaid gas for an exercise: `begin_exercise`, the decide receipt, the release and
-/// `end_exercise`.
-pub const EXERCISE_GAS: Gas = Gas::from_tgas(
-    2 * GAS_CROSS_CALL.as_tgas()
-        + GAS_DECIDE_RESERVE.as_tgas()
+/// Attached to the pack's exercise decide receipt: its own work, the release with its callback,
+/// and `end_exercise` on the registry.
+pub const EXERCISE_DECIDE_GAS: Gas = Gas::from_tgas(
+    GAS_DECIDE_RESERVE.as_tgas()
         + GAS_VERIFIER_TRANSFER.as_tgas()
-        + GAS_DELIVERY_CALLBACK.as_tgas(),
+        + GAS_DELIVERY_CALLBACK.as_tgas()
+        + GAS_CROSS_CALL.as_tgas(),
 );
+/// Minimum gas left to the pack's `mt_on_transfer` for an exercise: `begin_exercise` plus the
+/// decide receipt with everything it schedules.
+pub const EXERCISE_GAS: Gas =
+    Gas::from_tgas(GAS_CROSS_CALL.as_tgas() + EXERCISE_DECIDE_GAS.as_tgas());
+/// Minimum prepaid gas for a release retry (`claim`): one transfer and its callback.
+pub const CLAIM_GAS: Gas =
+    Gas::from_tgas(GAS_VERIFIER_TRANSFER.as_tgas() + GAS_DELIVERY_CALLBACK.as_tgas());
+/// Minimum prepaid gas for `record_disruption`: two joined views and the callback.
+pub const DISRUPTION_GAS: Gas =
+    Gas::from_tgas(2 * GAS_VERIFIER_VIEW.as_tgas() + GAS_DELIVERY_CALLBACK.as_tgas());
 
 // ---------------------------------------------------------------------------------------------
 // Storage and NEAR reserves
