@@ -251,7 +251,7 @@ export interface FaucetGrant {
   readonly txHash: string;
 }
 
-/** Asks the testnet faucet for test ZEC and USDC. Throws `ApiError` with the API's message. */
+/** Asks the testnet faucet for test ZEC, BTC, SOL and USDC. Throws `ApiError` with the API's message. */
 export async function claimFaucet(accountId: string): Promise<FaucetGrant> {
   const response = await fetch(`${baseUrl()}/faucet?network=testnet`, {
     method: 'POST',
