@@ -24,12 +24,12 @@ import { useWallet } from '../../../lib/near/wallet';
 import { amountText, cashText, termText } from '../../../lib/pack-view';
 import { usdText, usdValue, useUsdPrices } from '../../../lib/prices';
 import { CoinTile } from '../_components/CoinTile';
+import { ConnectPanel } from '../_components/ConnectPanel';
 import { Countdown } from '../_components/Countdown';
 import { DueReminder } from '../_components/DueReminder';
 import { appPath, packPath } from '../_components/routes';
 import { Stat, StatRow } from '../_components/Stat';
 import { ValueCheck } from '../_components/ValueCheck';
-import { WalletButton } from '../_components/WalletButton';
 
 import { History } from './History';
 import styles from './positions.module.css';
@@ -330,50 +330,31 @@ function Book({
 
 function ConnectCard() {
   return (
-    <div className={styles.connect}>
-      <div className={styles.connectCopy}>
-        <AppIcon color="ink" size={48}>
-          <WalletIcon weight="fill" />
-        </AppIcon>
-        <h2 className="t-h3">Connect to see your pawns.</h2>
-        <p className="t-body">See every pawn you borrowed or lent.</p>
-        <div className={styles.connectAction}>
-          <WalletButton size="md" />
-        </div>
-      </div>
-      <ul className={styles.legend}>
-        {[
-          {
-            icon: <TicketIcon weight="fill" />,
-            color: 'orange' as const,
-            title: 'Borrowing',
-            body: 'Repay and the coins come home.',
-          },
-          {
-            icon: <StampIcon weight="fill" />,
-            color: 'green' as const,
-            title: 'Lending',
-            body: 'The repayment, or the coins.',
-          },
-          {
-            icon: <HandCoinsIcon weight="fill" />,
-            color: 'blue' as const,
-            title: 'Packs',
-            body: 'Coins ready for the next pawn.',
-          },
-        ].map((item) => (
-          <li key={item.title} className={styles.legendItem}>
-            <AppIcon color={item.color} size={36}>
-              {item.icon}
-            </AppIcon>
-            <span className={styles.stack}>
-              <span className="t-label">{item.title}</span>
-              <span className="t-caption">{item.body}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ConnectPanel
+      icon={<WalletIcon weight="fill" />}
+      title="Connect to see your pawns."
+      body="See every pawn you borrowed or lent."
+      items={[
+        {
+          icon: <TicketIcon weight="fill" />,
+          color: 'orange',
+          title: 'Borrowing',
+          body: 'Repay and the coins come home.',
+        },
+        {
+          icon: <StampIcon weight="fill" />,
+          color: 'green',
+          title: 'Lending',
+          body: 'The repayment, or the coins.',
+        },
+        {
+          icon: <HandCoinsIcon weight="fill" />,
+          color: 'blue',
+          title: 'Packs',
+          body: 'Coins ready for the next pawn.',
+        },
+      ]}
+    />
   );
 }
 

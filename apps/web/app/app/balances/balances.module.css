@@ -235,17 +235,16 @@
   color: var(--negative);
   font-size: 14px;
 }
-.empty {
+/* Coins the page covers, under the connect button. */
+.coins {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  max-width: 420px;
-  margin: 24px auto 0;
-  padding: 40px 28px;
-  border-radius: 28px;
-  border: 1px solid var(--border-primary);
-  text-align: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.coins > :last-child {
+  margin-left: 6px;
 }
 
 @media (max-width: 479.98px) {

@@ -3,12 +3,12 @@
 import {
   BellRingingIcon,
   CoinVerticalIcon,
-  CoinsIcon,
   HandCoinsIcon,
   PlugsConnectedIcon,
   RobotIcon,
   SealCheckIcon,
   StorefrontIcon,
+  TicketIcon,
   WalletIcon,
 } from '@phosphor-icons/react';
 import Link from 'next/link';
@@ -32,8 +32,8 @@ import type { ReactNode } from 'react';
 
 const ICONS: Readonly<Record<AppRoute['icon'], Icon>> = {
   market: StorefrontIcon,
-  positions: WalletIcon,
-  balances: CoinsIcon,
+  positions: TicketIcon,
+  balances: WalletIcon,
   borrow: HandCoinsIcon,
   verify: SealCheckIcon,
   desk: RobotIcon,
