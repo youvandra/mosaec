@@ -79,6 +79,7 @@ export const ERROR_CATALOG = {
   DESK_BUDGET: desk('The lending desk budget is spent for now.'),
   DESK_EXPOSURE: desk('The lending desk holds its limit for this asset.'),
   DESK_PAUSED: desk('The lending desk is paused.'),
+  DESK_AGENT: desk('The lending desk agent did not answer; nothing was signed.'),
 } as const satisfies Record<string, CatalogEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOG;

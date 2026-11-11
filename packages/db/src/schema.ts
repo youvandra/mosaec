@@ -208,3 +208,45 @@ export const sessions = pgTable(
   },
   (t) => [index('sessions_account_idx').on(t.network, t.accountId)],
 );
+
+/**
+ * One row per desk decision: what the agent proposed for an offer, the policy verdict, and the
+ * transaction when the desk filled. The desk service is the only writer.
+ */
+export const deskDecisions = pgTable(
+  'desk_decisions',
+  {
+    id: bigint('id', { mode: 'bigint' }).primaryKey().generatedAlwaysAsIdentity(),
+    network: network(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
+    /** `run` groups the decisions of one loop pass. */
+    runId: text('run_id').notNull(),
+    packId: text('pack_id'),
+    /** `fill` signed, `pass` declined by the agent, `refused` blocked by policy, `error` failed. */
+    verdict: text('verdict', { enum: ['fill', 'pass', 'refused', 'error'] }).notNull(),
+    /** Catalog code for `refused` and `error` (`DESK_POLICY`, `DESK_BUDGET`, ...). */
+    code: text('code'),
+    /** Plain reason shown on the desk page. */
+    reason: text('reason').notNull(),
+    /** The quote the policy computed: principal, repayment, apr, ltv, term. */
+    quote: jsonb('quote'),
+    principal: u128('principal'),
+    txHash: text('tx_hash'),
+    /** Model that proposed the action, or `policy` for checks without a model. */
+    actor: text('actor').notNull(),
+  },
+  (t) => [index('desk_decisions_recent_idx').on(t.network, t.decidedAt)],
+);
+
+/** Testnet faucet grants: one per account per day. The API is the only writer. */
+export const faucetClaims = pgTable(
+  'faucet_claims',
+  {
+    id: bigint('id', { mode: 'bigint' }).primaryKey().generatedAlwaysAsIdentity(),
+    network: network(),
+    accountId: text('account_id').notNull(),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }).notNull().defaultNow(),
+    txHash: text('tx_hash'),
+  },
+  (t) => [index('faucet_claims_account_idx').on(t.network, t.accountId, t.claimedAt)],
+);

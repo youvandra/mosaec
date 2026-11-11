@@ -64,14 +64,22 @@ describe('API', () => {
   let close: () => Promise<void>;
   let app: Hono;
 
+  const faucetSent: string[] = [];
+
   function build(overrides: { chain?: ChainProbe; readsPerMinute?: number } = {}): Hono {
     return createApp({
       db,
-      chain: overrides.chain ?? chainOk,
+      chain: { balanceOf: () => Promise.resolve(5_000_000n), ...(overrides.chain ?? chainOk) },
       allowedOrigins: ['https://app.mosaec.finance'],
       readsPerMinute: overrides.readsPerMinute ?? 1_000,
       clock: () => NOW_NS,
       log: () => undefined,
+      faucet: {
+        send: (_network, receiverId) => {
+          faucetSent.push(receiverId);
+          return Promise.resolve('FaucetTxHash');
+        },
+      },
     });
   }
 
@@ -246,5 +254,42 @@ describe('API', () => {
     expect(ok.headers.get('access-control-allow-origin')).toBe('https://app.mosaec.finance');
     const other = await app.request('/health', { headers: { origin: 'https://evil.example' } });
     expect(other.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('serves the desk overview with its policy and an empty book', async () => {
+    const res = await app.request('/desk?network=testnet');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      accountId: string;
+      policy: { maxLtvBps: number; maxFillUsdc: string };
+      stats: { fills: number; lentUsdc: string };
+      balances: { symbol: string; amount: string | null }[];
+    };
+    expect(body.accountId).toBe('desk.mosaec.testnet');
+    expect(body.policy.maxLtvBps).toBe(5_000);
+    expect(body.policy.maxFillUsdc).toBe('250000000');
+    expect(body.stats).toMatchObject({ fills: 0, lentUsdc: '0' });
+    expect(body.balances[0]).toMatchObject({ symbol: 'USDC', amount: '5000000' });
+  });
+
+  it('lists desk decisions newest first', async () => {
+    const res = await app.request('/desk/decisions?network=testnet&limit=5');
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { items: unknown[] }).items).toEqual([]);
+  });
+
+  it('grants test tokens once a day per account, on testnet only', async () => {
+    const post = (network: string) =>
+      app.request(`/faucet?network=${network}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accountId: 'alice.testnet' }),
+      });
+    const first = await post('testnet');
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as { txHash: string }).txHash).toBe('FaucetTxHash');
+    expect(faucetSent).toEqual(['alice.testnet']);
+    expect((await post('testnet')).status).toBe(429);
+    expect((await post('mainnet')).status).toBe(404);
   });
 });

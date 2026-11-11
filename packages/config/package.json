@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./assets": "./assets.ts",
+    "./desk": "./desk.ts",
     "./env": "./env.ts",
     "./networks": "./networks.ts",
     "./eslint": "./eslint.js",
