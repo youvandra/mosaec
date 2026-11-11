@@ -36,9 +36,14 @@ export interface FaucetSender {
  * Testnet only: grants test ZEC and USDC at most once a day per account and per client address,
  * within a daily cap, and never below a small reserve. Addresses are held in memory only, so
  * nothing about a visitor is stored.
+ *
+ * Claims run one at a time (one API process per host): every limit is checked and the grant sent
+ * and recorded before the next claim reads them, so parallel requests cannot all pass the checks,
+ * and sends from the faucet key never race for a nonce.
  */
 export class FaucetService {
   private readonly byAddress = new Map<string, number>();
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly claims: FaucetRepository,
@@ -58,7 +63,13 @@ export class FaucetService {
     return this.sender !== null;
   }
 
-  async claim(network: NetworkId, accountId: string, address: string) {
+  claim(network: NetworkId, accountId: string, address: string) {
+    const run = this.queue.then(() => this.claimNow(network, accountId, address));
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async claimNow(network: NetworkId, accountId: string, address: string) {
     if (network !== 'testnet' || this.sender === null) {
       throw new MosaecError('NOT_FOUND', { cause: new Error('the faucet runs on testnet only') });
     }
@@ -87,7 +98,6 @@ export class FaucetService {
     if (lines.some((line, i) => (held[i] ?? 0n) < line.amount * FAUCET_RESERVE_GRANTS)) {
       throw new MosaecError('FAUCET_LOW');
     }
-    /* Reserve the address before sending, so two quick requests cannot both pass. */
     this.byAddress.set(address, nowMs);
     let txHash: string;
     try {
