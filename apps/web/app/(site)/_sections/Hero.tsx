@@ -141,8 +141,8 @@ export function Hero() {
           account until you pay.
         </Reveal>
         <Reveal trigger="load" delay={0.8} className={styles.actions}>
-          <ButtonLink href={SITE.appUrl} as={Link}>
-            Open App
+          <ButtonLink href={`${SITE.appUrl}/borrow`} as={Link}>
+            Get USDC Now
           </ButtonLink>
           <ButtonLink href="/borrow" as={Link} variant="secondary" showIcon>
             How a Pawn Works
