@@ -55,6 +55,7 @@
   letter-spacing: -0.01em;
 }
 .value {
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -104,7 +105,17 @@
   background: var(--bg-tertiary);
   color: var(--text-secondary);
 }
+/* Status pills differ in width; a fixed column keeps the amounts beside them aligned. */
+.trailing {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 112px;
+}
 @media (max-width: 479.98px) {
+  .trailing {
+    min-width: 0;
+  }
   .card {
     border-radius: 22px;
   }

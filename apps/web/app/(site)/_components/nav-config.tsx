@@ -31,7 +31,7 @@ export const NAV_MENUS: readonly NavMenu[] = [
         },
         {
           title: 'Lend',
-          caption: 'A fixed repayment, coins as backstop',
+          caption: 'Fixed return, coins as backstop',
           href: '/lend',
           icon: (
             <AppIcon color="lime" size={TILE}>

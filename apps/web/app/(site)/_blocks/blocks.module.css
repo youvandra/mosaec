@@ -415,9 +415,17 @@
   }
   .cap {
     grid-template-columns: 32px 1fr 40px;
+    row-gap: 10px;
+    padding: 22px 0;
+  }
+  /* Number, title and icon share the first row; the body runs under the title. */
+  .cap > :last-child {
+    grid-column: 3;
+    grid-row: 1;
   }
   .cap > p {
     grid-column: 2 / -1;
+    grid-row: 2;
   }
   .checkDark:nth-child(3) {
     order: 4;
