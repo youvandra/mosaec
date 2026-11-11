@@ -57,6 +57,8 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <strong>Faucet</strong>: the account name you enter, to send test tokens once a day.
+                Your IP address is held in memory for a day so one visitor cannot drain the faucet;
+                it is never written to disk.
               </li>
             </ul>
           ),
