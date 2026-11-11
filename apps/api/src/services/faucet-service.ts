@@ -7,6 +7,8 @@ import type { NetworkId } from '@mosaec/config/assets';
 /** One grant: enough for a pawn on each side. */
 export const FAUCET_GRANT = [
   { symbol: 'ZEC', amount: 100_000_000n },
+  { symbol: 'BTC', amount: 1_000_000n },
+  { symbol: 'SOL', amount: 1_000_000_000n },
   { symbol: 'USDC', amount: 1_000_000_000n },
 ] as const;
 
