@@ -109,14 +109,22 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
           <Link href="/" className={styles.phoneBrand} aria-label="Mosaec home">
             <Logo variant="mark" />
           </Link>
-          <span className={styles.title}>
-            {active?.label ??
-              (pathname.startsWith(appPath('/faucet'))
-                ? 'Test Tokens'
-                : pathname.startsWith(appPath('/packs/'))
-                  ? 'Pack'
-                  : 'Mosaec')}
-          </span>
+          <nav aria-label="Breadcrumb" className={styles.title}>
+            <Link href="/" className={styles.crumbHome}>
+              Home
+            </Link>
+            <span className={styles.crumbSep} aria-hidden="true">
+              /
+            </span>
+            <span aria-current="page">
+              {active?.label ??
+                (pathname.startsWith(appPath('/faucet'))
+                  ? 'Test Tokens'
+                  : pathname.startsWith(appPath('/packs/'))
+                    ? 'Pack'
+                    : 'Mosaec')}
+            </span>
+          </nav>
           <div className={styles.actions}>
             {due.count > 0 && due.firstNs !== null && (
               <Tooltip label="Repay before the date or the lender keeps the coins." side="bottom">
