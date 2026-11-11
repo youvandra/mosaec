@@ -56,6 +56,9 @@ function parsed(text: string, decimals: number): bigint | null {
   }
 }
 
+const SEAL_POLLS = 10;
+const SEAL_POLL_MS = 1_500;
+
 function cash(amount: bigint | null): string {
   return amount === null ? '0.00' : padCents(formatUnits(amount, SETTLEMENT.decimals, 2));
 }
@@ -222,6 +225,7 @@ export function BorrowFlow() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [lockText, setLockText] = useState('1');
+  const [lockEdited, setLockEdited] = useState(false);
   const [principalText, setPrincipalText] = useState('500');
   const [termId, setTermId] = useState(DEFAULT_TERM_ID);
   const [repaymentText, setRepaymentText] = useState('');
@@ -277,6 +281,8 @@ export function BorrowFlow() {
         if (!live) return;
         setPackBalance(balance);
         setOffered(position?.position.stage.state === 'offered');
+        /* Resuming a pack: start from what it already holds unless the person typed an amount. */
+        if (balance > 0n && !lockEdited) setLockText(plain(balance, collateral.decimals));
       })
       .catch(() => {
         if (live) setPackBalance(null);
@@ -343,7 +349,18 @@ export function BorrowFlow() {
 
   const sendDeposit = async () => {
     if (packId === null || toDeposit === null || toDeposit === 0n) return;
-    await depositTx.run([calls.deposit(packId, [{ token_id: tokenId, amount: toDeposit }])]);
+    const target = inPack + toDeposit;
+    const sent = await depositTx.run([
+      calls.deposit(packId, [{ token_id: tokenId, amount: toDeposit }]),
+    ]);
+    if (sent !== null) {
+      /* Final-state reads trail the wallet by a few blocks: wait until the pack shows the coins. */
+      for (let i = 0; i < SEAL_POLLS; i += 1) {
+        const held = await views.balanceOf(packId, tokenId).catch(() => null);
+        if (held !== null && held >= target) break;
+        await new Promise((resolve) => setTimeout(resolve, SEAL_POLL_MS));
+      }
+    }
     refresh();
   };
 
@@ -460,7 +477,10 @@ export function BorrowFlow() {
           id="lock"
           label="You lock"
           value={lockText}
-          onChange={setLockText}
+          onChange={(value) => {
+            setLockText(value);
+            setLockEdited(true);
+          }}
           aside={
             accountId !== null && walletBalance !== null ? (
               <button
