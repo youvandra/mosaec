@@ -1,6 +1,12 @@
 'use client';
 
-import { ArrowDownIcon, ArrowUpIcon, CoinVerticalIcon } from '@phosphor-icons/react';
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ArrowsDownUpIcon,
+  VaultIcon,
+  WalletIcon,
+} from '@phosphor-icons/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
@@ -19,8 +25,8 @@ import { useWallet } from '../../../lib/near/wallet';
 import { usdText, usdValue, useUsdPrices } from '../../../lib/prices';
 import { CoinMark } from '../_components/CoinMark';
 import { CoinTile } from '../_components/CoinTile';
+import { ConnectPanel } from '../_components/ConnectPanel';
 import { appPath } from '../_components/routes';
-import { WalletButton } from '../_components/WalletButton';
 
 import styles from './balances.module.css';
 
@@ -109,14 +115,42 @@ export function BalancesDesk() {
 
   if (accountId === null) {
     return (
-      <div className={styles.empty}>
-        <AppIcon color="blue" size={56}>
-          <CoinVerticalIcon weight="fill" />
-        </AppIcon>
-        <h2 className="t-h4">Connect to see your balances</h2>
-        <p className="t-body-sm">ZEC, BTC, SOL, USDC and NEAR, in your wallet and in Mosaec.</p>
-        <WalletButton />
-      </div>
+      <ConnectPanel
+        icon={<WalletIcon weight="fill" />}
+        title="Connect to see your balances."
+        body="Your coins in the wallet and in Mosaec, side by side."
+        items={[
+          {
+            icon: <WalletIcon weight="fill" />,
+            color: 'ink',
+            title: 'In Your Wallet',
+            body: 'Coins your NEAR account holds.',
+          },
+          {
+            icon: <VaultIcon weight="fill" />,
+            color: 'blue',
+            title: 'In Mosaec',
+            body: 'Coins ready to pawn or to lend.',
+          },
+          {
+            icon: <ArrowsDownUpIcon weight="bold" />,
+            color: 'green',
+            title: 'Deposit and Withdraw',
+            body: 'One signature moves a coin either way.',
+          },
+        ]}
+        footer={
+          <div className={styles.coins}>
+            {ASSET_SYMBOLS.map((symbol) => (
+              <CoinTile key={symbol} symbol={symbol} size={32} />
+            ))}
+            <AppIcon color="light" size={32} mark>
+              <Image src={NEAR_MARK.src} alt="" width={20} height={20} />
+            </AppIcon>
+            <span className="t-caption">{ASSET_SYMBOLS.join(', ')} and NEAR</span>
+          </div>
+        }
+      />
     );
   }
   if (load.kind === 'error') {

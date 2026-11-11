@@ -7,7 +7,7 @@ export const metadata = { title: 'Balances' };
 export default function BalancesPage() {
   return (
     <>
-      <PageHeader title="Balances" lead="Move coins between your wallet and Mosaec." />
+      <PageHeader title="Your" accent="balances." lead="Move coins between your wallet and Mosaec." />
       <BalancesDesk />
     </>
   );

@@ -109,56 +109,12 @@
   border-radius: var(--radius-tile);
   background: var(--bg-secondary);
 }
-.connect {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
-  gap: 40px;
-  align-items: center;
-  padding: 48px;
-  border-radius: var(--radius-tile);
-  background: var(--bg-secondary);
-}
-.connectCopy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  max-width: 480px;
-}
-.connectAction {
-  margin-top: 8px;
-}
-.legend {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.legendItem {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  border-radius: var(--radius-panel);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-card);
-}
 @media (max-width: 1023.98px) {
-  .connect {
-    grid-template-columns: 1fr;
-    padding: 32px;
-  }
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 479.98px) {
-  .connect {
-    padding: 20px;
-    border-radius: var(--radius-panel);
-  }
   .list {
     grid-template-columns: 1fr;
   }
