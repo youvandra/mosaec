@@ -22,6 +22,7 @@ fuzz/artifacts/
 # Node
 node_modules/
 .next/
+.next-*/
 .turbo/
 dist/
 coverage/

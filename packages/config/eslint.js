@@ -18,6 +18,7 @@ export function createConfig(rootDir) {
       ignores: [
         '**/node_modules/',
         '**/.next/',
+        '**/.next-*/',
         '**/.turbo/',
         '**/dist/',
         '**/coverage/',

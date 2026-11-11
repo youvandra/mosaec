@@ -20,6 +20,7 @@
     "@near-wallet-selector/meteor-wallet": "10.1.4",
     "@near-wallet-selector/my-near-wallet": "10.1.4",
     "@phosphor-icons/react": "^2.1.10",
+    "@sentry/nextjs": "^11.10.0",
     "geist": "^1.8.2",
     "near-api-js": "^6.5.1",
     "next": "~15.5.4",
