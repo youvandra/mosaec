@@ -341,6 +341,14 @@ describe('API', () => {
     expect((await claim('alice.testnet', '203.0.113.30')).status).toBe(200);
   });
 
+  it('grants once when one address sends many claims at the same time', async () => {
+    faucetSent.length = 0;
+    const accounts = ['p1', 'p2', 'p3', 'p4', 'p5'].map((name) => `${name}.testnet`);
+    const results = await Promise.all(accounts.map((id) => claim(id, '203.0.113.77')));
+    expect(results.filter((res) => res.status === 200)).toHaveLength(1);
+    expect(faucetSent).toHaveLength(1);
+  });
+
   it('grants once a day per client address', async () => {
     expect((await claim('alice.testnet', '203.0.113.9')).status).toBe(200);
     const second = await claim('bob.testnet', '203.0.113.9');
