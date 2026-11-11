@@ -16,6 +16,11 @@
     "@mosaec/db": "workspace:*",
     "@mosaec/domain": "workspace:*",
     "@mosaec/sdk": "workspace:*",
+    "@near-js/accounts": "^2.5.1",
+    "@near-js/crypto": "^2.5.1",
+    "@near-js/providers": "^2.5.1",
+    "@near-js/signers": "^2.5.1",
+    "@near-js/transactions": "^2.5.1",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.9.0",
     "zod": "^4.1.0"

@@ -8,6 +8,20 @@
       "when": 1794362602806,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794411762850,
+      "tag": "0001_desk_decisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794412436781,
+      "tag": "0002_faucet_claims",
+      "breakpoints": true
     }
   ]
 }

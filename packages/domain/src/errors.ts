@@ -69,6 +69,11 @@ export const ERROR_CATALOG = {
   AUTH_SESSION: api(401, 'Your session has ended. Sign in again.'),
   CSRF: api(403, 'The request is missing its security token. Reload the page.'),
   RATE_LIMITED: api(429, 'Too many requests. Try again in a minute.', true),
+  FAUCET_ACCOUNT_USED: api(429, 'This account already received test tokens today.'),
+  FAUCET_IP_USED: api(429, 'Test tokens already went to this network today. Try again tomorrow.'),
+  FAUCET_DAILY_CAP: api(429, 'The faucet gave out its daily amount. Try again tomorrow.'),
+  FAUCET_NO_ACCOUNT: api(404, 'No NEAR testnet account has this name. Check the spelling.'),
+  FAUCET_LOW: api(503, 'The faucet is being refilled. Try again later.', true),
   NOT_FOUND: api(404, 'Nothing exists at this address.'),
   VALIDATION: api(400, 'Some fields are invalid.'),
   UPSTREAM_RPC: api(502, 'The NEAR node is unreachable right now.', true),
@@ -79,6 +84,7 @@ export const ERROR_CATALOG = {
   DESK_BUDGET: desk('The lending desk budget is spent for now.'),
   DESK_EXPOSURE: desk('The lending desk holds its limit for this asset.'),
   DESK_PAUSED: desk('The lending desk is paused.'),
+  DESK_AGENT: desk('The lending desk agent did not answer; nothing was signed.'),
 } as const satisfies Record<string, CatalogEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOG;

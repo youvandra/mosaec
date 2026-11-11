@@ -4,6 +4,7 @@ import { schema } from '@mosaec/db';
 import { createTestDb } from '@mosaec/db/testing';
 
 import { createApp } from './app';
+import { FAUCET_DAILY_CAP } from './services/faucet-service';
 
 import type { ChainProbe } from './services/health-service';
 import type { Db } from '@mosaec/db';
@@ -64,14 +65,26 @@ describe('API', () => {
   let close: () => Promise<void>;
   let app: Hono;
 
+  const faucetSent: string[] = [];
+
+  let faucetHeld = 10n ** 15n;
+
   function build(overrides: { chain?: ChainProbe; readsPerMinute?: number } = {}): Hono {
     return createApp({
       db,
-      chain: overrides.chain ?? chainOk,
+      chain: { balanceOf: () => Promise.resolve(5_000_000n), ...(overrides.chain ?? chainOk) },
       allowedOrigins: ['https://app.mosaec.finance'],
       readsPerMinute: overrides.readsPerMinute ?? 1_000,
       clock: () => NOW_NS,
       log: () => undefined,
+      faucet: {
+        send: (_network, receiverId) => {
+          faucetSent.push(receiverId);
+          return Promise.resolve('FaucetTxHash');
+        },
+        accountExists: (_network, accountId) => Promise.resolve(!accountId.startsWith('ghost')),
+        balances: (_network, tokenIds) => Promise.resolve(tokenIds.map(() => faucetHeld)),
+      },
     });
   }
 
@@ -246,5 +259,89 @@ describe('API', () => {
     expect(ok.headers.get('access-control-allow-origin')).toBe('https://app.mosaec.finance');
     const other = await app.request('/health', { headers: { origin: 'https://evil.example' } });
     expect(other.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('serves the desk overview with its policy and an empty book', async () => {
+    const res = await app.request('/desk?network=testnet');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      accountId: string;
+      policy: { maxLtvBps: number; maxFillUsdc: string };
+      stats: { fills: number; lentUsdc: string };
+      balances: { symbol: string; amount: string | null }[];
+    };
+    expect(body.accountId).toBe('desk.mosaec.testnet');
+    expect(body.policy.maxLtvBps).toBe(5_000);
+    expect(body.policy.maxFillUsdc).toBe('250000000');
+    expect(body.stats).toMatchObject({ fills: 0, lentUsdc: '0' });
+    expect(body.balances[0]).toMatchObject({ symbol: 'USDC', amount: '5000000' });
+  });
+
+  it('lists desk decisions newest first', async () => {
+    const res = await app.request('/desk/decisions?network=testnet&limit=5');
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { items: unknown[] }).items).toEqual([]);
+  });
+
+  const claim = (accountId: string, ip = '203.0.113.1', network = 'testnet') =>
+    app.request(`/faucet?network=${network}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+      body: JSON.stringify({ accountId }),
+    });
+
+  async function code(res: Response): Promise<string> {
+    return ((await res.json()) as { error: { code: string } }).error.code;
+  }
+
+  it('grants test tokens once a day per account, on testnet only', async () => {
+    faucetSent.length = 0;
+    const first = await claim('alice.testnet');
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as { txHash: string }).txHash).toBe('FaucetTxHash');
+    expect(faucetSent).toEqual(['alice.testnet']);
+    const again = await claim('alice.testnet', '198.51.100.7');
+    expect(again.status).toBe(429);
+    expect(await code(again)).toBe('FAUCET_ACCOUNT_USED');
+    expect((await claim('carol.testnet', '198.51.100.8', 'mainnet')).status).toBe(404);
+  });
+
+  it('refuses an account that does not exist, and sends nothing', async () => {
+    faucetSent.length = 0;
+    const res = await claim('ghost-name.testnet', '203.0.113.30');
+    expect(res.status).toBe(404);
+    expect(await code(res)).toBe('FAUCET_NO_ACCOUNT');
+    expect(faucetSent).toEqual([]);
+    expect((await claim('alice.testnet', '203.0.113.30')).status).toBe(200);
+  });
+
+  it('grants once a day per client address', async () => {
+    expect((await claim('alice.testnet', '203.0.113.9')).status).toBe(200);
+    const second = await claim('bob.testnet', '203.0.113.9');
+    expect(second.status).toBe(429);
+    expect(await code(second)).toBe('FAUCET_IP_USED');
+    expect((await claim('bob.testnet', '203.0.113.10')).status).toBe(200);
+  });
+
+  it('stops at the daily cap across accounts and addresses', async () => {
+    for (let i = 0; i < FAUCET_DAILY_CAP; i += 1) {
+      expect((await claim(`user${i.toString()}.testnet`, `10.0.0.${i.toString()}`)).status).toBe(
+        200,
+      );
+    }
+    const over = await claim('late.testnet', '10.0.1.1');
+    expect(over.status).toBe(429);
+    expect(await code(over)).toBe('FAUCET_DAILY_CAP');
+  });
+
+  it('refuses while the faucet is below its reserve, and sends nothing', async () => {
+    faucetSent.length = 0;
+    faucetHeld = 1n;
+    const res = await claim('alice.testnet', '203.0.113.20');
+    faucetHeld = 10n ** 15n;
+    expect(res.status).toBe(503);
+    expect(await code(res)).toBe('FAUCET_LOW');
+    expect(faucetSent).toEqual([]);
+    expect((await claim('alice.testnet', '203.0.113.20')).status).toBe(200);
   });
 });
