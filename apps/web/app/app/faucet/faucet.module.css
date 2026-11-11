@@ -64,26 +64,6 @@
   font-family: var(--font-mono);
   font-size: 15px;
 }
-.ok,
-.bad {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 12px;
-}
-.ok {
-  color: var(--positive);
-}
-.ok a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  text-decoration: underline;
-}
-.bad {
-  color: var(--negative);
-}
 @media (max-width: 479.98px) {
   .grant {
     grid-template-columns: 1fr;

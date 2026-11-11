@@ -1,11 +1,10 @@
 'use client';
 
-import { ArrowSquareOutIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 import { explorerTxUrl } from '@mosaec/config/networks';
-import { Button, cx, useToast } from '@mosaec/ui';
+import { Button, useToast } from '@mosaec/ui';
 
 import { claimFaucet } from '../../../lib/api';
 import { ASSET_MARK } from '../../../lib/asset-marks';
@@ -14,22 +13,16 @@ import { track } from '../../../lib/track';
 
 import styles from './faucet.module.css';
 
-type State =
-  | { readonly kind: 'idle' }
-  | { readonly kind: 'pending' }
-  | { readonly kind: 'done'; readonly txHash: string }
-  | { readonly kind: 'error'; readonly message: string };
-
 const GRANT = [
   { symbol: 'ZEC', amount: '1.00' },
   { symbol: 'USDC', amount: '1,000.00' },
 ] as const;
 
-/** One form: an account id, prefilled from the wallet, and the grant it receives. */
+/** One form: an account id, prefilled from the wallet, and the grant it receives. The toast is the only feedback. */
 export function FaucetPanel() {
   const { accountId } = useWallet();
   const [input, setInput] = useState('');
-  const [state, setState] = useState<State>({ kind: 'idle' });
+  const [pending, setPending] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -39,10 +32,9 @@ export function FaucetPanel() {
   const send = () => {
     const target = input.trim().toLowerCase();
     if (target === '') return;
-    setState({ kind: 'pending' });
+    setPending(true);
     claimFaucet(target)
       .then((grant) => {
-        setState({ kind: 'done', txHash: grant.txHash });
         track('faucet_claimed');
         toast.show({
           tone: 'success',
@@ -53,10 +45,11 @@ export function FaucetPanel() {
       })
       .catch((cause: unknown) => {
         /* The API names the exact limit hit (account, address, daily amount or a low faucet). */
-        setState({
-          kind: 'error',
-          message: cause instanceof Error ? cause.message : 'The faucet is unavailable.',
-        });
+        const message = cause instanceof Error ? cause.message : 'The faucet is unavailable.';
+        toast.show({ tone: 'error', title: 'No test tokens sent', body: message });
+      })
+      .finally(() => {
+        setPending(false);
       });
   };
 
@@ -97,24 +90,10 @@ export function FaucetPanel() {
             setInput(event.target.value);
           }}
         />
-        <Button type="submit" disabled={input.trim() === ''} loading={state.kind === 'pending'}>
-          {state.kind === 'pending' ? 'Sending' : 'Send Test Tokens'}
+        <Button type="submit" disabled={input.trim() === ''} loading={pending}>
+          {pending ? 'Sending' : 'Send Test Tokens'}
         </Button>
       </form>
-      {state.kind === 'done' && (
-        <p className={cx('t-body-sm', styles.ok)} role="status">
-          <CheckCircleIcon size={18} weight="fill" />
-          Sent. Ready to borrow or lend.
-          <a href={explorerTxUrl('testnet', state.txHash)} target="_blank" rel="noreferrer">
-            View transaction <ArrowSquareOutIcon size={12} weight="bold" />
-          </a>
-        </p>
-      )}
-      {state.kind === 'error' && (
-        <p className={cx('t-body-sm', styles.bad)} role="alert">
-          {state.message}
-        </p>
-      )}
     </section>
   );
 }
