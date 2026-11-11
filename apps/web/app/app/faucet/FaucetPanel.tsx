@@ -15,6 +15,8 @@ import styles from './faucet.module.css';
 
 const GRANT = [
   { symbol: 'ZEC', amount: '1.00' },
+  { symbol: 'BTC', amount: '0.01' },
+  { symbol: 'SOL', amount: '1.00' },
   { symbol: 'USDC', amount: '1,000.00' },
 ] as const;
 
@@ -38,7 +40,7 @@ export function FaucetPanel() {
         track('faucet_claimed');
         toast.show({
           tone: 'success',
-          title: '1 ZEC and 1,000 USDC sent',
+          title: 'Test ZEC, BTC, SOL and USDC sent',
           body: `To ${grant.accountId}`,
           action: { label: 'View transaction', href: explorerTxUrl('testnet', grant.txHash) },
         });

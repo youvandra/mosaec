@@ -70,7 +70,7 @@ const FAQ = [
   },
   {
     q: 'Which network is live?',
-    a: `NEAR testnet, with the registry ${TESTNET.registryAccountId} and test ZEC and USDC. The mainnet registry ${NETWORKS.mainnet.registryAccountId} is the next milestone.`,
+    a: `NEAR testnet, with the registry ${TESTNET.registryAccountId} and test ZEC, BTC, SOL and USDC. The mainnet registry ${NETWORKS.mainnet.registryAccountId} is the next milestone.`,
   },
 ] as const;
 

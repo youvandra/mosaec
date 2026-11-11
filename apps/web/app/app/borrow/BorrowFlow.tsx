@@ -548,7 +548,13 @@ export function BorrowFlow() {
                           disabled={!available}
                           className={styles.option}
                           onClick={() => {
-                            setCollateral(ASSETS[symbol]);
+                            const next = ASSETS[symbol];
+                            if (next.symbol !== collateral.symbol) {
+                              /* Each coin has its own cap: start from one full pack of the new coin. */
+                              setLockText(plain(next.capPerPack, next.decimals));
+                              setLockEdited(false);
+                            }
+                            setCollateral(next);
                             setAssetMenu(false);
                           }}
                         >

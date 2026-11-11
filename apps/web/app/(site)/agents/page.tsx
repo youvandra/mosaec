@@ -156,7 +156,7 @@ const FAQ = [
   },
   {
     q: 'Which network does an agent use?',
-    a: `NEAR testnet, against the registry ${NETWORKS.testnet.registryAccountId} with test ZEC and USDC. The mainnet registry ${NETWORKS.mainnet.registryAccountId} is the next milestone.`,
+    a: `NEAR testnet, against the registry ${NETWORKS.testnet.registryAccountId} with test ZEC, BTC, SOL and USDC. The mainnet registry ${NETWORKS.mainnet.registryAccountId} is the next milestone.`,
   },
 ] as const;
 
