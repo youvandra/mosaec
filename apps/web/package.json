@@ -10,9 +10,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mosaec/domain": "workspace:*",
+    "@mosaec/sdk": "workspace:*",
+    "@mosaec/ui": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
+    "geist": "^1.8.2",
     "next": "~15.5.4",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@mosaec/config": "workspace:*",

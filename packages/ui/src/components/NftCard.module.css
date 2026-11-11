@@ -1,0 +1,65 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 240px;
+  height: 152px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-nft);
+  color: var(--text-inverse);
+  background: var(--surface-inverse);
+  overflow: hidden;
+}
+.title {
+  background: linear-gradient(135deg, #1f1f1f 0%, #141414 100%);
+}
+.ticket {
+  background: linear-gradient(135deg, #2f7bff 0%, var(--ill-blue) 100%);
+}
+.lime {
+  background: var(--ill-lime);
+  color: var(--text-primary);
+}
+.top,
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.kind {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.meta {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
+}
+.value {
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+/* Ticket stub notches. */
+.ticket::before,
+.ticket::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--notch, var(--bg-primary));
+}
+.ticket::before {
+  left: -9px;
+}
+.ticket::after {
+  right: -9px;
+}

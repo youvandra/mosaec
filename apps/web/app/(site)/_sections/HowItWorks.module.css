@@ -1,0 +1,97 @@
+.header {
+  margin-bottom: 64px;
+}
+.body {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 64px;
+  align-items: start;
+}
+.nav {
+  position: sticky;
+  top: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-card);
+  color: var(--text-secondary);
+  font-size: 16px;
+  font-weight: 500;
+  transition:
+    color 0.2s var(--ease-link),
+    background-color 0.2s var(--ease-link);
+}
+.navItem[aria-current='step'] {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+.navIndex {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.card {
+  scroll-margin-top: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-showcase);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stage {
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+}
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 560px;
+}
+.foot strong {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+@media (max-width: 1199.98px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+  .nav {
+    display: none;
+  }
+}
+@media (max-width: 809.98px) {
+  .card {
+    padding: 16px;
+    border-radius: var(--radius-panel);
+  }
+  .stage {
+    min-height: 0;
+    padding: 24px 12px;
+  }
+}

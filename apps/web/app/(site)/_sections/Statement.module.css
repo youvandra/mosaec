@@ -1,0 +1,39 @@
+.section {
+  padding: 220px var(--gutter);
+}
+.text {
+  max-width: 920px;
+  margin: 0 auto;
+  text-align: center;
+}
+.piece {
+  display: inline-block;
+  white-space: pre;
+  vertical-align: middle;
+}
+.icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 6px;
+  transform: translateY(-4px);
+}
+@supports (animation-timeline: view()) {
+  [data-reveal='view'] .piece {
+    animation: mosaec-word linear both;
+    animation-timeline: view();
+    animation-range: entry calc(10% + var(--i) * 2%) entry calc(50% + var(--i) * 2%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] .piece {
+    animation: none !important;
+  }
+}
+@media (max-width: 809.98px) {
+  .section {
+    padding: 120px var(--gutter);
+  }
+  .icon {
+    margin: 0 3px;
+  }
+}

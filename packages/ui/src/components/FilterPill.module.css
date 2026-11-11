@@ -1,0 +1,25 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.pill:hover {
+  background: var(--bg-hover);
+}
+.pill[aria-pressed='true'],
+.pill[aria-current='page'] {
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+}
+.light {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+}

@@ -3,14 +3,27 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./base.css": "./src/styles/base.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0"
+  },
   "devDependencies": {
     "@mosaec/config": "workspace:*",
+    "@types/react": "^19.1.0",
+    "react": "^19.1.0",
     "typescript": "~5.9.3"
   }
 }

@@ -1,0 +1,110 @@
+.list {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.rowLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.rowValue {
+  font-size: 17px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 420px;
+}
+.flowStep {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding-bottom: 18px;
+  position: relative;
+}
+.flowStep::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 26px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-primary);
+}
+.flowStep:last-child::before {
+  display: none;
+}
+.flowDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--positive-subtle);
+  color: var(--positive);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.flowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+}
+.cardRow {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.cardTilt {
+  transform: rotate(-5deg);
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 260px;
+}
+.address {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  overflow: hidden;
+}
+@media (max-width: 809.98px) {
+  .cardRow {
+    gap: 28px;
+  }
+  .side {
+    width: 100%;
+  }
+}

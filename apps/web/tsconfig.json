@@ -3,6 +3,13 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["next-env.d.ts", "next.config.ts", "app", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "next.config.ts",
+    "middleware.ts",
+    "app",
+    "lib",
+    ".next/types/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }

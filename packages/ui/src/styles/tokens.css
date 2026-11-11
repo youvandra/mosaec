@@ -1,0 +1,106 @@
+/*
+ * Design tokens. Values come from the Framer design source (colour, type, radius, shadow and
+ * spacing styles). Amber is the one addition: the template has no warning colour.
+ */
+:root {
+  /* Background */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f7;
+  --bg-tertiary: #f0f0f0;
+  --bg-elevated: #ffffff;
+  --bg-hover: #e8e8e8;
+
+  /* Surface */
+  --surface-inverse: #141414;
+  --surface-inverse-raised: #262626;
+  --surface-inverse-muted: #404040;
+  --surface-glass: rgba(255, 255, 255, 0.84);
+
+  /* Text */
+  --text-primary: #141414;
+  --text-secondary: #707070;
+  --text-tertiary: #adadad;
+  --text-inverse: #ffffff;
+  --text-inverse-secondary: rgba(255, 255, 255, 0.6);
+
+  /* Border */
+  --border-primary: #ebebeb;
+  --border-strong: #dbdbdb;
+  --border-inverse: rgba(255, 255, 255, 0.08);
+
+  /* Accent */
+  --accent: #0066ff;
+  --accent-hover: #0052d9;
+  --accent-secondary: #b3d1ff;
+  --accent-subtle: #ebf3ff;
+  --on-accent: #ffffff;
+
+  /* Status */
+  --positive: #12a150;
+  --positive-subtle: #e7f6ee;
+  --negative: #e5484d;
+  --negative-subtle: #fdecec;
+  --warning: #b25e00;
+  --warning-subtle: #fff4e0;
+
+  /* Illustration */
+  --ill-green: #00d64f;
+  --ill-orange: #ff6b1a;
+  --ill-mint: #2ee6c5;
+  --ill-violet: #635bff;
+  --ill-blue: #0052ff;
+  --ill-coral: #d97757;
+  --ill-teal: #20808d;
+  --ill-lime: #ccff00;
+
+  /* Radius */
+  --radius-pill: 100px;
+  --radius-tray: 40px;
+  --radius-tile: 32px;
+  --radius-nav: 28px;
+  --radius-panel: 24px;
+  --radius-faq: 20px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-tag: 8px;
+
+  /* Shadow */
+  --shadow-icon:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 8px rgba(0, 0, 0, 0.12),
+    0 10px 20px -10px rgba(20, 20, 20, 0.32);
+  --shadow-card: 0 8px 20px -14px rgba(20, 20, 20, 0.25);
+  --shadow-panel: 0 24px 48px -28px rgba(20, 20, 20, 0.3);
+  --shadow-nav: 0 16px 40px -20px rgba(20, 20, 20, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-faq: 0 16px 32px -22px rgba(20, 20, 20, 0.25);
+  --shadow-showcase: 0 -12px 32px -24px rgba(20, 20, 20, 0.18);
+  --shadow-nft: 0 24px 40px -20px rgba(20, 20, 20, 0.45);
+
+  /* Type */
+  --font-sans: var(--font-switzer), 'Switzer', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), 'Geist Mono', ui-monospace, monospace;
+  --font-features: 'blwf', 'cv03', 'cv04', 'cv09', 'cv11';
+
+  /* Layout */
+  --container: 1136px;
+  --gutter: 32px;
+  --section-y: 128px;
+
+  /* Motion */
+  --ease-link: cubic-bezier(0.44, 0, 0.56, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-hover: 0.35s;
+}
+
+@media (max-width: 1199.98px) {
+  :root {
+    --gutter: 24px;
+    --section-y: 96px;
+  }
+}
+
+@media (max-width: 809.98px) {
+  :root {
+    --gutter: 20px;
+    --section-y: 72px;
+  }
+}
