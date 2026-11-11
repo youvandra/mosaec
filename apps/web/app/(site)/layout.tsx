@@ -4,22 +4,16 @@ import { Navigation } from '@mosaec/ui';
 
 import { SITE } from '../../lib/site';
 
+import { NAV_MENUS } from './_components/nav-config';
 import { Footer } from './_sections/Footer';
 
 import type { ReactNode } from 'react';
-
-const NAV_ITEMS = [
-  { label: 'How It Works', href: '/#how' },
-  { label: 'Safety', href: '/#safety' },
-  { label: 'Assets', href: '/#assets' },
-  { label: 'FAQ', href: '/#faq' },
-] as const;
 
 export default function SiteLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <>
       <Navigation
-        items={NAV_ITEMS}
+        menus={NAV_MENUS}
         homeHref="/"
         cta={{ label: 'Open App', href: SITE.appUrl }}
         linkAs={Link}

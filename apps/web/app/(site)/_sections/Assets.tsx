@@ -12,6 +12,8 @@ import styles from './Assets.module.css';
 
 import type { AssetSymbol } from '@mosaec/config/assets';
 
+const TICKER: readonly AssetSymbol[] = ['ZEC', 'BTC', 'SOL', 'USDC', 'ZEC', 'BTC', 'SOL', 'USDC'];
+
 const ROLE_LABEL = { collateral: 'Collateral', settlement: 'Loan and Repayment' } as const;
 
 function liveOnTestnet(symbol: AssetSymbol): boolean {
@@ -21,10 +23,22 @@ function liveOnTestnet(symbol: AssetSymbol): boolean {
 export function Assets() {
   return (
     <Section id="assets" label="Assets">
+      <div className={styles.ticker} aria-hidden="true">
+        <div className={styles.tickerRow}>
+          {[...TICKER, ...TICKER].map((symbol, index) => (
+            <span key={index} className={styles.tickerItem}>
+              <AppIcon color="light" size={40} mark>
+                <Image src={ASSET_MARK[symbol]} alt="" width={26} height={26} />
+              </AppIcon>
+              {symbol}
+            </span>
+          ))}
+        </div>
+      </div>
       <SectionHeader layout="split" className={styles.header}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <Reveal>
-            <Tag badge="5" shape={<CoinsIcon weight="fill" size={16} color="var(--ill-orange)" />}>
+            <Tag badge="7" shape={<CoinsIcon weight="fill" size={16} color="var(--ill-orange)" />}>
               Assets
             </Tag>
           </Reveal>

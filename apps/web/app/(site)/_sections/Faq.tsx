@@ -48,7 +48,7 @@ export function Faq() {
         <div className={styles.left}>
           <Reveal>
             <Tag
-              badge="7"
+              badge="8"
               shape={<QuestionIcon weight="bold" size={16} color="var(--ill-orange)" />}
             >
               FAQ
