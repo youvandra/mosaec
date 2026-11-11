@@ -6,6 +6,7 @@
 //! mosaec-deploy plan     --env testnet                 print every step and its cost; sends nothing
 //! mosaec-deploy apply    --env testnet --yes           send the steps, then verify
 //! mosaec-deploy fund     --env testnet --asset zec --account alice.testnet --amount 50000000
+//! mosaec-deploy delete-token --env testnet --asset zec --yes   remove a test token so apply recreates it
 //! ```
 //! Options: `--root <account>`, `--rpc <url>`, `--assets zec,usdc` (testnet test tokens),
 //! `--dir <contracts workspace>` (default `.`).
@@ -16,7 +17,7 @@ use anyhow::{Context, Result, bail, ensure};
 use mosaec_deploy::plan::{format_near, plan, root_spend, slots};
 use mosaec_deploy::rpc::Rpc;
 use mosaec_deploy::target::{DEFAULT_TEST_ASSETS, Env, Target};
-use mosaec_deploy::{apply, fund, keychain, load_artifacts, observe, verify};
+use mosaec_deploy::{apply, delete_test_token, fund, keychain, load_artifacts, observe, verify};
 use near_primitives::types::AccountId;
 
 struct Args {
@@ -101,7 +102,19 @@ async fn main() -> Result<()> {
                 sent.tx_hash
             );
         }
-        _ => bail!("usage: mosaec-deploy <key-new|key-show|plan|apply|fund> --env mainnet|testnet"),
+        "delete-token" => {
+            let asset = args.asset.as_deref().context("--asset is required")?;
+            ensure!(
+                args.yes,
+                "delete-token deletes an account; rerun with --yes"
+            );
+            let (rpc, key) = connect(&args, &target).await?;
+            let sent = delete_test_token(&rpc, &target, &key, asset).await?;
+            println!("deleted the {asset} test token: tx {}", sent.tx_hash);
+        }
+        _ => bail!(
+            "usage: mosaec-deploy <key-new|key-show|plan|apply|fund|delete-token> --env mainnet|testnet"
+        ),
     }
     Ok(())
 }

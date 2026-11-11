@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, bail, ensure};
 use near_crypto::PublicKey;
-use near_primitives::action::{Action, FunctionCallAction};
+use near_primitives::action::{Action, DeleteAccountAction, FunctionCallAction};
 use near_primitives::types::{AccountId, Gas};
 use near_token::NearToken;
 use serde_json::json;
@@ -198,4 +198,48 @@ pub async fn fund(
     }));
     rpc.send(&key.signer_for(&target.root), &token.account, vec![action])
         .await
+}
+
+/// Deletes the testnet token account for `asset` and returns its NEAR to the root, so the next
+/// `apply` recreates it from the current plan. Refuses while the verifier holds any of the token.
+///
+/// # Errors
+/// On a mainnet target, an asset the target did not deploy, a token still held by the verifier,
+/// or a failed transaction.
+pub async fn delete_test_token(
+    rpc: &Rpc,
+    target: &Target,
+    key: &DeployKey,
+    asset: &str,
+) -> Result<Sent> {
+    if !target.deploys_verifier {
+        bail!("delete-token runs on testnet only");
+    }
+    let token = target
+        .tokens
+        .iter()
+        .find(|t| t.asset == asset)
+        .with_context(|| format!("no test token `{asset}` in this deploy"))?;
+    let held = rpc
+        .view(
+            &token.account,
+            "ft_balance_of",
+            &json!({ "account_id": target.verifier }),
+        )
+        .await?;
+    ensure!(
+        held == json!("0"),
+        "{} still holds {held} of {}; refusing to delete",
+        target.verifier,
+        token.account
+    );
+    let action = Action::DeleteAccount(DeleteAccountAction {
+        beneficiary_id: target.root.clone(),
+    });
+    rpc.send(
+        &key.signer_for(&token.account),
+        &token.account,
+        vec![action],
+    )
+    .await
 }
