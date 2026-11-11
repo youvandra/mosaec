@@ -82,6 +82,15 @@ jobs:
             fi
           done
           exit "$status"
+      - name: Upload contract wasm
+        uses: actions/upload-artifact@v4
+        with:
+          name: contracts-wasm-${{ github.sha }}
+          path: |
+            contracts/target/near/mosaec_pack/mosaec_pack.wasm
+            contracts/target/near/mosaec_registry/mosaec_registry.wasm
+          if-no-files-found: error
+          retention-days: 90
       - name: Verify pinned bytes in res
         run: |
           for pinned in res/*.sha256; do
