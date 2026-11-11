@@ -22,6 +22,9 @@ export const GAS = {
   claim: 100n * TGAS,
   claimPayout: 100n * TGAS,
   nftTransfer: 30n * TGAS,
+  verifierDeposit: 100n * TGAS,
+  verifierWithdraw: 100n * TGAS,
+  storageDeposit: 30n * TGAS,
 } as const;
 
 /**
