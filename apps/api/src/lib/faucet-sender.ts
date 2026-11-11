@@ -19,6 +19,21 @@ export class NearFaucetSender implements FaucetSender {
     private readonly secretKey: string,
   ) {}
 
+  async accountExists(network: NetworkId, accountId: string): Promise<boolean> {
+    const provider = new JsonRpcProvider({ url: NETWORKS[network].rpcUrl });
+    try {
+      await provider.viewAccount(accountId, { finality: 'final' });
+      return true;
+    } catch (cause) {
+      /* Only a missing account means no; any other RPC failure surfaces as an error. */
+      const type = (cause as { readonly type?: unknown }).type;
+      if (type === 'AccountDoesNotExist' || type === 'UNKNOWN_ACCOUNT') {
+        return false;
+      }
+      throw cause;
+    }
+  }
+
   async balances(network: NetworkId, tokenIds: readonly string[]): Promise<readonly bigint[]> {
     const { rpcUrl, verifierAccountId } = NETWORKS[network];
     const provider = new JsonRpcProvider({ url: rpcUrl });
