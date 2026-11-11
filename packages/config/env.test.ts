@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import { NETWORK_IDS } from './assets';
 import {
   baseEnvSchema,
-  DEPLOYMENTS,
   EnvError,
   MAX_ACCOUNT_ID_LENGTH,
   MAX_VERIFIER_TOKEN_ID_LENGTH,
-  MOSAEC_ENVS,
   packAccountId,
   parseEnv,
   verifierNftTokenId,
 } from './env';
+import { NETWORKS } from './networks';
 
 const U64_MAX = 2n ** 64n - 1n;
 
@@ -35,8 +35,8 @@ describe('parseEnv', () => {
   });
 });
 
-describe.each(MOSAEC_ENVS)('%s deployment names', (env) => {
-  const { registryAccountId } = DEPLOYMENTS[env];
+describe.each(NETWORK_IDS)('%s registry names', (network) => {
+  const { registryAccountId } = NETWORKS[network];
   const longestPack = packAccountId(registryAccountId, U64_MAX);
 
   it('keeps the longest pack account id within the account id limit', () => {
