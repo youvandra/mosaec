@@ -47,3 +47,16 @@ export function suggestedRepayment(
   const denominator = BPS * monthNs * CENT;
   return principal + ((numerator + denominator - 1n) / denominator) * CENT;
 }
+
+/**
+ * Suggested loan as a share of the coins' reference value. The research priced every default rate
+ * at 50% loan to value; the contract reads no price, so this only fills the form.
+ */
+export const SUGGESTED_LTV = 0.5;
+
+/** Suggested principal (USDC units, whole dollars, never above `cap`) for coins worth `usd`. */
+export function suggestedPrincipal(usd: number, cap: bigint): bigint {
+  const dollars = BigInt(Math.max(Math.floor(usd * SUGGESTED_LTV), 0));
+  const units = dollars * 1_000_000n;
+  return units > cap ? cap : units;
+}
