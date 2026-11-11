@@ -1,22 +1,24 @@
 import {
   ArrowUpIcon,
-  BinocularsIcon,
   BrowserIcon,
   CalculatorIcon,
+  CalendarCheckIcon,
   ChatsCircleIcon,
-  CodeIcon,
+  CoinsIcon,
   HandCoinsIcon,
   ListMagnifyingGlassIcon,
   RobotIcon,
   ShieldCheckIcon,
   SparkleIcon,
-  TicketIcon,
   WalletIcon,
   WarningOctagonIcon,
+  ArrowUUpLeftIcon,
+  HammerIcon,
 } from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 
 import { ASSETS } from '@mosaec/config/assets';
+import { NETWORKS } from '@mosaec/config/networks';
 import { ERROR_CATALOG } from '@mosaec/domain';
 import { AppIcon, ButtonLink, Reveal, Section, StatusPill, Tag, WordReveal, cx } from '@mosaec/ui';
 
@@ -27,95 +29,134 @@ import {
   BluePanel,
   CapabilityList,
   Checkerboard,
+  CompareBars,
   Eyebrow,
   FaqBlock,
   SectionIntro,
 } from '../_blocks';
-import { EXAMPLE_PAWN as E } from '../_content/facts';
+import { EXAMPLE_PAWN as E, ROLLING_REPLAY } from '../_content/facts';
 
 import styles from './agents.module.css';
 
-import type { Capability } from '../_blocks';
+import type { Capability, CompareRow } from '../_blocks';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Agents',
   description:
-    'Mosaec pawns are a fixed repayment, a date and typed refusals: rules an agent reads from the API and signs with the SDK.',
+    'Bring your agent to Mosaec: it lends USDC to open pawns inside your rules and collects a fixed repayment on each date.',
 };
 
 const PROMPTS = [
-  'Quote a 90-day pawn on 1 ZEC',
-  'List open pawns under 2.5% a month',
-  'Redeem pack #2 before the date',
+  'Fill 90-day ZEC pawns paying 2.5% a month or more',
+  'Keep 1,000 USDC working across open pawns',
+  'Tell me when a repayment lands',
 ] as const;
 
 const USDC_DECIMALS = ASSETS.USDC.decimals;
 const PRINCIPAL = BigInt(E.principal.replace('.', '')) * 10n ** BigInt(USDC_DECIMALS - 2);
 const ZEC_RATE = SUGGESTED_MONTHLY_RATE_BPS.ZEC ?? 0;
 /** Mainnet term options, one open pack each, priced at the suggested ZEC rate. */
-const RESULTS = TERM_OPTIONS.filter((term) => term.testnetOnly !== true).map((term, index) => ({
-  pack: `Pack #${index.toString()}`,
-  term: term.label,
-  repayment: padCents(
-    formatUnits(suggestedRepayment(PRINCIPAL, ZEC_RATE, term.termNs), USDC_DECIMALS, 2),
-  ),
+const usdc = (amount: bigint): string => padCents(formatUnits(amount, USDC_DECIMALS, 2));
+const RESULTS = TERM_OPTIONS.filter((term) => term.testnetOnly !== true).map((term, index) => {
+  const repayment = suggestedRepayment(PRINCIPAL, ZEC_RATE, term.termNs);
+  return {
+    pack: `Pack #${index.toString()}`,
+    term: term.label,
+    repayment: usdc(repayment),
+    earned: usdc(repayment - PRINCIPAL),
+  };
+});
+const CHOSEN = RESULTS[RESULTS.length - 1];
+const EARNED_90 = CHOSEN?.earned ?? '';
+
+/** What 1,000 USDC returns over 90 days at each coin's suggested rate. */
+const STAKE = 1_000n * 10n ** BigInt(USDC_DECIMALS);
+const NINETY = TERM_OPTIONS.find((term) => term.id === 'd90')?.termNs ?? 0n;
+const RETURN_ROWS = (['ZEC', 'SOL', 'BTC'] as const).map((symbol) => {
+  const bps = SUGGESTED_MONTHLY_RATE_BPS[symbol] ?? 0;
+  const earned = suggestedRepayment(STAKE, bps, NINETY) - STAKE;
+  return { symbol, bps, earned };
+});
+const TOP_EARNED = RETURN_ROWS.reduce((max, row) => (row.earned > max ? row.earned : max), 1n);
+const RETURNS: readonly CompareRow[] = RETURN_ROWS.map((row) => ({
+  name: `${row.symbol} pawns`,
+  note: `${(row.bps / 100).toFixed(2)}% a month, coins worth about twice the loan`,
+  value: `+${usdc(row.earned)} USDC`,
+  ratio: Number((row.earned * 1000n) / TOP_EARNED) / 1000,
+  best: row.earned === TOP_EARNED,
 }));
 
-const SOURCES = [
-  { call: 'GET /offers?network=testnet', note: 'Open packs, contents and terms' },
-  { call: 'GET /packs/:id?network=testnet', note: 'One pack with its history' },
-  { call: 'new MosaecViews("testnet").positionOf(pack)', note: 'The offer, read from chain' },
-  { call: 'mosaecCalls("testnet").fill(...)', note: 'Exact call for the wallet' },
+const LEDGER = [
+  { label: 'Lent', value: `${E.principal} USDC`, icon: <HandCoinsIcon size={16} weight="bold" /> },
+  {
+    label: 'Due back',
+    value: `${CHOSEN?.repayment ?? ''} USDC`,
+    icon: <CalendarCheckIcon size={16} weight="bold" />,
+  },
+  {
+    label: `Earned in ${CHOSEN?.term ?? ''}`,
+    value: `+${EARNED_90} USDC`,
+    icon: <CoinsIcon size={16} weight="bold" />,
+  },
+  {
+    label: 'If the date passes',
+    value: `${E.collateral} ZEC is yours`,
+    icon: <WalletIcon size={16} weight="bold" />,
+  },
 ] as const;
 
 const CAPABILITIES: readonly Capability[] = [
   {
-    title: 'List',
-    body: 'list_offers returns every open pack with its contents, repayment and term. GET /offers serves the same rows today.',
+    title: 'Find',
+    body: 'The agent reads every open pawn: the coins sealed inside, the repayment and the date.',
     icon: <ListMagnifyingGlassIcon weight="fill" />,
     color: 'blue',
   },
   {
-    title: 'Quote',
-    body: 'quote_offer prices a pack against the desk policy. The SDK helpers aprBps and repaymentFor run the same arithmetic in any agent today.',
+    title: 'Price',
+    body: `Each repayment is checked against your floor rate. A ${E.termDays.toString()}-day ZEC pawn at ${E.monthlyRate} a month returns ${EARNED_90} USDC on ${E.principal}.`,
     icon: <CalculatorIcon weight="fill" />,
     color: 'violet',
   },
   {
-    title: 'Fill',
-    body: 'fill_offer pays the principal with the contents hash the agent read. The builder behind it, mosaecCalls().fill, ships in the SDK now.',
+    title: 'Lend',
+    body: 'The agent pays the principal and the Title, the claim on the coins, settles to your wallet in the same transaction.',
     icon: <HandCoinsIcon weight="fill" />,
     color: 'green',
   },
   {
-    title: 'Watch',
-    body: 'The indexer feed reports fills, redemptions and expiries per pack. GET /packs/:id returns that history today; the push feed is planned.',
-    icon: <BinocularsIcon weight="fill" />,
+    title: 'Collect',
+    body: 'The borrower repays by the date and the USDC lands in your wallet. When the date passes unpaid, the coins are yours.',
+    icon: <CoinsIcon weight="fill" />,
     color: 'orange',
   },
 ];
 
 const FAQ = [
   {
+    q: 'How much does an agent earn?',
+    a: `The borrower sets the repayment at fill and it never moves. At the suggested ZEC rate of ${E.monthlyRate} a month, ${E.principal} USDC lent for ${E.termDays.toString()} days comes back as ${E.repayment} USDC.`,
+  },
+  {
+    q: 'What if the borrower never repays?',
+    a: `The coins in the pack become yours, worth about twice the loan at fill. Across every ${ROLLING_REPLAY.termDays.toString()}-day ZEC start from ${ROLLING_REPLAY.span} at ${ROLLING_REPLAY.ltv} LTV, ${ROLLING_REPLAY.pawnForfeit} of pawns ended this way.`,
+  },
+  {
+    q: 'Can I exit before the date?',
+    a: 'The Title is an NFT, so another lender can buy it at any time. The buyer collects the repayment or the coins.',
+  },
+  {
     q: 'Is the house desk live?',
-    a: 'The desk is in development. Today any agent can read the API, build exact calls with the SDK, verify packs and read typed refusal codes.',
+    a: 'The desk is built and its policy and every decision are public on its page in the app. The badge beside it shows whether its loop is running right now.',
+  },
+  {
+    q: 'When do I get paid?',
+    a: 'When the borrower repays, on or before the date. The repayment lands in the pack the Title owns, and one withdraw moves it to your balance.',
   },
   {
     q: 'Which network does an agent use?',
-    a: 'NEAR testnet, against the registry v0.mosaec.testnet with test ZEC and USDC. The mainnet registry v0.mosaec.near is the next milestone.',
-  },
-  {
-    q: 'Does an agent need a price feed?',
-    a: 'A pawn has zero oracle and zero liquidation. The repayment and the date are fixed at fill, so an agent reasons about two numbers and one deadline.',
-  },
-  {
-    q: 'What happens when a fill goes wrong?',
-    a: 'Fill settles through one receipt chain. Any mismatch in contents, terms or amount sends the USDC back to the lender in full, and parseOutcome reads the reason as a catalog code.',
-  },
-  {
-    q: 'Can an agent hold a Ticket or a Title?',
-    a: 'Both are NFTs on the registry, so any NEAR account can hold, transfer or sell them. An agent holding a Ticket redeems with mosaecCalls().exercise before the date.',
+    a: `NEAR testnet, against the registry ${NETWORKS.testnet.registryAccountId} with test ZEC and USDC. The mainnet registry ${NETWORKS.mainnet.registryAccountId} is the next milestone.`,
   },
 ] as const;
 
@@ -130,14 +171,18 @@ function Hero() {
           </Tag>
         </Reveal>
         <WordReveal
+          id="agents-title"
           as="h1"
           trigger="load"
           className={cx('t-display', styles.title)}
-          lines={['Pawn rules', { text: 'an agent can read.', className: 't-accent' }]}
+          lines={[
+            'Bring your agent.',
+            { text: 'It earns while you sleep.', className: 't-accent' },
+          ]}
         />
         <Reveal as="p" trigger="load" delay={0.5} className={cx('t-body-lg', styles.lead)}>
-          Every Mosaec pawn is a fixed repayment, a date and a typed answer. Lending and borrowing
-          run on autopilot when the rules live in code.
+          Your agent reads the open pawns, fills the ones inside your rules and collects a fixed
+          repayment on each date. Coins worth about twice the loan back every one.
         </Reveal>
         <Reveal trigger="load" delay={0.65} className={styles.promptWrap}>
           <div className={styles.prompt} aria-label="Example prompt">
@@ -157,11 +202,11 @@ function Hero() {
           </ul>
         </Reveal>
         <Reveal trigger="load" delay={0.8} className={styles.actions}>
-          <ButtonLink href="/developers#sdk" as={Link}>
-            Read the SDK
-          </ButtonLink>
-          <ButtonLink href={SITE.appUrl} as={Link} variant="secondary" showIcon>
+          <ButtonLink href={SITE.appUrl} as={Link}>
             Open App
+          </ButtonLink>
+          <ButtonLink href="/rates" as={Link} variant="secondary" showIcon>
+            See the Rates
           </ButtonLink>
         </Reveal>
       </div>
@@ -189,8 +234,8 @@ function Conversation() {
             label="House Desk"
           />
         }
-        title={['Ask the desk,', { text: 'get a signed answer.', className: 't-accent' }]}
-        lead="The house lending desk is a budget-capped lender run by the team. Below is how it reads the book, built from live endpoints and SDK calls."
+        title={['Ask once,', { text: 'get paid on the date.', className: 't-accent' }]}
+        lead="Tell the agent your floor rate and budget. It finds the pawns that pay at least that much, lends into them and tracks every date."
       />
       <Reveal className={styles.window}>
         <div className={styles.windowBar}>
@@ -203,18 +248,17 @@ function Conversation() {
             <BrowserIcon size={12} weight="bold" />
             desk.mosaec.near
           </span>
-          <StatusPill tone="warning">In Development</StatusPill>
+          <StatusPill tone="warning" icon={HammerIcon}>
+            In Development
+          </StatusPill>
         </div>
         <div className={styles.windowBody}>
           <div className={styles.thread}>
-            <p className={styles.ask}>
-              Show open ZEC pawns on testnet at {E.monthlyRate} a month or less.
-            </p>
+            <p className={styles.ask}>Find ZEC pawns paying {E.monthlyRate} a month or more.</p>
             <div className={styles.reply}>
               <DeskMark />
               <p className="t-body-sm">
-                Three open packs match. Each holds {E.collateral} ZEC against {E.principal} USDC and
-                repays by a fixed date.
+                Three open pawns match. Each borrows {E.principal} USDC against {E.collateral} ZEC.
               </p>
             </div>
             <div className={styles.results}>
@@ -229,8 +273,8 @@ function Conversation() {
                   <span className={cx('t-h3', styles.resultValue)}>{E.collateral} ZEC</span>
                   <dl className={styles.resultMeta}>
                     <div>
-                      <dt>Repayment</dt>
-                      <dd>{result.repayment} USDC</dd>
+                      <dt>You earn</dt>
+                      <dd>+{result.earned} USDC</dd>
                     </div>
                     <div>
                       <dt>Term</dt>
@@ -240,32 +284,23 @@ function Conversation() {
                 </div>
               ))}
             </div>
-            <p className={styles.ask}>Fill pack #2.</p>
+            <p className={styles.ask}>Fill the {CHOSEN?.term.replace(' days', '-day')} one.</p>
             <div className={styles.reply}>
               <DeskMark />
               <p className="t-body-sm">
-                Call built for the desk wallet. The Title moves on settle.
+                Filled. The Title is in your wallet and {CHOSEN?.repayment} USDC is due back on the
+                date.
               </p>
             </div>
-            <div className={styles.callRows}>
-              <div className={styles.callRow}>
-                <span className="t-label">Pays</span>
-                <span className={styles.mono}>{E.principal} USDC</span>
-              </div>
-              <div className={styles.callRow}>
-                <span className="t-label">Method</span>
-                <span className={styles.mono}>mt_transfer_call</span>
-              </div>
-            </div>
           </div>
-          <aside className={styles.sources} aria-label="Sources">
-            <span className="t-mono">Sources</span>
-            {SOURCES.map((source) => (
-              <div key={source.call} className={styles.source}>
-                <CodeIcon size={16} weight="bold" className={styles.sourceIcon} />
+          <aside className={styles.sources} aria-label="This loan">
+            <span className="t-mono">This Loan</span>
+            {LEDGER.map((row) => (
+              <div key={row.label} className={styles.source}>
+                <span className={styles.sourceIcon}>{row.icon}</span>
                 <div>
-                  <code className={styles.sourceCall}>{source.call}</code>
-                  <span className="t-caption">{source.note}</span>
+                  <span className="t-caption">{row.label}</span>
+                  <span className={styles.sourceCall}>{row.value}</span>
                 </div>
               </div>
             ))}
@@ -273,7 +308,7 @@ function Conversation() {
         </div>
       </Reveal>
       <Reveal as="p" className={cx('t-caption', styles.note)} delay={0.2}>
-        Illustration of the house desk while it is built. Every source on the right works today.
+        Illustration of the house desk while it is built. Numbers use the suggested ZEC rate.
       </Reveal>
     </Section>
   );
@@ -298,7 +333,9 @@ function RefusalCard() {
       <code className={styles.codeChip}>E_TERMS</code>
       <p className="t-body-sm">{ERROR_CATALOG.E_TERMS.message}</p>
       <div className={styles.cardFoot}>
-        <StatusPill tone="positive">USDC Refunded</StatusPill>
+        <StatusPill tone="positive" icon={ArrowUUpLeftIcon}>
+          USDC Refunded
+        </StatusPill>
         <span className="t-caption">HTTP {ERROR_CATALOG.E_TERMS.httpStatus.toString()}</span>
       </div>
     </div>
@@ -313,17 +350,21 @@ function PolicyCard() {
           <WalletIcon weight="fill" />
         </AppIcon>
         <div>
-          <div className="t-label">Desk policy</div>
-          <div className="t-caption">desk.mosaec.near</div>
+          <div className="t-label">Your rules</div>
+          <div className="t-caption">Checked before every fill</div>
         </div>
         <StatusPill tone="neutral" dot={false} className={styles.push}>
-          Policy Shape
+          Example
         </StatusPill>
       </div>
       <dl className={styles.policy}>
         <div>
+          <dt>Floor rate</dt>
+          <dd>{E.monthlyRate} a month</dd>
+        </div>
+        <div>
           <dt>Budget</dt>
-          <dd>Set by the team</dd>
+          <dd>1,000 USDC</dd>
         </div>
         <div>
           <dt>Max per pawn</dt>
@@ -358,41 +399,59 @@ export default function AgentsPage() {
             <Eyebrow
               badge="2"
               shape={<SparkleIcon weight="fill" size={16} color="var(--ill-violet)" />}
-              label="Capabilities"
+              label="Where It Earns"
             />
           }
-          title={['Four tools,', 'one pawn book.']}
-          lead="The desk speaks MCP with three tools and one feed. Each maps to an SDK call or API route an agent can use on its own today."
+          title={['Four steps,', 'one fixed return.']}
+          lead="A borrower pawns coins for USDC and agrees the repayment at fill. The difference is the lender's return, set before any coin moves."
         />
         <CapabilityList items={CAPABILITIES} />
+      </Section>
+      <Section id="returns" label="Returns">
+        <SectionIntro
+          layout="split"
+          eyebrow={
+            <Eyebrow
+              badge="3"
+              shape={<CoinsIcon weight="fill" size={16} color="var(--ill-orange)" />}
+              label="Returns"
+            />
+          }
+          title={['1,000 USDC,', 'ninety days.']}
+          lead="What a full budget earns at each coin's suggested rate. The number is fixed at fill and paid on the date."
+        />
+        <CompareBars
+          rows={RETURNS}
+          footnote="Suggested rates at 50% loan to value. A borrower who misses the date leaves the coins instead."
+        />
       </Section>
       <Section id="guardrails" label="Guardrails">
         <SectionIntro
           layout="center"
           eyebrow={
             <Eyebrow
-              badge="3"
+              badge="4"
               shape={<ShieldCheckIcon weight="fill" size={16} color="var(--ill-green)" />}
               label="Guardrails"
             />
           }
-          title={['Limits an agent', 'reads as data.']}
+          title={['Your rules', 'cap every loss.']}
         />
         <Checkerboard
           cells={[
             {
               kind: 'dark',
               icon: <WarningOctagonIcon size={24} weight="fill" color="var(--ill-lime)" />,
-              title: 'Typed refusals',
-              body: 'A contract that declines answers with a catalog code and a plain message. The agent branches on the code and skips parsing prose.',
+              title: 'A bad fill costs nothing',
+              body: 'Any mismatch in coins, terms or amount refunds the USDC in the same settlement. The agent reads the reason as a code and moves to the next pawn.',
             },
             { kind: 'light', visual: <RefusalCard /> },
             { kind: 'light', visual: <PolicyCard /> },
             {
               kind: 'dark',
-              icon: <TicketIcon size={24} weight="fill" color="var(--ill-lime)" />,
-              title: 'Budget-capped desk',
-              body: 'The desk lends from a fixed budget with a cap per pawn. The server checks policy before it signs, and the registry enforces the per-pack caps again on chain.',
+              icon: <WalletIcon size={24} weight="fill" color="var(--ill-lime)" />,
+              title: 'Budget and floor set by you',
+              body: 'You set the budget, the floor rate and the size per pawn. The server checks them before it signs, and the registry enforces the per-pack caps again on chain.',
             },
           ]}
         />

@@ -3,7 +3,7 @@
 .headerStack {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   align-items: flex-start;
 }
 .headerCenter {
@@ -15,23 +15,45 @@
 .headerSplit {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 48px;
   align-items: end;
   margin-bottom: 48px;
+}
+.headerSplit > .headerStack {
+  gap: 24px;
 }
 .headerSplit > p {
   padding-bottom: 8px;
 }
 .headerGap {
-  margin-bottom: 48px;
+  margin-bottom: 64px;
+}
+
+/* FAQ block: the source's AI page FAQ, 760 wide, 40 under the title, 12 between items. */
+.faq {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.faqItems {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
 /* Split: copy on one side, a grey stage with a live visual on the other. */
 .split {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-columns: 1fr 1.3fr;
   gap: 64px;
   align-items: center;
+}
+.splitReverse {
+  grid-template-columns: 1.3fr 1fr;
 }
 .splitReverse .copy {
   order: 2;
@@ -342,7 +364,8 @@
 }
 
 @media (max-width: 1199.98px) {
-  .split {
+  .split,
+  .splitReverse {
     grid-template-columns: 1fr;
     gap: 40px;
   }

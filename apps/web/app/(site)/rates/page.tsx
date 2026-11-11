@@ -106,6 +106,7 @@ function Hero() {
           </Tag>
         </Reveal>
         <WordReveal
+          id="rates-title"
           as="h1"
           trigger="load"
           className={cx('t-display', styles.title)}

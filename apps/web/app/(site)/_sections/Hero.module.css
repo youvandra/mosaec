@@ -53,16 +53,16 @@
 }
 .center {
   left: 0;
-  top: 50px;
+  top: 0;
 }
 .folders {
   position: relative;
+  margin: 24px auto 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px 24px;
   max-width: 1136px;
-  margin: 0 auto;
 }
 @media (max-width: 1199.98px) {
   .far {

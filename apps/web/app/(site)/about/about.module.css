@@ -1,0 +1,34 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 170px var(--gutter) 48px;
+  text-align: center;
+  background: var(--bg-primary);
+}
+.hero > * {
+  position: relative;
+}
+.glow {
+  position: absolute !important;
+  inset: 0 0 auto;
+  height: 640px;
+  background: linear-gradient(180deg, var(--accent-subtle) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.title {
+  max-width: 900px;
+}
+.lead {
+  max-width: 560px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
