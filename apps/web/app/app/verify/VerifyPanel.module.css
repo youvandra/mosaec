@@ -94,8 +94,54 @@
   color: var(--text-secondary);
 }
 .spin {
+  display: block;
   animation: spin 0.9s linear infinite;
   color: var(--text-tertiary);
+}
+
+/* Label roll from the source (Pending button, Label Roll): the reading text slides up and out
+   while the value slides in from below, on --ease-roll, one row after the next. */
+.roll {
+  position: relative;
+  display: inline-grid;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: top;
+}
+.rollItem {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+/* The leaving copy stops taking space, so the box takes the size of the value. */
+.rollOut {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  animation: roll-out 0.45s var(--ease-roll) var(--delay, 0ms) both;
+}
+.rollIn {
+  animation: roll-in 0.45s var(--ease-roll) var(--delay, 0ms) both;
+}
+@keyframes roll-out {
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes roll-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+.placeholder {
+  color: var(--text-tertiary);
+}
+.tile {
+  flex: none;
+  border-radius: 12px;
 }
 @keyframes spin {
   to {
@@ -121,11 +167,6 @@
   background: var(--surface-inverse);
   color: var(--text-inverse);
   box-shadow: var(--shadow-nft);
-}
-.verdictLoading {
-  gap: 14px;
-  padding: 20px;
-  min-height: 360px;
 }
 .head {
   display: flex;
@@ -160,8 +201,13 @@
 .callFail {
   color: var(--negative);
 }
-.call svg {
+.callIcon {
   flex: none;
+  width: 40px;
+  height: 40px;
+}
+.callIcon .spin {
+  color: var(--text-inverse-secondary);
 }
 .callText {
   display: flex;
@@ -169,6 +215,7 @@
   gap: 2px;
 }
 .callTitle {
+  display: grid;
   font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.03em;
@@ -188,6 +235,22 @@
   background: var(--surface-inverse-raised);
 }
 .slotValue {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.slotValue .placeholder,
+.holders .placeholder,
+.status .placeholder {
+  color: var(--text-inverse-secondary);
+}
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.line {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -211,7 +274,13 @@
   border-radius: 18px;
   background: var(--surface-inverse-raised);
 }
+.holders dd .rollItem {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .holders dd {
+  display: grid;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -250,6 +319,13 @@
 .link:hover {
   background: var(--surface-inverse-muted);
 }
+.linkIdle {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.slotEnter {
+  animation: roll-in 0.45s var(--ease-roll) var(--delay, 0ms) both;
+}
 
 @media (max-width: 899.98px) {
   .result {
@@ -276,7 +352,13 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .spin {
+  .spin,
+  .rollIn,
+  .slotEnter {
     animation: none;
+  }
+  .rollOut {
+    animation: none;
+    visibility: hidden;
   }
 }

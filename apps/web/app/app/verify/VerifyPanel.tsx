@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { NETWORKS, explorerAccountUrl } from '@mosaec/config/networks';
-import { AppIcon, Button, ErrorState, Skeleton, cx } from '@mosaec/ui';
+import { AppIcon, Button, ErrorState, cx } from '@mosaec/ui';
 
 import { PAWN_STATUS } from '../../../lib/deal-status';
 import { formatDateTimeNs } from '../../../lib/format';
@@ -27,9 +27,9 @@ import { packPath } from '../_components/routes';
 
 import styles from './VerifyPanel.module.css';
 
-import type { Check, CheckResult, PackReport } from '../../../lib/near/verify';
+import type { Check, CheckResult, PackReport, PlannedCheck } from '../../../lib/near/verify';
 import type { AppIconColor } from '@mosaec/ui';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 const ACCOUNT_ID = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
 
@@ -45,8 +45,48 @@ const RESULT: Readonly<Record<CheckResult, { icon: ReactNode; color: AppIconColo
   skip: { icon: <MinusIcon weight="bold" />, color: 'light' },
 };
 
-function short(account: string | null): string {
-  return account ?? 'Nobody';
+/** Pause between one value rolling in and the next, so the result settles top to bottom. */
+const STAGGER_MS = 60;
+
+function delay(step: number): CSSProperties {
+  return { '--delay': `${(step * STAGGER_MS).toString()}ms` } as CSSProperties;
+}
+
+/**
+ * The source's label roll: while reading, `from` shows; once `to` is given, `from` slides up and
+ * out as `to` slides in from below. Both share one grid cell, so the box keeps the larger size.
+ */
+function Roll({
+  from,
+  to,
+  step = 0,
+  className,
+}: {
+  readonly from: ReactNode;
+  readonly to?: ReactNode;
+  readonly step?: number;
+  readonly className?: string | undefined;
+}) {
+  const done = to !== undefined;
+  return (
+    <span className={cx(styles.roll, className)} style={delay(step)}>
+      <span className={cx(styles.rollItem, done && styles.rollOut)} aria-hidden={done}>
+        {from}
+      </span>
+      {done && <span className={cx(styles.rollItem, styles.rollIn)}>{to}</span>}
+    </span>
+  );
+}
+
+function Spinner({ size = 16 }: { readonly size?: number }) {
+  return <CircleNotchIcon size={size} weight="bold" className={styles.spin} />;
+}
+
+function packLabel(target: string, registry: string): string {
+  const [head] = target.split('.');
+  return head !== undefined && /^\d+$/.test(head) && target === `${head}.${registry}`
+    ? `Pack #${head}`
+    : 'Account';
 }
 
 export function VerifyPanel() {
@@ -66,7 +106,7 @@ export function VerifyPanel() {
       return;
     }
     if (!ACCOUNT_ID.test(target)) {
-      setState({ kind: 'error', message: 'Enter a NEAR account id, like 0.' + registry + '.' });
+      setState({ kind: 'error', message: `Enter a NEAR account id, like 0.${registry}.` });
       return;
     }
     let live = true;
@@ -116,7 +156,7 @@ export function VerifyPanel() {
               setInput(event.target.value);
             }}
           />
-          <Button type="submit" disabled={state.kind === 'loading'}>
+          <Button type="submit" loading={state.kind === 'loading'}>
             Verify
           </Button>
         </form>
@@ -164,88 +204,120 @@ export function VerifyPanel() {
         </ListCard>
       )}
 
-      {state.kind === 'loading' && (
-        <div className={styles.result} aria-busy="true">
-          <div className={cx(styles.verdict, styles.verdictLoading)}>
-            <Skeleton width="40%" />
-            <Skeleton width="80%" height={28} />
-            <Skeleton width="100%" height={72} />
-            <Skeleton width="100%" height={72} />
-          </div>
-          <ListCard title="Checks" pill={<SoftPill tone="neutral">Reading the chain</SoftPill>}>
-            {planned.map((item) => (
-              <ListRow
-                key={item.id}
-                icon={
-                  <AppIcon color="light" size={36}>
-                    <CircleNotchIcon weight="bold" className={styles.spin} />
-                  </AppIcon>
-                }
-                title={item.label}
-                meta={<span className={styles.source}>{item.source}</span>}
-              />
-            ))}
-          </ListCard>
-        </div>
+      {(state.kind === 'loading' || state.kind === 'done') && (
+        <Report
+          key={`${network}:${target}`}
+          report={state.kind === 'done' ? state.report : null}
+          target={target}
+          label={packLabel(target, registry)}
+          planned={planned}
+        />
       )}
-
-      {state.kind === 'done' && <Report report={state.report} target={target} />}
     </div>
   );
 }
 
-function Report({ report, target }: { readonly report: PackReport; readonly target: string }) {
+/**
+ * One layout for reading and for the result: the ticket and the rows are on screen from the first
+ * frame with their real labels, and each value rolls in where it will stay.
+ */
+function Report({
+  report,
+  target,
+  label,
+  planned,
+}: {
+  readonly report: PackReport | null;
+  readonly target: string;
+  readonly label: string;
+  readonly planned: readonly PlannedCheck[];
+}) {
   const { network } = useNetwork();
-  const { checks, summary } = report;
-  const failed = checks.filter((item) => item.result === 'fail').length;
-  const ran = checks.filter((item) => item.result !== 'skip').length;
+  const reading = report === null;
+  const checks = report?.checks;
+  const summary = report?.summary;
+  const failed = checks?.filter((item) => item.result === 'fail').length ?? 0;
+  const ran = checks?.filter((item) => item.result !== 'skip').length ?? 0;
   const passed = failed === 0;
-  const status = summary.status === null ? null : PAWN_STATUS[summary.status];
+  const isPack = summary?.index !== null;
+  const status = summary?.status == null ? null : PAWN_STATUS[summary.status];
+  const rpcHost = new URL(NETWORKS[network].rpcUrl).host;
+  const placeholder = <span className={styles.placeholder}>Reading</span>;
 
   return (
-    <div className={styles.result}>
+    <div className={cx(styles.result, reading && styles.reading)} aria-busy={reading}>
       <section className={styles.verdict} aria-label="Verdict">
         <div className={styles.head}>
-          <span className={styles.mono}>
-            {summary.index === null ? 'Not a pack' : `Pack #${summary.index}`}
-          </span>
-          {status !== null && <span className={styles.status}>{status.label}</span>}
+          <span className={styles.mono}>{summary?.index === null ? 'Not a pack' : label}</span>
+          <Roll
+            className={styles.status}
+            from="Reading"
+            to={reading ? undefined : (status?.label ?? 'Unknown')}
+          />
         </div>
-        <div className={cx(styles.call, !passed && styles.callFail)}>
-          {passed ? (
-            <SealCheckIcon size={40} weight="fill" />
-          ) : (
-            <SealWarningIcon size={40} weight="fill" />
-          )}
+        <div className={cx(styles.call, !reading && !passed && styles.callFail)}>
+          <Roll
+            className={styles.callIcon}
+            from={<Spinner size={40} />}
+            to={
+              reading ? undefined : passed ? (
+                <SealCheckIcon size={40} weight="fill" />
+              ) : (
+                <SealWarningIcon size={40} weight="fill" />
+              )
+            }
+          />
           <span className={styles.callText}>
-            <span className={styles.callTitle}>
-              {passed
-                ? 'Pack checks out'
-                : `${failed.toString()} ${failed === 1 ? 'check' : 'checks'} failed`}
-            </span>
-            <span className={styles.callNote}>
-              {ran - failed} of {ran} checks passed
-            </span>
+            <Roll
+              className={styles.callTitle}
+              from="Reading the chain"
+              to={
+                reading
+                  ? undefined
+                  : passed
+                    ? 'Pack checks out'
+                    : `${failed.toString()} ${failed === 1 ? 'check' : 'checks'} failed`
+              }
+            />
+            <Roll
+              className={styles.callNote}
+              step={1}
+              from={`${planned.length.toString()} checks from your browser`}
+              to={
+                reading
+                  ? undefined
+                  : `${(ran - failed).toString()} of ${ran.toString()} checks passed`
+              }
+            />
           </span>
         </div>
 
-        {summary.index !== null && (
+        {isPack && (
           <>
             <div className={styles.slot}>
               <span className={styles.mono}>Coins inside</span>
-              {summary.contents.length === 0 ? (
-                <span className={styles.slotValue}>Empty</span>
-              ) : (
-                summary.contents.map((line) => (
-                  <span key={line.text} className={styles.slotValue}>
-                    <CoinMark symbol={line.symbol} size={22} />
-                    {line.text}
-                  </span>
-                ))
-              )}
+              <Roll
+                className={styles.slotValue}
+                step={2}
+                from={placeholder}
+                to={
+                  summary === undefined ? undefined : summary.contents.length === 0 ? (
+                    'Empty'
+                  ) : (
+                    <span className={styles.lines}>
+                      {summary.contents.map((line) => (
+                        <span key={line.text} className={styles.line}>
+                          <CoinMark symbol={line.symbol} size={22} />
+                          {line.text}
+                        </span>
+                      ))}
+                    </span>
+                  )
+                }
+              />
             </div>
-            {summary.repay !== null && (
-              <div className={styles.slot}>
+            {summary?.repay != null && (
+              <div className={cx(styles.slot, styles.slotEnter)} style={delay(3)}>
                 <span className={styles.mono}>
                   {summary.dueNs === null ? 'Repay' : `Repay by ${formatDateTimeNs(summary.dueNs)}`}
                 </span>
@@ -255,11 +327,23 @@ function Report({ report, target }: { readonly report: PackReport; readonly targ
             <dl className={styles.holders}>
               <div>
                 <dt className={styles.mono}>Title</dt>
-                <dd>{short(summary.titleOwner)}</dd>
+                <dd>
+                  <Roll
+                    step={3}
+                    from={placeholder}
+                    to={summary === undefined ? undefined : (summary.titleOwner ?? 'Nobody')}
+                  />
+                </dd>
               </div>
               <div>
                 <dt className={styles.mono}>Ticket</dt>
-                <dd>{short(summary.ticketOwner)}</dd>
+                <dd>
+                  <Roll
+                    step={4}
+                    from={placeholder}
+                    to={summary === undefined ? undefined : (summary.ticketOwner ?? 'Nobody')}
+                  />
+                </dd>
               </div>
             </dl>
           </>
@@ -267,14 +351,19 @@ function Report({ report, target }: { readonly report: PackReport; readonly targ
 
         <div className={styles.foot}>
           <span className={styles.proof}>
-            Read in your browser from {report.rpcHost}
-            {report.blockHeight !== null &&
+            {reading ? 'Reading' : 'Read'} in your browser from {rpcHost}
+            {report?.blockHeight != null &&
               ` at block ${report.blockHeight.toLocaleString('en-US')}`}
             .
           </span>
           <div className={styles.links}>
-            {summary.index !== null && (
-              <Link href={packPath(target)} className={styles.link}>
+            {isPack && (
+              <Link
+                href={packPath(target)}
+                className={cx(styles.link, reading && styles.linkIdle)}
+                aria-disabled={reading}
+                tabIndex={reading ? -1 : undefined}
+              >
                 Open Pack
               </Link>
             )}
@@ -294,32 +383,66 @@ function Report({ report, target }: { readonly report: PackReport; readonly targ
       <ListCard
         title="Checks"
         pill={
-          <SoftPill tone={passed ? 'positive' : 'negative'}>
-            {ran - failed} of {ran} passed
-          </SoftPill>
+          reading ? (
+            <SoftPill tone="neutral">Reading the chain</SoftPill>
+          ) : (
+            <SoftPill tone={passed ? 'positive' : 'negative'}>
+              {ran - failed} of {ran} passed
+            </SoftPill>
+          )
         }
       >
-        {checks.map((item) => (
-          <CheckRow key={item.id} item={item} />
+        {planned.map((item, index) => (
+          <CheckRow
+            key={item.id}
+            item={item}
+            check={checks?.find((one) => one.id === item.id)}
+            step={index}
+          />
         ))}
       </ListCard>
     </div>
   );
 }
 
-function CheckRow({ item }: { readonly item: Check }) {
-  const result = RESULT[item.result];
+function CheckRow({
+  item,
+  check,
+  step,
+}: {
+  readonly item: PlannedCheck;
+  readonly check: Check | undefined;
+  readonly step: number;
+}) {
+  const result = check === undefined ? undefined : RESULT[check.result];
   return (
     <ListRow
       icon={
-        <AppIcon color={result.color} size={36}>
-          {result.icon}
-        </AppIcon>
+        <Roll
+          className={styles.tile}
+          step={step}
+          from={
+            <AppIcon color="light" size={36}>
+              <Spinner />
+            </AppIcon>
+          }
+          to={
+            result === undefined ? undefined : (
+              <AppIcon color={result.color} size={36}>
+                {result.icon}
+              </AppIcon>
+            )
+          }
+        />
       }
       title={item.label}
       meta={
         <span className={styles.meta}>
-          <span>{item.detail}</span>
+          <Roll
+            step={step}
+            from={<span className={styles.placeholder}>Reading</span>}
+            to={check?.detail}
+          />
           <span className={styles.source}>{item.source}</span>
         </span>
       }
