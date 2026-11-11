@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  CaretDownIcon,
+  CheckIcon,
+  LockSimpleIcon,
+  StampIcon,
+  TicketIcon,
+} from '@phosphor-icons/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -8,99 +15,35 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ASSETS } from '@mosaec/config/assets';
 import { NETWORKS } from '@mosaec/config/networks';
 import { parseUnits } from '@mosaec/domain';
-import { MINT_DEPOSIT_YOCTO, MosaecViews, mosaecCalls } from '@mosaec/sdk';
-import { Button, ButtonLink, FilterPill, cx } from '@mosaec/ui';
+import { MINT_DEPOSIT_YOCTO, MosaecViews, aprBps, mosaecCalls } from '@mosaec/sdk';
+import { Button, ButtonLink, Segmented, cx, useConfirm } from '@mosaec/ui';
 
 import { getPositions } from '../../../lib/api';
 import { ASSET_MARK } from '../../../lib/asset-marks';
-import { formatUnits } from '../../../lib/format';
+import { formatUnits, padCents } from '../../../lib/format';
+import { SIGN_FOOTNOTE } from '../../../lib/legal';
 import { useNetwork } from '../../../lib/near/network';
 import { useTransaction } from '../../../lib/near/useTransaction';
 import { useWallet } from '../../../lib/near/wallet';
 import { SUGGESTED_MONTHLY_RATE_BPS, TERM_OPTIONS, suggestedRepayment } from '../../../lib/rates';
+import { track } from '../../../lib/track';
 import actionStyles from '../_components/ActionCard.module.css';
-import { Facts } from '../_components/Panel';
+import { ListCard, SoftPill } from '../_components/ListCard';
 import { packPath } from '../_components/routes';
-import { TxStatus } from '../_components/TxStatus';
 import { WalletButton } from '../_components/WalletButton';
 
 import styles from './BorrowFlow.module.css';
 
 import type { Pack } from '../../../lib/api';
+import type { TxState } from '../../../lib/near/useTransaction';
 import type { Asset, AssetSymbol } from '@mosaec/config/assets';
 import type { ReactNode } from 'react';
 
 const NS_PER_MS = 1_000_000n;
 const OFFER_OPEN_NS = 3n * 24n * 3_600_000_000_000n;
 const SETTLEMENT = ASSETS.USDC;
-const YOCTO_PER_NEAR = 10n ** 24n;
 const DEFAULT_TERM_ID = 'd90';
 const FALLBACK_RATE_BPS = 250;
-
-type StepState = 'locked' | 'active' | 'done';
-
-function Step({
-  index,
-  title,
-  state,
-  children,
-}: {
-  readonly index: number;
-  readonly title: string;
-  readonly state: StepState;
-  readonly children: ReactNode;
-}) {
-  return (
-    <section className={styles.step} data-state={state} aria-label={title}>
-      <div className={styles.stepHead}>
-        <span className={styles.num}>{index}</span>
-        <h2 className="t-h5">{title}</h2>
-      </div>
-      {state !== 'locked' && children}
-    </section>
-  );
-}
-
-function AmountField({
-  label,
-  value,
-  onChange,
-  asset,
-  hint,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly onChange: (value: string) => void;
-  readonly asset: Asset;
-  readonly hint?: ReactNode;
-}) {
-  const id = `amount-${label.replace(/\s+/g, '-').toLowerCase()}`;
-  return (
-    <div className={styles.field}>
-      <label htmlFor={id} className="t-caption">
-        {label}
-      </label>
-      <div className={styles.inputRow}>
-        <input
-          id={id}
-          className={styles.input}
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="0.00"
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value.replace(',', '.'));
-          }}
-        />
-        <span className={styles.unit}>
-          <Image src={ASSET_MARK[asset.symbol]} alt="" width={22} height={22} />
-          {asset.symbol}
-        </span>
-      </div>
-      {hint !== undefined && <div className={cx('t-caption', styles.hint)}>{hint}</div>}
-    </div>
-  );
-}
 
 /** Parses a typed amount; `null` while empty or invalid. */
 function parsed(text: string, decimals: number): bigint | null {
@@ -113,12 +56,147 @@ function parsed(text: string, decimals: number): bigint | null {
   }
 }
 
+function cash(amount: bigint | null): string {
+  return amount === null ? '0.00' : padCents(formatUnits(amount, SETTLEMENT.decimals, 2));
+}
+
+function plain(amount: bigint, decimals: number): string {
+  return formatUnits(amount, decimals).replace(/,/g, '');
+}
+
+function dueDate(termNs: bigint): string {
+  const ms = Date.now() + Number(termNs / NS_PER_MS);
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: termNs < 86_400_000_000_000n ? '2-digit' : undefined,
+    minute: termNs < 86_400_000_000_000n ? '2-digit' : undefined,
+  }).format(ms);
+}
+
+/** One amount well from the source's Converter: label, the figure, and a token pill. */
+function Well({
+  id,
+  label,
+  value,
+  onChange,
+  pill,
+  aside,
+}: {
+  readonly id: string;
+  readonly label: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly pill: ReactNode;
+  readonly aside?: ReactNode;
+}) {
+  return (
+    <div className={styles.well}>
+      <div className={styles.wellMeta}>
+        <span className={styles.wellHead}>
+          <label htmlFor={id} className={styles.wellLabel}>
+            {label}
+          </label>
+          {aside}
+        </span>
+        <input
+          id={id}
+          className={styles.input}
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0.00"
+          value={value}
+          onChange={(event) => {
+            onChange(event.target.value.replace(',', '.'));
+          }}
+        />
+      </div>
+      {pill}
+    </div>
+  );
+}
+
+function TokenPill({
+  symbol,
+  onClick,
+  expanded,
+}: {
+  readonly symbol: AssetSymbol;
+  readonly onClick?: () => void;
+  readonly expanded?: boolean;
+}) {
+  const body = (
+    <>
+      <Image src={ASSET_MARK[symbol]} alt="" width={24} height={24} />
+      <span>{symbol}</span>
+      {onClick !== undefined && <CaretDownIcon size={14} weight="bold" />}
+    </>
+  );
+  return onClick === undefined ? (
+    <span className={styles.pill}>{body}</span>
+  ) : (
+    <button
+      type="button"
+      className={styles.pill}
+      aria-haspopup="listbox"
+      aria-expanded={expanded}
+      onClick={onClick}
+    >
+      {body}
+    </button>
+  );
+}
+
+/** The ruled rows between wells, as in the Converter's fee list. */
+function Rows({ children }: { readonly children: ReactNode }) {
+  return <dl className={styles.rows}>{children}</dl>;
+}
+
+function Row({ k, children }: { readonly k: ReactNode; readonly children: ReactNode }) {
+  return (
+    <div className={styles.row}>
+      <dt>{k}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+type StepState = 'todo' | 'current' | 'done';
+
+function StepRow({
+  index,
+  title,
+  detail,
+  state,
+}: {
+  readonly index: number;
+  readonly title: string;
+  readonly detail: string;
+  readonly state: StepState;
+}) {
+  return (
+    <li className={styles.stepRow} data-state={state}>
+      <span className={styles.stepNum}>
+        {state === 'done' ? <CheckIcon size={14} weight="bold" /> : index}
+      </span>
+      <span className={styles.stepText}>
+        <span className="t-label">{title}</span>
+        <span className="t-caption">{detail}</span>
+      </span>
+    </li>
+  );
+}
+
 function useViews() {
   const { network } = useNetwork();
   return useMemo(() => new MosaecViews(network), [network]);
 }
 
-/** The borrower's path from a pack to a signed offer. Each step resumes from chain state. */
+/**
+ * Quote first, chain second: anyone can price a pawn; the wallet is asked for at the first
+ * signature, and each on-chain step resumes from what the chain already holds.
+ */
 export function BorrowFlow() {
   const { network } = useNetwork();
   const { accountId } = useWallet();
@@ -143,16 +221,24 @@ export function BorrowFlow() {
   const [offered, setOffered] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [depositText, setDepositText] = useState('');
-  const [principalText, setPrincipalText] = useState('');
+  const [lockText, setLockText] = useState('1');
+  const [principalText, setPrincipalText] = useState('500');
   const [termId, setTermId] = useState(DEFAULT_TERM_ID);
   const [repaymentText, setRepaymentText] = useState('');
   const [repaymentEdited, setRepaymentEdited] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [assetMenu, setAssetMenu] = useState(false);
 
-  const mintTx = useTransaction();
-  const depositTx = useTransaction();
-  const offerTx = useTransaction();
+  const confirm = useConfirm();
+  const mintTx = useTransaction({ pending: 'Creating your pack', success: 'Pack created' });
+  const depositTx = useTransaction({
+    pending: 'Sealing coins in the pack',
+    success: 'Coins sealed',
+  });
+  const offerTx = useTransaction({
+    pending: 'Signing the offer',
+    success: 'Offer is on the market',
+  });
 
   const refresh = useCallback(() => {
     setRefreshKey((key) => key + 1);
@@ -200,7 +286,10 @@ export function BorrowFlow() {
     };
   }, [packId, tokenId, views, refreshKey]);
 
-  const term = TERM_OPTIONS.find((option) => option.id === termId) ?? TERM_OPTIONS[1];
+  const terms = TERM_OPTIONS.filter(
+    (option) => option.testnetOnly !== true || network === 'testnet',
+  );
+  const term = terms.find((option) => option.id === termId) ?? terms[0];
   const principal = parsed(principalText, SETTLEMENT.decimals);
   const rateBps = SUGGESTED_MONTHLY_RATE_BPS[collateral.symbol] ?? FALLBACK_RATE_BPS;
   const suggested =
@@ -210,37 +299,39 @@ export function BorrowFlow() {
 
   useEffect(() => {
     if (!repaymentEdited) {
-      setRepaymentText(
-        suggested === null ? '' : formatUnits(suggested, SETTLEMENT.decimals).replace(/,/g, ''),
-      );
+      setRepaymentText(suggested === null ? '' : padCents(plain(suggested, SETTLEMENT.decimals)));
     }
   }, [suggested, repaymentEdited]);
 
   const repayment = parsed(repaymentText, SETTLEMENT.decimals);
-  const deposit = parsed(depositText, collateral.decimals);
+  const lock = parsed(lockText, collateral.decimals);
+  const inPack = packBalance ?? 0n;
+  const toDeposit = lock === null ? null : lock > inPack ? lock - inPack : 0n;
 
-  if (accountId === null) {
-    return (
-      <div className={styles.step}>
-        <h2 className="t-h5">Connect a wallet to start</h2>
-        <p className="t-body-sm">
-          Your pack, its Title and the Ticket all live in your NEAR account.
-        </p>
-        <div>
-          <WalletButton />
-        </div>
-      </div>
-    );
-  }
-
-  const hasCollateral = packBalance !== null && packBalance > 0n;
-  const stepState = (ready: boolean, done: boolean): StepState =>
-    done ? 'done' : ready ? 'active' : 'locked';
-  const loanValid =
-    principal !== null && repayment !== null && repayment >= principal && term !== undefined;
   const repaymentTooLow = principal !== null && repayment !== null && repayment < principal;
+  const overCap = lock !== null && lock > collateral.capPerPack;
+  const overBalance =
+    toDeposit !== null && toDeposit > 0n && walletBalance !== null && toDeposit > walletBalance;
+  const quoteValid =
+    lock !== null &&
+    principal !== null &&
+    repayment !== null &&
+    !repaymentTooLow &&
+    !overCap &&
+    term !== undefined;
+
+  const apr =
+    principal !== null &&
+    repayment !== null &&
+    term !== undefined &&
+    term.testnetOnly !== true &&
+    repayment >= principal
+      ? Number(aprBps(principal, repayment, term.termNs)) / 100
+      : null;
+  const interest = principal !== null && repayment !== null ? repayment - principal : null;
 
   const mint = async () => {
+    track('borrow_started');
     const sent = await mintTx.run([calls.mint()]);
     const minted = sent
       ?.flatMap((tx) => tx.outcome.events)
@@ -251,14 +342,27 @@ export function BorrowFlow() {
   };
 
   const sendDeposit = async () => {
-    if (packId === null || deposit === null) return;
-    await depositTx.run([calls.deposit(packId, [{ token_id: tokenId, amount: deposit }])]);
-    setDepositText('');
+    if (packId === null || toDeposit === null || toDeposit === 0n) return;
+    await depositTx.run([calls.deposit(packId, [{ token_id: tokenId, amount: toDeposit }])]);
     refresh();
   };
 
   const sendOffer = async () => {
     if (packId === null || principal === null || repayment === null || term === undefined) return;
+    const ok = await confirm({
+      footnote: SIGN_FOOTNOTE,
+      title: 'Put this pawn on the market?',
+      body: 'A lender who fills it pays you the loan and takes the Title. You keep the Ticket.',
+      rows: [
+        ['You receive', `${cash(principal)} USDC`],
+        ['You repay', `${cash(repayment)} USDC`],
+        ['Due by', dueDate(term.termNs)],
+        ['Locked', lockLabel],
+      ],
+      warning: 'Miss the date and the lender keeps the coins. No liquidation before then.',
+      confirmLabel: 'Sign the Offer',
+    });
+    if (!ok) return;
     const sent = await offerTx.run([
       calls.offer({
         pack: packId,
@@ -269,231 +373,347 @@ export function BorrowFlow() {
         offerExpiresAtNs: BigInt(Date.now()) * NS_PER_MS + OFFER_OPEN_NS,
       }),
     ]);
-    if (sent !== null) setOffered(true);
+    if (sent !== null) {
+      setOffered(true);
+      track('offer_signed');
+    }
   };
 
-  return (
-    <div className={styles.flow}>
-      <div className={styles.steps}>
-        <Step index={1} title="Choose a pack" state={stepState(true, packId !== null)}>
-          {collateralAssets.length > 1 && (
-            <div className={styles.packs} role="group" aria-label="Collateral">
-              {collateralAssets.map((asset) => (
-                <FilterPill
-                  key={asset.symbol}
-                  active={asset.symbol === collateral.symbol}
-                  onClick={() => {
-                    setCollateral(asset);
-                  }}
-                >
-                  {asset.symbol}
-                </FilterPill>
-              ))}
-            </div>
-          )}
-          {ownedFree.length > 0 && (
-            <div className={styles.packs} role="group" aria-label="Your free packs">
-              {ownedFree.map((pack) => (
-                <FilterPill
-                  key={pack.id}
-                  tone="light"
-                  active={pack.id === packId}
-                  onClick={() => {
-                    setPackId(pack.id);
-                  }}
-                >
-                  {`Pack #${pack.index}`}
-                </FilterPill>
-              ))}
-            </div>
-          )}
-          <p className="t-body-sm">
-            A new pack costs a {formatUnits(MINT_DEPOSIT_YOCTO, 24)} NEAR storage deposit. You
-            receive its Title.
-          </p>
-          <div>
-            <Button
-              variant={packId === null ? 'primary' : 'secondary'}
-              size="sm"
-              disabled={mintTx.state.phase === 'pending'}
-              onClick={() => void mint()}
-            >
-              {mintTx.state.phase === 'pending' ? 'Waiting for the Wallet' : 'Mint a New Pack'}
-            </Button>
-          </div>
-          <TxStatus state={mintTx.state} success="Pack minted. You hold its Title." />
-        </Step>
+  const hasPack = packId !== null;
+  const deposited = hasPack && packBalance !== null && toDeposit === 0n;
+  const stage: 'connect' | 'mint' | 'deposit' | 'offer' | 'done' =
+    accountId === null
+      ? 'connect'
+      : offered
+        ? 'done'
+        : !hasPack
+          ? 'mint'
+          : !deposited
+            ? 'deposit'
+            : 'offer';
+  const stepState = (step: 'mint' | 'deposit' | 'offer'): StepState => {
+    const order = ['mint', 'deposit', 'offer'] as const;
+    if (stage === 'done') return 'done';
+    if (stage === 'connect') return 'todo';
+    const at = order.indexOf(stage);
+    const mine = order.indexOf(step);
+    return mine < at ? 'done' : mine === at ? 'current' : 'todo';
+  };
 
-        <Step
-          index={2}
-          title={`Deposit ${collateral.symbol}`}
-          state={stepState(packId !== null, hasCollateral && depositText === '')}
+  const pending = (state: TxState) => state.phase === 'pending';
+  const lockLabel =
+    lock === null
+      ? `0 ${collateral.symbol}`
+      : `${formatUnits(lock, collateral.decimals, 4)} ${collateral.symbol}`;
+
+  let action: ReactNode;
+  if (stage === 'connect') {
+    action = <WalletButton size="md" fullWidth label="Connect Wallet to Borrow" />;
+  } else if (stage === 'mint') {
+    action = (
+      <Button
+        fullWidth
+        disabled={!quoteValid}
+        loading={pending(mintTx.state)}
+        onClick={() => void mint()}
+      >
+        {pending(mintTx.state) ? 'Waiting for the Wallet' : 'Create the Pack'}
+      </Button>
+    );
+  } else if (stage === 'deposit') {
+    action = (
+      <Button
+        fullWidth
+        disabled={!quoteValid || overBalance}
+        loading={pending(depositTx.state)}
+        onClick={() => void sendDeposit()}
+      >
+        {pending(depositTx.state)
+          ? 'Waiting for the Wallet'
+          : `Seal ${toDeposit === null ? '' : formatUnits(toDeposit, collateral.decimals, 4)} ${collateral.symbol}`}
+      </Button>
+    );
+  } else if (stage === 'offer') {
+    action = (
+      <Button
+        fullWidth
+        disabled={!quoteValid || !agreed}
+        loading={pending(offerTx.state)}
+        onClick={() => void sendOffer()}
+      >
+        {pending(offerTx.state) ? 'Waiting for the Wallet' : 'Sign the Offer'}
+      </Button>
+    );
+  } else {
+    action =
+      packId === null ? null : (
+        <ButtonLink href={packPath(packId)} as={Link} fullWidth showIcon>
+          View Your Pawn
+        </ButtonLink>
+      );
+  }
+
+  return (
+    <div className={styles.layout}>
+      <section className={styles.quote} aria-label="Your pawn">
+        <Well
+          id="lock"
+          label="You lock"
+          value={lockText}
+          onChange={setLockText}
+          aside={
+            accountId !== null && walletBalance !== null ? (
+              <button
+                type="button"
+                className={styles.max}
+                onClick={() => {
+                  const max =
+                    walletBalance + inPack > collateral.capPerPack
+                      ? collateral.capPerPack
+                      : walletBalance + inPack;
+                  setLockText(plain(max, collateral.decimals));
+                }}
+              >
+                Max {formatUnits(walletBalance, collateral.decimals, 4)}
+              </button>
+            ) : undefined
+          }
+          pill={
+            <div className={styles.picker}>
+              <TokenPill
+                symbol={collateral.symbol}
+                expanded={assetMenu}
+                onClick={() => {
+                  setAssetMenu((open) => !open);
+                }}
+              />
+              {assetMenu && (
+                <ul className={styles.menu} role="listbox" aria-label="Collateral">
+                  {(['ZEC', 'BTC', 'SOL'] as const).map((symbol) => {
+                    const available = collateralAssets.some((item) => item.symbol === symbol);
+                    return (
+                      <li key={symbol}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={collateral.symbol === symbol}
+                          disabled={!available}
+                          className={styles.option}
+                          onClick={() => {
+                            setCollateral(ASSETS[symbol]);
+                            setAssetMenu(false);
+                          }}
+                        >
+                          <Image src={ASSET_MARK[symbol]} alt="" width={24} height={24} />
+                          <span className={styles.optionText}>
+                            <span>{symbol}</span>
+                            <span className="t-caption">
+                              {available ? ASSETS[symbol].name : 'Mainnet release'}
+                            </span>
+                          </span>
+                          {collateral.symbol === symbol && <CheckIcon size={14} weight="bold" />}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          }
+        />
+        <Rows>
+          <Row k="Term">
+            <Segmented
+              label="Term"
+              size="sm"
+              tone="ink"
+              value={term?.id ?? DEFAULT_TERM_ID}
+              onChange={setTermId}
+              options={terms.map((option) => ({
+                id: option.id,
+                label: option.label.replace(' minutes', ' min').replace(' days', 'd'),
+              }))}
+            />
+          </Row>
+          <Row k="Rate">
+            {term?.testnetOnly === true ? 'Rehearsal' : `${(rateBps / 100).toFixed(2)}% a month`}
+          </Row>
+          <Row k="Sealed in">
+            {overCap ? (
+              <span className={styles.bad}>
+                Cap {formatUnits(collateral.capPerPack, collateral.decimals)} {collateral.symbol}
+              </span>
+            ) : (
+              'A keyless pack'
+            )}
+          </Row>
+        </Rows>
+        <Well
+          id="principal"
+          label="You receive now"
+          value={principalText}
+          onChange={setPrincipalText}
+          pill={<TokenPill symbol="USDC" />}
+        />
+        <Rows>
+          <Row k="Cost of the loan">
+            {interest === null || interest < 0n ? '0.00' : cash(interest)} USDC
+          </Row>
+          <Row k="Yearly rate">{apr === null ? '–' : `${apr.toFixed(1)}% APR`}</Row>
+          <Row k="Due if filled now">{term === undefined ? '' : dueDate(term.termNs)}</Row>
+        </Rows>
+        <Well
+          id="repayment"
+          label="You repay by the date"
+          value={repaymentText}
+          onChange={(value) => {
+            setRepaymentEdited(true);
+            setRepaymentText(value);
+          }}
+          aside={
+            repaymentEdited ? (
+              <button
+                type="button"
+                className={styles.max}
+                onClick={() => {
+                  setRepaymentEdited(false);
+                }}
+              >
+                Use Suggested
+              </button>
+            ) : undefined
+          }
+          pill={<TokenPill symbol="USDC" />}
+        />
+        <p className={cx('t-caption', styles.hint, repaymentTooLow && styles.bad)}>
+          {repaymentTooLow
+            ? 'The repayment must be at least the loan.'
+            : 'The repayment is your price. Nothing moves it.'}
+        </p>
+      </section>
+
+      <aside className={styles.side} aria-label="Summary">
+        <div className={styles.ticket}>
+          <div className={styles.ticketHead}>
+            <span className={styles.mono}>Pawn ticket</span>
+            <span className={styles.chip}>
+              <LockSimpleIcon size={12} weight="fill" />
+              Zero liquidation
+            </span>
+          </div>
+          <div className={styles.slot}>
+            <span className={styles.mono}>Coins sealed</span>
+            <span className={styles.slotValue}>
+              <Image src={ASSET_MARK[collateral.symbol]} alt="" width={22} height={22} />
+              {lockLabel}
+            </span>
+          </div>
+          <div className={styles.slot}>
+            <span className={styles.mono}>You receive now</span>
+            <span className={styles.slotValue}>{cash(principal)} USDC</span>
+          </div>
+          <div className={styles.slot}>
+            <span className={styles.mono}>
+              You repay by {term === undefined ? 'the date' : dueDate(term.termNs)}
+            </span>
+            <span className={styles.slotValue}>
+              {cash(repayment)} USDC
+              {apr !== null && <span className={styles.apr}>{apr.toFixed(1)}% APR</span>}
+            </span>
+          </div>
+          <div className={styles.rights}>
+            <span className={styles.right}>
+              <TicketIcon size={16} weight="fill" />
+              Repay by the date, the coins come back.
+            </span>
+            <span className={styles.right}>
+              <StampIcon size={16} weight="fill" />
+              Miss it, the lender keeps the coins.
+            </span>
+          </div>
+        </div>
+
+        <ListCard
+          title="Three signatures"
+          pill={
+            stage === 'done' ? (
+              <SoftPill>Offer open</SoftPill>
+            ) : stage === 'connect' ? (
+              <SoftPill tone="neutral">Wallet needed</SoftPill>
+            ) : (
+              <SoftPill tone="accent">{`Step ${String(['mint', 'deposit', 'offer'].indexOf(stage) + 1)} of 3`}</SoftPill>
+            )
+          }
         >
-          <AmountField
-            label="Amount to seal"
-            value={depositText}
-            onChange={setDepositText}
-            asset={collateral}
-            hint={
-              <>
-                <span>
-                  Available:{' '}
-                  {walletBalance === null
-                    ? 'checking'
-                    : `${formatUnits(walletBalance, collateral.decimals)} ${collateral.symbol}`}
-                </span>
-                <span>
-                  In this pack:{' '}
-                  {packBalance === null
-                    ? 'checking'
-                    : `${formatUnits(packBalance, collateral.decimals)} ${collateral.symbol}`}
-                </span>
-              </>
+          <StepRow
+            index={1}
+            title="Create the pack"
+            detail={
+              hasPack
+                ? `Pack #${packId.split('.')[0] ?? ''} is yours`
+                : `${formatUnits(MINT_DEPOSIT_YOCTO, 24)} NEAR storage deposit`
             }
+            state={stepState('mint')}
           />
-          {deposit !== null &&
-            packBalance !== null &&
-            deposit + packBalance > collateral.capPerPack && (
+          <StepRow
+            index={2}
+            title={`Seal ${collateral.symbol}`}
+            detail={
+              packBalance !== null && packBalance > 0n
+                ? `${formatUnits(packBalance, collateral.decimals, 4)} ${collateral.symbol} inside`
+                : `Move ${lockLabel} into the pack`
+            }
+            state={stepState('deposit')}
+          />
+          <StepRow
+            index={3}
+            title="Sign the offer"
+            detail="Open to lenders for 3 days"
+            state={stepState('offer')}
+          />
+          <li className={styles.actionRow}>
+            {ownedFree.length > 0 && stage !== 'done' && (
+              <div className={styles.reuse}>
+                <span className="t-caption">Or use a pack you hold</span>
+                <div className={styles.reuseList}>
+                  {ownedFree.map((pack) => (
+                    <button
+                      key={pack.id}
+                      type="button"
+                      className={styles.reuseItem}
+                      aria-pressed={pack.id === packId}
+                      onClick={() => {
+                        setPackId(pack.id);
+                      }}
+                    >
+                      Pack #{pack.index}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {stage === 'offer' && (
+              <label className={actionStyles.check}>
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(event) => {
+                    setAgreed(event.target.checked);
+                  }}
+                />
+                If I miss the date, the lender keeps the coins.
+              </label>
+            )}
+            {overBalance && stage === 'deposit' && (
               <p className={actionStyles.warn}>
-                A pack holds at most {formatUnits(collateral.capPerPack, collateral.decimals)}{' '}
-                {collateral.symbol} in this release.
+                Your balance holds {formatUnits(walletBalance, collateral.decimals, 4)}{' '}
+                {collateral.symbol}. Lower the amount to lock.
               </p>
             )}
-          <div>
-            <Button
-              size="sm"
-              disabled={
-                deposit === null ||
-                (walletBalance !== null && deposit > walletBalance) ||
-                depositTx.state.phase === 'pending'
-              }
-              onClick={() => void sendDeposit()}
-            >
-              {depositTx.state.phase === 'pending' ? 'Waiting for the Wallet' : 'Deposit'}
-            </Button>
-          </div>
-          <TxStatus state={depositTx.state} success="Deposited into the pack." />
-        </Step>
-
-        <Step index={3} title="Name the loan" state={stepState(hasCollateral, loanValid)}>
-          <AmountField
-            label="You receive now"
-            value={principalText}
-            onChange={setPrincipalText}
-            asset={SETTLEMENT}
-          />
-          <div className={styles.field}>
-            <span className="t-caption">Term</span>
-            <div className={styles.terms} role="group" aria-label="Term">
-              {TERM_OPTIONS.filter(
-                (option) => option.testnetOnly !== true || network === 'testnet',
-              ).map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={styles.term}
-                  aria-pressed={option.id === termId}
-                  onClick={() => {
-                    setTermId(option.id);
-                  }}
-                >
-                  <span className="t-label">{option.label}</span>
-                  <span className="t-caption">
-                    {option.testnetOnly === true
-                      ? 'Testnet rehearsal'
-                      : `${(rateBps / 100).toFixed(2)}% a month`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <AmountField
-            label="You repay by the date"
-            value={repaymentText}
-            onChange={(value) => {
-              setRepaymentEdited(true);
-              setRepaymentText(value);
-            }}
-            asset={SETTLEMENT}
-            hint={
-              <span>
-                Suggested at {(rateBps / 100).toFixed(2)}% a month from the {collateral.symbol}{' '}
-                volatility study. Edit it to set your own price.
-              </span>
-            }
-          />
-          {repaymentTooLow && (
-            <p className={cx('t-body-sm', styles.error)}>
-              The repayment must be at least the loan.
-            </p>
-          )}
-        </Step>
-
-        <Step
-          index={4}
-          title="Review and sign"
-          state={stepState(hasCollateral && loanValid, offered)}
-        >
-          <label className={actionStyles.check}>
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(event) => {
-                setAgreed(event.target.checked);
-              }}
-            />
-            If I miss the date, the lender keeps everything in the pack and I keep the USDC. The
-            contracts have had an internal review only.
-          </label>
-          <div>
-            <Button
-              disabled={!agreed || offered || offerTx.state.phase === 'pending'}
-              onClick={() => void sendOffer()}
-            >
-              {offerTx.state.phase === 'pending' ? 'Waiting for the Wallet' : 'Sign the Offer'}
-            </Button>
-          </div>
-          <TxStatus state={offerTx.state} success="Offer open. Lenders can fill it now." />
-          {offered && packId !== null && (
-            <div>
-              <ButtonLink href={packPath(packId)} as={Link} variant="secondary" size="sm" showIcon>
-                View Your Pack
-              </ButtonLink>
-            </div>
-          )}
-        </Step>
-      </div>
-
-      <aside className={cx(actionStyles.card, styles.summary)} aria-label="Summary">
-        <h2 className="t-h5">Summary</h2>
-        <Facts
-          rows={[
-            ['Pack', packId ?? 'Not chosen'],
-            [
-              'Collateral',
-              packBalance === null
-                ? 'n/a'
-                : `${formatUnits(packBalance, collateral.decimals)} ${collateral.symbol}`,
-            ],
-            [
-              'You receive',
-              principal === null ? 'n/a' : `${formatUnits(principal, SETTLEMENT.decimals)} USDC`,
-            ],
-            [
-              'You repay',
-              repayment === null ? 'n/a' : `${formatUnits(repayment, SETTLEMENT.decimals)} USDC`,
-            ],
-            ['Term', term?.label ?? 'n/a'],
-            [
-              'Storage deposit',
-              `${(Number(MINT_DEPOSIT_YOCTO) / Number(YOCTO_PER_NEAR)).toString()} NEAR`,
-            ],
-          ]}
-        />
-        <p className="t-caption">
-          The pack ignores the {collateral.symbol} price. Only the payment and the date decide where
-          the coins go.
-        </p>
+            {action}
+            <p className={cx('t-caption', styles.fine)}>Each step asks your wallet first.</p>
+          </li>
+        </ListCard>
       </aside>
     </div>
   );

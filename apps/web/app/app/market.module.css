@@ -1,0 +1,42 @@
+.emptyTray {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  align-items: center;
+  gap: 48px;
+  padding: 48px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+.emptyCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 460px;
+}
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.emptyCard {
+  transform: rotate(2deg);
+}
+@media (max-width: 1023.98px) {
+  .emptyTray {
+    grid-template-columns: 1fr;
+    padding: 32px;
+  }
+  .emptyCard {
+    transform: none;
+  }
+}
+@media (max-width: 639.98px) {
+  .emptyTray {
+    padding: 20px;
+    gap: 28px;
+    border-radius: var(--radius-panel);
+  }
+}

@@ -1,0 +1,134 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
+  align-items: start;
+}
+.side {
+  position: sticky;
+  top: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tx {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  transition:
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
+}
+.tx:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+/* Policy: the Converter's ruled rows inside a list card shell. */
+.policy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 28px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  overflow: hidden;
+}
+.policyHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 20px 10px;
+}
+.rules {
+  display: flex;
+  flex-direction: column;
+  margin: 0 20px 0 28px;
+  border-left: 1px solid var(--border-strong);
+}
+.rule {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0 7px 14px;
+  font-size: 14px;
+}
+.rule dt {
+  color: var(--text-secondary);
+}
+.rule dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+}
+.policyNote {
+  padding: 12px 20px 18px;
+}
+
+/* Latest call: the dark control stack. */
+.agent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 28px;
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-nft);
+}
+.agentHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 8px 12px;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-inverse-secondary);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--ill-lime);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--surface-inverse-raised);
+}
+.quote {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+@media (max-width: 1023.98px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side {
+    position: static;
+  }
+}

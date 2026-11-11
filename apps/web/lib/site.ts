@@ -4,6 +4,8 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mosaec.finance',
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? '/app',
   sourceUrl: 'https://github.com/youvandra/mosaec',
+  /** The house desk's MCP endpoint that outside agents connect to. */
+  deskMcpUrl: process.env.NEXT_PUBLIC_DESK_MCP_URL ?? 'https://desk.mosaec.finance/mcp',
   supportEmail: 'support@mosaec.finance',
   securityEmail: 'security@mosaec.finance',
   description:

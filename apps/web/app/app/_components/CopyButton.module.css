@@ -1,0 +1,15 @@
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inverse-raised);
+  color: var(--text-inverse);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.3s var(--ease-out);
+}
+.copy:hover {
+  background: var(--surface-inverse-muted);
+}

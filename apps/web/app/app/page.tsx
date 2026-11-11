@@ -1,75 +1,115 @@
-import { StorefrontIcon, WarningCircleIcon } from '@phosphor-icons/react/dist/ssr';
+import {
+  CalendarCheckIcon,
+  StorefrontIcon,
+  WarningCircleIcon,
+} from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 
-import { DEFAULT_NETWORK } from '@mosaec/config/networks';
-import { ButtonLink, EmptyState, ErrorState } from '@mosaec/ui';
+import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
 
-import { listOffers, listPacks } from '../../lib/api';
+import { liveDealOf } from '../../lib/deal';
+import { exampleDeal, loadMarket } from '../../lib/market';
 
-import { PackTable } from './_components/PackTable';
-import { PageHeader, PageSection } from './_components/PageHeader';
+import { Activity } from './_components/Activity';
+import { MarketStats } from './_components/MarketStats';
+import { OfferBook } from './_components/OfferBook';
+import { OfferCard } from './_components/OfferCard';
+import { PageHeader, PageSection, SectionTitle } from './_components/PageHeader';
 import { appPath } from './_components/routes';
+import styles from './market.module.css';
 
-import type { Pack } from '../../lib/api';
-
-export const metadata = { title: 'Open Pawns' };
+export const metadata = { title: 'Market' };
 export const revalidate = 15;
 
-const RECENT = 20;
-
-async function load(): Promise<{ offers: readonly Pack[]; recent: readonly Pack[] } | null> {
-  try {
-    const [offers, all] = await Promise.all([
-      listOffers(DEFAULT_NETWORK),
-      listPacks(DEFAULT_NETWORK, 100),
-    ]);
-    const recent = [...all]
-      .sort((a, b) => Number(BigInt(b.index) - BigInt(a.index)))
-      .slice(0, RECENT);
-    return { offers, recent };
-  } catch {
-    return null;
-  }
+function EmptyBook() {
+  return (
+    <div className={styles.emptyTray}>
+      <div className={styles.emptyCopy}>
+        <AppIcon color="ink" size={48}>
+          <StorefrontIcon weight="fill" />
+        </AppIcon>
+        <h3 className="t-h3">The book is clear.</h3>
+        <p className="t-body">
+          Every offer is filled. New pawns land here the moment a borrower signs.
+        </p>
+        <div className={styles.emptyActions}>
+          <ButtonLink href={appPath('/borrow')} as={Link} showIcon>
+            Open a Pawn
+          </ButtonLink>
+          <ButtonLink href="/lend" as={Link} variant="secondary">
+            How Lending Works
+          </ButtonLink>
+        </div>
+      </div>
+      <div className={styles.emptyCard}>
+        <OfferCard packId="" index="" deal={exampleDeal()} offerEndsNs={null} example />
+      </div>
+    </div>
+  );
 }
 
 export default async function MarketPage() {
-  const data = await load();
+  const data = await loadMarket();
+
   return (
     <>
       <PageHeader
-        title="Open pawns"
-        lead="Each row is a sealed pack whose Title is for sale. Fill one to lend: you pay the loan now and receive the repayment, or the coins, at the end of the term."
+        title="Lend against"
+        accent="sealed coins."
+        lead="Fill a pawn, get paid back by the date. Or keep the coins."
         actions={
           <ButtonLink href={appPath('/borrow')} as={Link} showIcon>
-            Borrow
+            Borrow Instead
           </ButtonLink>
         }
       />
       {data === null ? (
-        <ErrorState title="Packs are unavailable right now" icon={<WarningCircleIcon size={22} />}>
+        <ErrorState
+          title="The market is unavailable right now"
+          icon={<WarningCircleIcon size={22} />}
+        >
           The indexer could not be reached. Every pack stays readable on the explorer, and this page
           refreshes on its own.
         </ErrorState>
       ) : (
         <>
-          {data.offers.length === 0 ? (
-            <EmptyState
-              title="No open pawns right now"
-              icon={<StorefrontIcon size={22} />}
-              action={
-                <ButtonLink href={appPath('/borrow')} as={Link} size="sm" showIcon>
-                  Open a Pawn
-                </ButtonLink>
+          <MarketStats data={data} />
+          <OfferBook
+            title={
+              <SectionTitle
+                title="Open offers"
+                tag={
+                  <Tag
+                    badge="1"
+                    shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
+                  >
+                    Lend
+                  </Tag>
+                }
+              />
+            }
+            empty={<EmptyBook />}
+            entries={data.offers.map((pack) => ({
+              packId: pack.id,
+              index: pack.index,
+              deal: liveDealOf(pack),
+              offerEndsNs: pack.offer?.expiresAtNs ?? null,
+            }))}
+          />
+          {data.activity.length > 0 && (
+            <PageSection
+              title="Recent pawns"
+              tag={
+                <Tag
+                  badge="2"
+                  shape={<CalendarCheckIcon weight="fill" size={16} color="var(--ill-lime)" />}
+                >
+                  On chain
+                </Tag>
               }
+              lead="Every pawn so far, read from chain."
             >
-              New offers appear here seconds after a borrower signs them.
-            </EmptyState>
-          ) : (
-            <PackTable packs={data.offers} caption="Open pawns" />
-          )}
-          {data.recent.length > 0 && (
-            <PageSection title="Recent packs">
-              <PackTable packs={data.recent} caption="Recent packs" />
+              <Activity items={data.activity} />
             </PageSection>
           )}
         </>

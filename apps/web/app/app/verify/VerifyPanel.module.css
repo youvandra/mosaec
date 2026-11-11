@@ -1,39 +1,72 @@
+.tray {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-secondary);
+}
 .form {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 24px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+}
+.form:focus-within {
+  box-shadow:
+    0 0 0 2px var(--accent-secondary),
+    var(--shadow-card);
 }
 .input {
   flex: 1;
-  min-width: 240px;
-  padding: 13px 18px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-primary);
-  background: var(--bg-primary);
-  font-size: 15px;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
 }
-.input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+.examples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 12px 8px;
+}
+.example {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.3s var(--ease-out);
+}
+.example:hover {
+  color: var(--accent);
 }
 .list {
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-panel);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-primary);
-  overflow: hidden;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .row {
   display: grid;
   grid-template-columns: 28px 1fr;
+  align-items: center;
   gap: 4px 14px;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-primary);
-}
-.row:last-child {
-  border-bottom: 0;
+  border-radius: var(--radius-panel);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
 }
 .row p {
   grid-column: 2;
@@ -49,5 +82,21 @@
   color: var(--text-tertiary);
 }
 .summary {
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+}
+@media (max-width: 479.98px) {
+  .tray {
+    padding: 8px;
+    border-radius: var(--radius-panel);
+  }
+  .form {
+    padding-left: 16px;
+  }
+  .input {
+    font-size: 14px;
+  }
 }

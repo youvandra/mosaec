@@ -1,0 +1,116 @@
+/* Source: Payouts › Bulk payouts list card (radius 28, 1px border, panel shadow). */
+.card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 20px;
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 0 6px;
+  list-style: none;
+}
+.item {
+  border-top: 1px solid var(--border-primary);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+}
+.link {
+  transition: background-color 0.3s var(--ease-out);
+}
+.link:hover {
+  background: var(--bg-secondary);
+}
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.meta > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.title {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+.amount {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.positive {
+  background: var(--positive-subtle);
+  color: var(--positive);
+}
+.accent {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+.negative {
+  background: var(--negative-subtle);
+  color: var(--negative);
+}
+.warning {
+  background: var(--warning-subtle);
+  color: var(--warning);
+}
+.neutral {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+@media (max-width: 479.98px) {
+  .card {
+    border-radius: 22px;
+  }
+  .header,
+  .row {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

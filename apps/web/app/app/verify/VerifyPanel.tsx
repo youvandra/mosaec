@@ -1,10 +1,16 @@
 'use client';
 
-import { CheckCircleIcon, MinusCircleIcon, XCircleIcon } from '@phosphor-icons/react';
+import {
+  CheckCircleIcon,
+  CheckIcon,
+  MinusCircleIcon,
+  XCircleIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { explorerAccountUrl } from '@mosaec/config/networks';
+import { NETWORKS, explorerAccountUrl } from '@mosaec/config/networks';
 import { Button, ErrorState, Skeleton, StatusPill } from '@mosaec/ui';
 
 import { useNetwork } from '../../../lib/near/network';
@@ -42,7 +48,7 @@ export function VerifyPanel() {
       return;
     }
     if (!ACCOUNT_ID.test(target)) {
-      setState({ kind: 'error', message: 'That is not a NEAR account id.' });
+      setState({ kind: 'error', message: 'Enter a NEAR account id, like alice.testnet.' });
       return;
     }
     let live = true;
@@ -66,7 +72,7 @@ export function VerifyPanel() {
   const passed = state.kind === 'done' && state.checks.every((c) => c.result !== 'fail');
 
   return (
-    <>
+    <div className={styles.tray}>
       <form
         className={styles.form}
         onSubmit={(event) => {
@@ -90,6 +96,27 @@ export function VerifyPanel() {
         />
         <Button type="submit">Verify</Button>
       </form>
+      {state.kind === 'idle' && (
+        <div className={styles.examples}>
+          <span className="t-caption">Try a pack</span>
+          {['0', '1', '2'].map((index) => {
+            const id = `${index}.${NETWORKS[network].registryAccountId}`;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={styles.example}
+                onClick={() => {
+                  setInput(id);
+                  router.replace(`?pack=${encodeURIComponent(id)}`);
+                }}
+              >
+                {id}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {state.kind === 'loading' && (
         <div className={styles.list} aria-busy="true">
           {[0, 1, 2, 3, 4].map((i) => (
@@ -106,7 +133,11 @@ export function VerifyPanel() {
       {state.kind === 'done' && (
         <>
           <div className={styles.summary}>
-            <StatusPill tone={passed ? 'positive' : 'negative'}>
+            <StatusPill
+              tone={passed ? 'positive' : 'negative'}
+              icon={passed ? CheckIcon : XIcon}
+              size="md"
+            >
               {passed ? 'Every check passed' : 'A check failed'}
             </StatusPill>{' '}
             <a
@@ -130,6 +161,6 @@ export function VerifyPanel() {
           </ul>
         </>
       )}
-    </>
+    </div>
   );
 }

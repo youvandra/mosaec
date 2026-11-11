@@ -1,8 +1,11 @@
 'use client';
 
+import Image from 'next/image';
+
 import { NETWORK_IDS } from '@mosaec/config/assets';
 import { NETWORKS } from '@mosaec/config/networks';
 
+import { NEAR_MARK } from '../../../lib/asset-marks';
 import { useNetwork } from '../../../lib/near/network';
 
 import styles from './NetworkToggle.module.css';
@@ -13,7 +16,8 @@ const LABEL = { mainnet: 'Mainnet', testnet: 'Testnet' } as const;
 export function NetworkToggle() {
   const { network, select } = useNetwork();
   return (
-    <div className={styles.toggle} role="radiogroup" aria-label="Network">
+    <div className={styles.toggle} role="radiogroup" aria-label="NEAR network">
+      <Image className={styles.mark} src={NEAR_MARK.src} alt="NEAR" width={22} height={22} />
       {NETWORK_IDS.map((id) => (
         <button
           key={id}

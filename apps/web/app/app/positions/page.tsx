@@ -8,8 +8,9 @@ export default function PositionsPage() {
   return (
     <>
       <PageHeader
-        title="Your positions"
-        lead="Every pack where you hold the Title or the Ticket, with what each one needs next."
+        title="Your"
+        accent="positions."
+        lead="Your pawns, their dates, and what comes next."
       />
       <PositionsDesk />
     </>

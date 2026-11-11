@@ -16,6 +16,28 @@ export function formatUnits(
   return shown === '' ? grouped : `${grouped}.${shown}`;
 }
 
+const COMPACT: readonly (readonly [bigint, string])[] = [
+  [10n ** 18n, 'Qn'],
+  [10n ** 15n, 'Q'],
+  [10n ** 12n, 'T'],
+  [10n ** 9n, 'B'],
+  [10n ** 6n, 'M'],
+];
+
+/**
+ * A token amount short enough for a card: below a million it is `formatUnits`, above it one
+ * truncated decimal and a suffix, such as `1.2M` or `9.9Qn`.
+ */
+export function formatCompact(amount: bigint, decimals: number, maxFraction = decimals): string {
+  const whole = amount / 10n ** BigInt(decimals);
+  const step = COMPACT.find(([size]) => whole >= size);
+  if (step === undefined) return formatUnits(amount, decimals, maxFraction);
+  const [size, suffix] = step;
+  const tenths = (whole * 10n) / size;
+  const text = `${(tenths / 10n).toLocaleString('en-US')}.${(tenths % 10n).toString()}`;
+  return `${text.replace(/\.0$/, '')}${suffix}`;
+}
+
 /** A display amount padded to cents, such as `512.5` to `512.50`. */
 export function padCents(value: string): string {
   const [whole = '0', fraction = ''] = value.split('.');
@@ -33,4 +55,19 @@ export function formatDateNs(ns: bigint | string): string {
     year: 'numeric',
     timeZone: 'UTC',
   }).format(ms);
+}
+
+/** A nanosecond timestamp as date and UTC time, such as `9 Feb 2027, 14:05 UTC`. */
+export function formatDateTimeNs(ns: bigint | string): string {
+  const ms = Number((typeof ns === 'string' ? BigInt(ns) : ns) / NS_PER_MS);
+  const text = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'UTC',
+  }).format(ms);
+  return `${text} UTC`;
 }
