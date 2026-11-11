@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { explorerTxUrl } from '@mosaec/config/networks';
 import { Button, cx, useToast } from '@mosaec/ui';
 
-import { ApiError, claimFaucet } from '../../../lib/api';
+import { claimFaucet } from '../../../lib/api';
 import { ASSET_MARK } from '../../../lib/asset-marks';
 import { useWallet } from '../../../lib/near/wallet';
 import { track } from '../../../lib/track';
@@ -52,14 +52,10 @@ export function FaucetPanel() {
         });
       })
       .catch((cause: unknown) => {
+        /* The API names the exact limit hit (account, address, daily amount or a low faucet). */
         setState({
           kind: 'error',
-          message:
-            cause instanceof ApiError && cause.status === 429
-              ? 'This account already received a grant today. Try again tomorrow.'
-              : cause instanceof Error
-                ? cause.message
-                : 'The faucet is unavailable.',
+          message: cause instanceof Error ? cause.message : 'The faucet is unavailable.',
         });
       });
   };
