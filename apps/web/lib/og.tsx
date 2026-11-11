@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og';
 
-import { MARK_PATH, MARK_VIEWBOX } from '@mosaec/ui';
+// The CSS-free subpath: importing the package index from an image route pulled the UI stylesheet
+// into the main entry, and production served it as a <script>.
+import { MARK_PATH, MARK_VIEWBOX } from '@mosaec/ui/mark';
 
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 
