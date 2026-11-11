@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { MINT_DEPOSIT_YOCTO, mosaecCalls } from './actions';
+import { FT_STORAGE_DEPOSIT_YOCTO, MINT_DEPOSIT_YOCTO, ftAccountOf, mosaecCalls } from './actions';
 import { canonicalContents, contentsHash } from './contents';
 import { aprBps, ltvBps, pawnFee, repaymentFor } from './finance';
 import { GAS, MAX_TX_GAS } from './gas';
@@ -140,6 +140,51 @@ describe('mosaecCalls (testnet)', () => {
       }).args,
     ) as { destination: unknown };
     expect(args.destination).toEqual({ kind: 'verifier', account_id: 'lender.mosaec.testnet' });
+  });
+});
+
+describe('verifier balance calls (testnet)', () => {
+  const calls = mosaecCalls('testnet');
+  const zec = 'nep141:zec.mosaec.testnet';
+
+  it('reads the token contract from a nep141 id', () => {
+    expect(ftAccountOf(zec)).toBe('zec.mosaec.testnet');
+    expect(() => ftAccountOf('nep245:x.near:1')).toThrow(RangeError);
+  });
+
+  it('deposits through ft_transfer_call to the verifier, credited to the sender', () => {
+    const c = calls.verifierDeposit(zec, 50_000_000n);
+    expect(c.receiverId).toBe('zec.mosaec.testnet');
+    expect(c.methodName).toBe('ft_transfer_call');
+    expect(JSON.parse(c.args)).toEqual({
+      receiver_id: 'intents.mosaec.testnet',
+      amount: '50000000',
+      msg: '',
+    });
+    expect(c.deposit).toBe(1n);
+  });
+
+  it('withdraws with the verifier ft_withdraw to the wallet', () => {
+    const c = calls.verifierWithdraw(zec, 'alice.testnet', 7n);
+    expect(c.receiverId).toBe('intents.mosaec.testnet');
+    expect(c.methodName).toBe('ft_withdraw');
+    expect(JSON.parse(c.args)).toEqual({
+      token: 'zec.mosaec.testnet',
+      receiver_id: 'alice.testnet',
+      amount: '7',
+    });
+    expect(c.deposit).toBe(1n);
+  });
+
+  it('registers storage with the bound the token reports', () => {
+    const c = calls.ftStorageDeposit(zec, 'alice.testnet');
+    expect(c.methodName).toBe('storage_deposit');
+    expect(c.deposit).toBe(FT_STORAGE_DEPOSIT_YOCTO);
+  });
+
+  it('refuses zero amounts', () => {
+    expect(() => calls.verifierDeposit(zec, 0n)).toThrow(RangeError);
+    expect(() => calls.verifierWithdraw(zec, 'alice.testnet', 0n)).toThrow(RangeError);
   });
 });
 
