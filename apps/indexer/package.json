@@ -7,16 +7,23 @@
     "build": "tsup",
     "dev": "node --env-file-if-exists=../../.env --watch --import tsx src/index.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@mosaec/config": "workspace:*",
+    "@mosaec/db": "workspace:*",
+    "@mosaec/domain": "workspace:*",
+    "@mosaec/sdk": "workspace:*",
+    "drizzle-orm": "^0.45.4",
     "zod": "^4.1.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.12",
     "@types/node": "^22.15.0",
     "tsup": "^8.5.0",
     "tsx": "^4.20.0",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
   }
 }
