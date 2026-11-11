@@ -12,8 +12,22 @@ let loading: Promise<SentryModule> | null = null;
 export function sentry(): Promise<SentryModule> | null {
   if (DSN === '' || typeof window === 'undefined') return null;
   loading ??= Promise.all([import('@sentry/nextjs'), import('./sentry-scrub')]).then(
-    ([sdk, { SENTRY_BASE }]) => {
-      sdk.init({ ...SENTRY_BASE, dsn: DSN });
+    ([sdk, { SENTRY_BASE, scrubDeep }]) => {
+      sdk.init({
+        ...SENTRY_BASE,
+        dsn: DSN,
+        integrations: [
+          /* Replays only sessions that hit an error; every text, input and image is hidden. */
+          sdk.replayIntegration({
+            maskAllText: true,
+            maskAllInputs: true,
+            blockAllMedia: true,
+            beforeAddRecordingEvent: (event) => scrubDeep(event),
+          }),
+        ],
+        replaysSessionSampleRate: 0,
+        replaysOnErrorSampleRate: 1,
+      });
       return sdk;
     },
   );
