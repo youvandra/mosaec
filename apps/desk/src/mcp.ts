@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 
 // The SDK publishes these subpaths through a wildcard export the import resolver cannot follow.
@@ -10,6 +10,13 @@ import { z } from 'zod';
 
 import type { DeskService, OfferReview } from './desk-service';
 import type { IncomingMessage, Server } from 'node:http';
+
+/** Largest request body the endpoint reads; MCP calls here are a few hundred bytes. */
+export const MAX_BODY_BYTES = 64 * 1024;
+/** Requests per client address per minute, keyed by the address Caddy forwards. */
+export const MCP_REQUESTS_PER_MINUTE = 30;
+/** How long one read of every open offer serves `list_offers`. */
+const OFFERS_CACHE_MS = 5_000;
 
 const PACK = z.string().min(3).max(64).describe('Pack account id, such as 3.v0.mosaec.testnet');
 
@@ -42,7 +49,11 @@ function review(item: OfferReview) {
  * the exact call to sign with the caller's own key. `fill_offer`, which spends the desk budget,
  * is registered only for a caller holding the desk token.
  */
-export function deskMcp(service: DeskService, canSpend: boolean): McpServer {
+export function deskMcp(
+  service: DeskService,
+  canSpend: boolean,
+  listOffers: () => Promise<readonly OfferReview[]> = () => service.reviewOffers(),
+): McpServer {
   const server = new McpServer({ name: 'mosaec-desk', version: '0.1.0' });
 
   server.registerTool(
@@ -60,7 +71,7 @@ export function deskMcp(service: DeskService, canSpend: boolean): McpServer {
       description:
         'Every open pawn, read live from the registry, with the price, repayment, term and the desk policy verdict.',
     },
-    async () => text((await service.reviewOffers()).map(review)),
+    async () => text((await listOffers()).map(review)),
   );
 
   server.registerTool(
@@ -103,11 +114,58 @@ export function deskMcp(service: DeskService, canSpend: boolean): McpServer {
   return server;
 }
 
+class BodyTooLarge extends Error {}
+
 async function body(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > MAX_BODY_BYTES) throw new BodyTooLarge();
+    chunks.push(chunk as Buffer);
+  }
   const raw = Buffer.concat(chunks).toString('utf8');
   return raw === '' ? undefined : (JSON.parse(raw) as unknown);
+}
+
+/** Compares a bearer header with the desk token in constant time. */
+export function holdsToken(header: string | undefined, token: string | undefined): boolean {
+  if (token === undefined || header === undefined) return false;
+  const digest = (value: string) => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(header), digest(`Bearer ${token}`));
+}
+
+/** Fixed one-minute window per client address, in memory. */
+export function mcpLimiter(perMinute: number, now: () => number = Date.now) {
+  const windows = new Map<string, { start: number; count: number }>();
+  return (address: string): boolean => {
+    const at = now();
+    if (windows.size > 10_000) {
+      for (const [key, w] of windows) if (at - w.start >= 60_000) windows.delete(key);
+    }
+    const current = windows.get(address);
+    const window =
+      current === undefined || at - current.start >= 60_000 ? { start: at, count: 0 } : current;
+    window.count += 1;
+    windows.set(address, window);
+    return window.count <= perMinute;
+  };
+}
+
+/** One live read of the offer book shared by every request inside `ms`. */
+function cached<T>(read: () => Promise<T>, ms: number): () => Promise<T> {
+  let entry: { at: number; value: Promise<T> } | null = null;
+  return () => {
+    const at = Date.now();
+    if (entry === null || at - entry.at >= ms) {
+      const value = read();
+      entry = { at, value };
+      value.catch(() => {
+        entry = null;
+      });
+    }
+    return entry.value;
+  };
 }
 
 /** Stateless Streamable HTTP endpoint at `/mcp`; one server per request. */
@@ -116,6 +174,8 @@ export function serveMcp(
   port: number,
   deskToken: string | undefined,
 ): Server {
+  const allow = mcpLimiter(MCP_REQUESTS_PER_MINUTE);
+  const listOffers = cached(() => service.reviewOffers(), OFFERS_CACHE_MS);
   const http = createServer((req, res) => {
     void (async () => {
       if (req.url === '/health') {
@@ -130,9 +190,21 @@ export function serveMcp(
         res.writeHead(405, { allow: 'POST' }).end();
         return;
       }
-      const canSpend =
-        deskToken !== undefined && req.headers.authorization === `Bearer ${deskToken}`;
-      const server = deskMcp(service, canSpend);
+      const forwarded = req.headers['x-forwarded-for'];
+      const address =
+        (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ??
+        req.socket.remoteAddress ??
+        'direct';
+      if (!allow(address)) {
+        res.writeHead(429, { 'retry-after': '60' }).end();
+        return;
+      }
+      if (Number(req.headers['content-length'] ?? 0) > MAX_BODY_BYTES) {
+        res.writeHead(413).end();
+        return;
+      }
+      const canSpend = holdsToken(req.headers.authorization, deskToken);
+      const server = deskMcp(service, canSpend, listOffers);
       const transport = new StreamableHTTPServerTransport({});
       res.on('close', () => {
         void transport.close();
@@ -141,8 +213,8 @@ export function serveMcp(
       try {
         await server.connect(transport);
         await transport.handleRequest(req, res, await body(req));
-      } catch {
-        if (!res.headersSent) res.writeHead(400).end();
+      } catch (cause) {
+        if (!res.headersSent) res.writeHead(cause instanceof BodyTooLarge ? 413 : 400).end();
       }
     })();
   });
