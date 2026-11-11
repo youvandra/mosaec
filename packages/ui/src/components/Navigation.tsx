@@ -60,13 +60,21 @@ function RollingLabel({ text }: { readonly text: string }) {
   );
 }
 
-/** Compact while scrolling down past the hero, full again on any scroll up. */
-function useCompactOnScroll(): boolean {
+/**
+ * Compact while scrolling down past the hero, full again on any scroll up. While `held` is true
+ * (the pointer rests on the bar) the size stays as it is, so scrolling never shrinks the bar out
+ * from under the pointer and an open menu stays open.
+ */
+function useCompactOnScroll(held: { readonly current: boolean }): boolean {
   const [compact, setCompact] = useState(false);
   useEffect(() => {
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
+      if (held.current) {
+        last = y;
+        return;
+      }
       if (y < COMPACT_AFTER_PX) setCompact(false);
       else if (y - last > SCROLL_DELTA_PX) setCompact(true);
       else if (last - y > SCROLL_DELTA_PX) setCompact(false);
@@ -76,7 +84,7 @@ function useCompactOnScroll(): boolean {
     return () => {
       window.removeEventListener('scroll', onScroll);
     };
-  }, []);
+  }, [held]);
   return compact;
 }
 
@@ -154,7 +162,8 @@ function usePanelHeight(active: NavMenu | undefined) {
  * shrinks to logo and call to action while the reader scrolls down.
  */
 export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: NavigationProps) {
-  const compact = useCompactOnScroll();
+  const hovered = useRef(false);
+  const compact = useCompactOnScroll(hovered);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [drawer, setDrawer] = useState(false);
   const [drawerSection, setDrawerSection] = useState<string | null>(null);
@@ -222,8 +231,14 @@ export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: Navigat
           expanded && styles.expanded,
         )}
         aria-label="Main"
-        onPointerLeave={scheduleClose}
-        onPointerEnter={cancelClose}
+        onPointerLeave={() => {
+          hovered.current = false;
+          scheduleClose();
+        }}
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') hovered.current = true;
+          cancelClose();
+        }}
       >
         <div className={styles.bar}>
           <Link href={homeHref} className={styles.home} aria-label="Mosaec home" onClick={closeAll}>
