@@ -7,6 +7,8 @@ import {
   registryConfigSchema,
 } from '@mosaec/domain';
 
+import { ftAccountOf } from './actions';
+
 import type { RpcTxResult } from './outcome';
 import type { NetworkId } from '@mosaec/config/assets';
 import type { PackStatus, PositionView, RegistryConfig } from '@mosaec/domain';
@@ -107,6 +109,38 @@ export class MosaecViews {
 
   async packStatus(pack: string): Promise<PackStatus> {
     return parsed(packStatusSchema, await this.rpc.view(pack, 'status'));
+  }
+
+  /** Wallet balance of `accountId` in the NEP-141 contract behind `tokenId`. */
+  async walletBalanceOf(accountId: string, tokenId: string): Promise<bigint> {
+    const value = await this.rpc.view(ftAccountOf(tokenId), 'ft_balance_of', {
+      account_id: accountId,
+    });
+    if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+      throw new MosaecError('UPSTREAM_RPC', { cause: new Error('unexpected balance') });
+    }
+    return BigInt(value);
+  }
+
+  /** Whether `accountId` is registered on the token contract behind `tokenId`. */
+  async isRegistered(accountId: string, tokenId: string): Promise<boolean> {
+    const value = await this.rpc.view(ftAccountOf(tokenId), 'storage_balance_of', {
+      account_id: accountId,
+    });
+    return value !== null;
+  }
+
+  /** Native NEAR balance of `accountId` in yoctoNEAR. */
+  async nearBalanceOf(accountId: string): Promise<bigint> {
+    const view = (await this.rpc.request('query', {
+      request_type: 'view_account',
+      finality: 'final',
+      account_id: accountId,
+    })) as { amount?: unknown };
+    if (typeof view.amount !== 'string' || !/^\d+$/.test(view.amount)) {
+      throw new MosaecError('UPSTREAM_RPC', { cause: new Error('unexpected account view') });
+    }
+    return BigInt(view.amount);
   }
 
   /** Verifier balance of `accountId` in `tokenId`, in the token's smallest unit. */

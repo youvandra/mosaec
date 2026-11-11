@@ -19,6 +19,15 @@ export interface ContractCall {
 /** Deposit `mint` requires (`MINT_DEPOSIT`, 0.051 NEAR); `config().mint_deposit` reports it too. */
 export const MINT_DEPOSIT_YOCTO = 51_000_000_000_000_000_000_000n;
 
+/** NEP-145 registration on a test or bridged token (`storage_balance_bounds().min`, 0.00125 NEAR). */
+export const FT_STORAGE_DEPOSIT_YOCTO = 1_250_000_000_000_000_000_000n;
+
+/** The NEP-141 contract behind a verifier token id such as `nep141:zec.mosaec.testnet`. */
+export function ftAccountOf(tokenId: string): string {
+  if (!tokenId.startsWith('nep141:')) throw new RangeError(`${tokenId} is not a NEP-141 token id`);
+  return tokenId.slice('nep141:'.length);
+}
+
 /** NEP-245 transfers require exactly one yoctoNEAR. */
 export const ONE_YOCTO = 1n;
 
@@ -210,6 +219,40 @@ export function mosaecCalls(network: NetworkId) {
     /** Retries delivery of the lender's principal to the maker. */
     claimPayout: (pack: string): ContractCall =>
       call(registry, 'claim_payout', { pack }, GAS.claimPayout, 0n, GAS_FLOOR.command),
+
+    /** Moves a wallet's tokens into its verifier balance (an empty `msg` credits the sender). */
+    verifierDeposit: (tokenId: string, amount: bigint): ContractCall => {
+      positive(amount, 'amount');
+      return call(
+        ftAccountOf(tokenId),
+        'ft_transfer_call',
+        { receiver_id: verifier, amount: amount.toString(), msg: '' },
+        GAS.verifierDeposit,
+        ONE_YOCTO,
+      );
+    },
+
+    /** Moves verifier balance back to a NEAR wallet as the plain token. */
+    verifierWithdraw: (tokenId: string, receiverId: string, amount: bigint): ContractCall => {
+      positive(amount, 'amount');
+      return call(
+        verifier,
+        'ft_withdraw',
+        { token: ftAccountOf(tokenId), receiver_id: receiverId, amount: amount.toString() },
+        GAS.verifierWithdraw,
+        ONE_YOCTO,
+      );
+    },
+
+    /** Registers `accountId` on a token contract so it can hold that token. */
+    ftStorageDeposit: (tokenId: string, accountId: string): ContractCall =>
+      call(
+        ftAccountOf(tokenId),
+        'storage_deposit',
+        { account_id: accountId, registration_only: true },
+        GAS.storageDeposit,
+        FT_STORAGE_DEPOSIT_YOCTO,
+      ),
 
     /** Sends a Title or Ticket to another account. */
     nftTransfer: (tokenId: string, receiverId: string): ContractCall =>
