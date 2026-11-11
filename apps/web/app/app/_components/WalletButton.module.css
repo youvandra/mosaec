@@ -1,0 +1,63 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px 5px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 240px;
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ill-lime);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.account {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wallet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  text-align: left;
+  font-weight: 500;
+  transition: background-color 0.2s var(--ease-link);
+}
+.wallet:hover {
+  background: var(--bg-tertiary);
+}
+.wallet img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.note {
+  margin-top: 16px;
+}
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
