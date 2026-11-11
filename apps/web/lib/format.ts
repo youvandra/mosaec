@@ -24,13 +24,19 @@ const COMPACT: readonly (readonly [bigint, string])[] = [
   [10n ** 6n, 'M'],
 ];
 
+/** Below this a full number still reads at a glance; from here on it gets a suffix. */
+const COMPACT_FROM = 10_000n;
+
 /**
- * A token amount short enough for a card: below a million it is `formatUnits`, above it one
- * truncated decimal and a suffix, such as `1.2M` or `9.9Qn`.
+ * A token amount short enough for a card: below 10,000 it is `formatUnits`, above it one
+ * truncated decimal and a suffix, such as `12.5K`, `1.2M` or `9.9Qn`.
  */
 export function formatCompact(amount: bigint, decimals: number, maxFraction = decimals): string {
   const whole = amount / 10n ** BigInt(decimals);
-  const step = COMPACT.find(([size]) => whole >= size);
+  const step =
+    whole < COMPACT_FROM
+      ? undefined
+      : (COMPACT.find(([size]) => whole >= size) ?? ([1_000n, 'K'] as const));
   if (step === undefined) return formatUnits(amount, decimals, maxFraction);
   const [size, suffix] = step;
   const tenths = (whole * 10n) / size;

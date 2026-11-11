@@ -73,7 +73,16 @@ export function usdValue(lines: readonly Amount[], prices: UsdPrices | null): nu
   return total;
 }
 
+/** Dollars for a glance: `$512.40`, `$1,001`, then `$12.5K`, `$1M`, `$3.4B` from 10,000 up. */
 export function usdText(value: number): string {
+  if (Math.abs(value) >= 10_000) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(value);
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
