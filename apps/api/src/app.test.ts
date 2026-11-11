@@ -4,6 +4,7 @@ import { schema } from '@mosaec/db';
 import { createTestDb } from '@mosaec/db/testing';
 
 import { createApp } from './app';
+import { FAUCET_DAILY_CAP } from './services/faucet-service';
 
 import type { ChainProbe } from './services/health-service';
 import type { Db } from '@mosaec/db';
@@ -66,6 +67,8 @@ describe('API', () => {
 
   const faucetSent: string[] = [];
 
+  let faucetHeld = 10n ** 15n;
+
   function build(overrides: { chain?: ChainProbe; readsPerMinute?: number } = {}): Hono {
     return createApp({
       db,
@@ -79,6 +82,7 @@ describe('API', () => {
           faucetSent.push(receiverId);
           return Promise.resolve('FaucetTxHash');
         },
+        balances: (_network, tokenIds) => Promise.resolve(tokenIds.map(() => faucetHeld)),
       },
     });
   }
@@ -278,18 +282,56 @@ describe('API', () => {
     expect(((await res.json()) as { items: unknown[] }).items).toEqual([]);
   });
 
+  const claim = (accountId: string, ip = '203.0.113.1', network = 'testnet') =>
+    app.request(`/faucet?network=${network}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+      body: JSON.stringify({ accountId }),
+    });
+
+  async function code(res: Response): Promise<string> {
+    return ((await res.json()) as { error: { code: string } }).error.code;
+  }
+
   it('grants test tokens once a day per account, on testnet only', async () => {
-    const post = (network: string) =>
-      app.request(`/faucet?network=${network}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accountId: 'alice.testnet' }),
-      });
-    const first = await post('testnet');
+    faucetSent.length = 0;
+    const first = await claim('alice.testnet');
     expect(first.status).toBe(200);
     expect(((await first.json()) as { txHash: string }).txHash).toBe('FaucetTxHash');
     expect(faucetSent).toEqual(['alice.testnet']);
-    expect((await post('testnet')).status).toBe(429);
-    expect((await post('mainnet')).status).toBe(404);
+    const again = await claim('alice.testnet', '198.51.100.7');
+    expect(again.status).toBe(429);
+    expect(await code(again)).toBe('FAUCET_ACCOUNT_USED');
+    expect((await claim('carol.testnet', '198.51.100.8', 'mainnet')).status).toBe(404);
+  });
+
+  it('grants once a day per client address', async () => {
+    expect((await claim('alice.testnet', '203.0.113.9')).status).toBe(200);
+    const second = await claim('bob.testnet', '203.0.113.9');
+    expect(second.status).toBe(429);
+    expect(await code(second)).toBe('FAUCET_IP_USED');
+    expect((await claim('bob.testnet', '203.0.113.10')).status).toBe(200);
+  });
+
+  it('stops at the daily cap across accounts and addresses', async () => {
+    for (let i = 0; i < FAUCET_DAILY_CAP; i += 1) {
+      expect((await claim(`user${i.toString()}.testnet`, `10.0.0.${i.toString()}`)).status).toBe(
+        200,
+      );
+    }
+    const over = await claim('late.testnet', '10.0.1.1');
+    expect(over.status).toBe(429);
+    expect(await code(over)).toBe('FAUCET_DAILY_CAP');
+  });
+
+  it('refuses while the faucet is below its reserve, and sends nothing', async () => {
+    faucetSent.length = 0;
+    faucetHeld = 1n;
+    const res = await claim('alice.testnet', '203.0.113.20');
+    faucetHeld = 10n ** 15n;
+    expect(res.status).toBe(503);
+    expect(await code(res)).toBe('FAUCET_LOW');
+    expect(faucetSent).toEqual([]);
+    expect((await claim('alice.testnet', '203.0.113.20')).status).toBe(200);
   });
 });

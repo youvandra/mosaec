@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { clientIp } from '../middleware/rate-limit';
+
 import { accountIdSchema, networkQuery } from './schemas';
 
 import type { FaucetService } from '../services/faucet-service';
@@ -13,6 +15,7 @@ export class FaucetController {
   claim = async (c: Context): Promise<Response> => {
     const { network } = networkQuery.parse(c.req.query());
     const { accountId } = claimBody.parse(await c.req.json());
-    return c.json(await this.faucet.claim(network, accountId));
+    const address = clientIp(c.req.header('x-forwarded-for'));
+    return c.json(await this.faucet.claim(network, accountId, address));
   };
 }
