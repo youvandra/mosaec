@@ -6,6 +6,7 @@
 //! The sandbox tests drive these functions, so the deploy path runs in CI before any network.
 
 pub mod keychain;
+pub mod ops;
 pub mod plan;
 pub mod rpc;
 pub mod target;
