@@ -309,12 +309,15 @@ describe('API', () => {
     expect(((await res.json()) as { items: unknown[] }).items).toEqual([]);
   });
 
-  const claim = (accountId: string, ip = '203.0.113.1', network = 'testnet') =>
-    app.request(`/faucet?network=${network}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
-      body: JSON.stringify({ accountId }),
-    });
+  /* `app.request` may answer synchronously; one promise type lets claims run in parallel. */
+  const claim = (accountId: string, ip = '203.0.113.1', network = 'testnet'): Promise<Response> =>
+    Promise.resolve(
+      app.request(`/faucet?network=${network}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+        body: JSON.stringify({ accountId }),
+      }),
+    );
 
   async function code(res: Response): Promise<string> {
     return ((await res.json()) as { error: { code: string } }).error.code;
