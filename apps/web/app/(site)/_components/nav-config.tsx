@@ -60,7 +60,11 @@ export const NAV_MENUS: readonly NavMenu[] = [
           ),
         },
       ],
-      footer: { badge: 'New', text: 'ZEC, BTC and SOL packs are live on NEAR testnet.', href: SITE.appUrl },
+      footer: {
+        badge: 'New',
+        text: 'ZEC, BTC and SOL packs are live on NEAR testnet.',
+        href: SITE.appUrl,
+      },
     },
   },
   { label: 'Market', href: '/market' },
