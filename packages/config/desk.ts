@@ -55,9 +55,10 @@ export const DESK_POLICIES: Readonly<Record<NetworkId, DeskPolicyInput>> = {
   testnet: {
     network: 'testnet',
     deskAccountId: DESK_ACCOUNTS.testnet,
-    assets: ['ZEC'],
+    assets: ['ZEC', 'BTC', 'SOL'],
     maxLtvBps: 5_000,
-    minAprBps: 2_000,
+    /* BTC prices at about 12% a year (1% a month); 10% keeps all three coins in reach. */
+    minAprBps: 1_000,
     minTermNs: (10n * NS_PER_MINUTE).toString(),
     maxTermNs: (90n * NS_PER_DAY).toString(),
     maxFillUsdc: (250n * USDC_UNIT).toString(),

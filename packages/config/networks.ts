@@ -65,7 +65,7 @@ export const NETWORKS = {
     registryAccountId: 'v0.mosaec.testnet',
     verifierAccountId: 'intents.mosaec.testnet',
     termBoundsNs: { min: TESTNET_MIN_TERM_NS, max: MAX_TERM_NS },
-    assets: ['ZEC', 'USDC'],
+    assets: ['ZEC', 'BTC', 'SOL', 'USDC'],
   },
 } as const satisfies Record<NetworkId, NetworkConfig>;
 
