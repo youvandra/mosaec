@@ -1,5 +1,6 @@
-import { packStatusSchema, parseContractJson, positionViewSchema } from '@mosaec/domain';
 import { describe, expect, it } from 'vitest';
+
+import { packStatusSchema, parseContractJson, positionViewSchema } from '@mosaec/domain';
 
 import { packRow } from './refresh';
 
