@@ -75,7 +75,7 @@ export function ListRow({
           {valueNote !== undefined && <span className="t-caption">{valueNote}</span>}
         </span>
       )}
-      {trailing}
+      {trailing !== undefined && <span className={styles.trailing}>{trailing}</span>}
     </>
   );
   return (

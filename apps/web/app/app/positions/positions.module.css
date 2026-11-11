@@ -48,6 +48,10 @@
   background: var(--bg-primary);
   border: 1px solid var(--border-primary);
 }
+/* Cards in a row end on the same line: the action sits at the bottom whatever comes above it. */
+.cardAction {
+  margin-top: auto;
+}
 .cardTop {
   display: flex;
   align-items: center;

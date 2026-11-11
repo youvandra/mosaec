@@ -179,12 +179,20 @@ function PositionCard({
   return (
     <li className={styles.card}>
       <div className={styles.cardTop}>
-        <CoinTile symbol={lead?.symbol ?? null} size={40} />
+        {lead === undefined ? (
+          <AppIcon color="light" size={40}>
+            <PackageIcon weight="fill" />
+          </AppIcon>
+        ) : (
+          <CoinTile symbol={lead.symbol} size={40} />
+        )}
         <PackStatus status={pack.status ?? 'Free'} />
       </div>
       <div className={styles.cardBody}>
         <span className="t-body-sm">
-          Pack #{pack.index} · {lead === undefined ? 'empty' : amountText(lead)} · {right}
+          {lead === undefined || deal.repayment === null
+            ? `Pack #${pack.index} · ${right}`
+            : `Pack #${pack.index} · ${amountText(lead)} · ${right}`}
         </span>
         <span className={styles.cardValue}>
           {deal.repayment === null
@@ -202,17 +210,19 @@ function PositionCard({
           />
         </span>
       )}
-      <span className="t-caption">
-        {deal.dueNs !== null ? (
-          <>
-            {side === 'borrowing' ? 'Repay within ' : 'Settles in '}
-            <Countdown untilNs={deal.dueNs} compact />
-            {` · due ${formatDateNs(deal.dueNs)}`}
-          </>
-        ) : (
-          termText(deal.termNs)
-        )}
-      </span>
+      {(deal.dueNs !== null || deal.termNs !== null) && (
+        <span className="t-caption">
+          {deal.dueNs !== null ? (
+            <>
+              {side === 'borrowing' ? 'Repay within ' : 'Settles in '}
+              <Countdown untilNs={deal.dueNs} compact />
+              {` · due ${formatDateNs(deal.dueNs)}`}
+            </>
+          ) : (
+            termText(deal.termNs)
+          )}
+        </span>
+      )}
       {side !== 'owned' && deal.outcome === 'running' && worth !== null && owed !== null && (
         <ValueCheck side={side === 'borrowing' ? 'borrower' : 'lender'} worth={worth} owed={owed} />
       )}
@@ -234,6 +244,7 @@ function PositionCard({
         as={Link}
         size="sm"
         fullWidth
+        className={styles.cardAction}
         variant={next.primary ? 'primary' : 'secondary'}
       >
         {next.label}
