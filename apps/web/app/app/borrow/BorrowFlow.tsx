@@ -25,7 +25,14 @@ import { SIGN_FOOTNOTE } from '../../../lib/legal';
 import { useNetwork } from '../../../lib/near/network';
 import { useTransaction } from '../../../lib/near/useTransaction';
 import { useWallet } from '../../../lib/near/wallet';
-import { SUGGESTED_MONTHLY_RATE_BPS, TERM_OPTIONS, suggestedRepayment } from '../../../lib/rates';
+import { usdText, useUsdPrices } from '../../../lib/prices';
+import {
+  SUGGESTED_LTV,
+  SUGGESTED_MONTHLY_RATE_BPS,
+  TERM_OPTIONS,
+  suggestedPrincipal,
+  suggestedRepayment,
+} from '../../../lib/rates';
 import { track } from '../../../lib/track';
 import actionStyles from '../_components/ActionCard.module.css';
 import { ListCard, SoftPill } from '../_components/ListCard';
@@ -227,6 +234,8 @@ export function BorrowFlow() {
   const [lockText, setLockText] = useState('1');
   const [lockEdited, setLockEdited] = useState(false);
   const [principalText, setPrincipalText] = useState('500');
+  const [principalEdited, setPrincipalEdited] = useState(false);
+  const prices = useUsdPrices();
   const [termId, setTermId] = useState(DEFAULT_TERM_ID);
   const [repaymentText, setRepaymentText] = useState('');
   const [repaymentEdited, setRepaymentEdited] = useState(false);
@@ -311,6 +320,25 @@ export function BorrowFlow() {
 
   const repayment = parsed(repaymentText, SETTLEMENT.decimals);
   const lock = parsed(lockText, collateral.decimals);
+  const coinPrice = prices?.[collateral.symbol];
+  const lockUsd =
+    lock === null || coinPrice === undefined
+      ? null
+      : (Number(lock) / 10 ** collateral.decimals) * coinPrice;
+  const suggestedLoan =
+    lockUsd === null ? null : suggestedPrincipal(lockUsd, SETTLEMENT.capPerPack);
+
+  /* Until the person types a loan, it follows the coins: half their reference value. */
+  useEffect(() => {
+    if (!principalEdited && suggestedLoan !== null) {
+      setPrincipalText(plain(suggestedLoan, SETTLEMENT.decimals));
+    }
+  }, [suggestedLoan, principalEdited]);
+
+  const ltv =
+    lockUsd === null || lockUsd <= 0 || principal === null
+      ? null
+      : Number(principal) / 10 ** SETTLEMENT.decimals / lockUsd;
   const inPack = packBalance ?? 0n;
   const toDeposit = lock === null ? null : lock > inPack ? lock - inPack : 0n;
 
@@ -572,10 +600,36 @@ export function BorrowFlow() {
           id="principal"
           label="You receive now"
           value={principalText}
-          onChange={setPrincipalText}
+          onChange={(value) => {
+            setPrincipalEdited(true);
+            setPrincipalText(value);
+          }}
+          aside={
+            principalEdited && suggestedLoan !== null ? (
+              <button
+                type="button"
+                className={styles.max}
+                onClick={() => {
+                  setPrincipalEdited(false);
+                }}
+              >
+                Use {Math.round(SUGGESTED_LTV * 100).toString()}%
+              </button>
+            ) : undefined
+          }
           pill={<TokenPill symbol="USDC" />}
         />
         <Rows>
+          <Row k="Coins worth">
+            {lockUsd === null ? (
+              '–'
+            ) : (
+              <span className={cx(ltv !== null && ltv > 0.7 && styles.bad)}>
+                {usdText(lockUsd)}
+                {ltv === null ? '' : ` · ${Math.round(ltv * 100).toString()}% loan to value`}
+              </span>
+            )}
+          </Row>
           <Row k="Cost of the loan">
             {interest === null || interest < 0n ? '0.00' : cash(interest)} USDC
           </Row>
