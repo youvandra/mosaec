@@ -1,7 +1,7 @@
 'use client';
 
 import { CaretDownIcon, CaretRightIcon, ListIcon, XIcon } from '@phosphor-icons/react';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import { ButtonLink } from './Button';
 import { cx } from './cx';
@@ -44,7 +44,10 @@ export interface NavigationProps {
 
 const COMPACT_AFTER_PX = 120;
 const SCROLL_DELTA_PX = 6;
-const CLOSE_DELAY_MS = 140;
+const CLOSE_DELAY_MS = 160;
+/** Hover must rest this long before a menu opens, so a pointer passing over the bar opens nothing. */
+const OPEN_DELAY_MS = 70;
+const HOVER_POINTER = '(hover: hover) and (pointer: fine)';
 
 function RollingLabel({ text }: { readonly text: string }) {
   return (
@@ -115,6 +118,38 @@ function Panel({
 }
 
 /**
+ * Keeps the last opened menu rendered while the panel closes, and reports the panel's content
+ * height so open, close and a switch between menus all animate one real height.
+ */
+function usePanelHeight(active: NavMenu | undefined) {
+  // Adjust-state-during-render: remember the last open menu without an extra effect pass.
+  const [last, setLast] = useState<NavMenu | undefined>(undefined);
+  if (active !== undefined && active !== last) setLast(active);
+  const shown = active ?? last;
+  const [contentHeight, setContentHeight] = useState(0);
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  // Measure before paint, so the first open starts from the real height in the same frame.
+  useLayoutEffect(() => {
+    if (innerRef.current !== null) setContentHeight(innerRef.current.offsetHeight);
+  }, [shown?.label]);
+
+  useEffect(() => {
+    const node = innerRef.current;
+    if (node === null) return;
+    const observer = new ResizeObserver(() => {
+      setContentHeight(node.offsetHeight);
+    });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return { shown, height: active === undefined ? 0 : contentHeight, innerRef };
+}
+
+/**
  * Floating glass navigation. Menus with a panel open a mega menu on hover or click; the bar
  * shrinks to logo and call to action while the reader scrolls down.
  */
@@ -124,21 +159,32 @@ export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: Navigat
   const [drawer, setDrawer] = useState(false);
   const [drawerSection, setDrawerSection] = useState<string | null>(null);
   const closeTimer = useRef<number | undefined>(undefined);
-  /** True when the open menu was opened by hover, so the click that follows keeps it open. */
-  const openedByHover = useRef(false);
+  const openTimer = useRef<number | undefined>(undefined);
   const navRef = useRef<HTMLElement>(null);
   const panelId = useId();
 
   const cancelClose = () => {
     window.clearTimeout(closeTimer.current);
   };
+  const cancelOpen = () => {
+    window.clearTimeout(openTimer.current);
+  };
   const scheduleClose = () => {
     cancelClose();
+    cancelOpen();
     closeTimer.current = window.setTimeout(() => {
       setOpenMenu(null);
     }, CLOSE_DELAY_MS);
   };
+  const scheduleOpen = (label: string) => {
+    cancelClose();
+    cancelOpen();
+    openTimer.current = window.setTimeout(() => {
+      setOpenMenu(label);
+    }, OPEN_DELAY_MS);
+  };
   const closeAll = useCallback(() => {
+    window.clearTimeout(openTimer.current);
     setOpenMenu(null);
     setDrawer(false);
   }, []);
@@ -164,6 +210,7 @@ export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: Navigat
 
   const active = menus.find((menu) => menu.label === openMenu && menu.panel !== undefined);
   const expanded = active !== undefined || drawer;
+  const { shown, height, innerRef } = usePanelHeight(active);
 
   return (
     <div className={styles.wrap}>
@@ -180,7 +227,7 @@ export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: Navigat
       >
         <div className={styles.bar}>
           <Link href={homeHref} className={styles.home} aria-label="Mosaec home" onClick={closeAll}>
-            <Logo variant="mark" size={44} />
+            <Logo variant="mark" />
             <span className={styles.wordmark} aria-hidden={!compact}>
               Mosaec
             </span>
@@ -195,16 +242,14 @@ export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: Navigat
                   aria-expanded={openMenu === menu.label}
                   aria-controls={panelId}
                   onPointerEnter={(event) => {
-                    if (event.pointerType === 'mouse') {
-                      cancelClose();
-                      openedByHover.current = openMenu !== menu.label;
-                      setOpenMenu(menu.label);
-                    }
+                    if (event.pointerType === 'mouse') scheduleOpen(menu.label);
                   }}
-                  onClick={() => {
-                    const keep = openedByHover.current;
-                    openedByHover.current = false;
-                    setOpenMenu((value) => (value === menu.label && !keep ? null : menu.label));
+                  onClick={(event) => {
+                    cancelOpen();
+                    // With a mouse the menu follows the pointer, so a click only confirms it.
+                    // Touch and keyboard (detail 0) toggle.
+                    const mouse = event.detail > 0 && window.matchMedia(HOVER_POINTER).matches;
+                    setOpenMenu((value) => (value === menu.label && !mouse ? null : menu.label));
                   }}
                 >
                   <RollingLabel text={menu.label} />
@@ -246,11 +291,16 @@ export function Navigation({ menus, homeHref, cta, linkAs: Link = 'a' }: Navigat
           className={styles.panel}
           data-open={active !== undefined}
           role="region"
-          aria-label={active?.label}
+          aria-label={shown?.label}
+          aria-hidden={active === undefined}
+          inert={active === undefined}
+          style={{ height }}
         >
-          {active?.panel !== undefined && (
-            <Panel panel={active.panel} Link={Link} onNavigate={closeAll} />
-          )}
+          <div ref={innerRef}>
+            {shown?.panel !== undefined && (
+              <Panel key={shown.label} panel={shown.panel} Link={Link} onNavigate={closeAll} />
+            )}
+          </div>
         </div>
 
         <div id="nav-drawer" className={styles.drawer} data-open={drawer}>

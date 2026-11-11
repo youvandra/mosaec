@@ -1,0 +1,81 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.body {
+  color: var(--text-secondary);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 16px;
+  border-radius: var(--radius-card);
+  background: var(--bg-secondary);
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+.row + .row {
+  border-top: 1px solid var(--border-primary);
+}
+.row dt {
+  color: var(--text-secondary);
+}
+.row dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.warning {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--warning-subtle);
+  color: var(--warning);
+  font-size: 13px;
+  line-height: 18px;
+}
+.warning svg {
+  flex: none;
+  margin-top: 1px;
+}
+.danger {
+  background: var(--negative-subtle);
+  color: var(--negative);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.actions > * {
+  width: 100%;
+  justify-content: center;
+}
+
+.footnote {
+  margin: -4px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+.footnote a {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

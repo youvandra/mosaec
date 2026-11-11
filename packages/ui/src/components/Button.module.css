@@ -55,6 +55,27 @@
   background: var(--accent);
   color: var(--on-accent);
 }
+.danger {
+  background: var(--negative);
+  color: var(--text-inverse);
+}
+.danger:hover:not(:disabled) {
+  background: #c93a3f;
+}
+.loading {
+  cursor: progress;
+}
+.loading:disabled {
+  opacity: 0.72;
+}
+.spinner {
+  animation: button-spin 0.9s linear infinite;
+}
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .inverse {
   background: var(--bg-primary);
   color: var(--text-primary);

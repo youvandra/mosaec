@@ -1,11 +1,11 @@
-import { CaretRightIcon } from '@phosphor-icons/react/dist/ssr';
+import { CaretRightIcon, SpinnerGapIcon } from '@phosphor-icons/react/dist/ssr';
 
 import styles from './Button.module.css';
 import { cx } from './cx';
 
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'inverse';
+export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'inverse' | 'danger';
 
 interface CommonProps {
   readonly variant?: ButtonVariant;
@@ -15,6 +15,8 @@ interface CommonProps {
   readonly fullWidth?: boolean;
   readonly children: string;
   readonly icon?: ReactNode;
+  /** Shows a spinner in place of the icon and blocks clicks while work runs. */
+  readonly loading?: boolean;
 }
 
 function Label({ text }: { readonly text: string }) {
@@ -34,13 +36,18 @@ function classes(props: CommonProps, className?: string): string {
     styles[props.variant ?? 'primary'],
     props.size === 'sm' && styles.sm,
     props.fullWidth === true && styles.full,
+    props.loading === true && styles.loading,
     className,
   );
 }
 
 function Content(props: CommonProps) {
   const icon =
-    props.icon ?? (props.showIcon === true ? <CaretRightIcon size={16} weight="bold" /> : null);
+    props.loading === true ? (
+      <SpinnerGapIcon size={16} weight="bold" className={styles.spinner} />
+    ) : (
+      (props.icon ?? (props.showIcon === true ? <CaretRightIcon size={16} weight="bold" /> : null))
+    );
   return (
     <>
       <span className={styles.bloom} aria-hidden="true" />
@@ -65,13 +72,21 @@ export function Button({
   showIcon,
   fullWidth,
   icon,
+  loading,
   children,
   className,
+  disabled,
   ...rest
 }: ButtonProps) {
-  const common = { variant, size, showIcon, fullWidth, icon, children } as CommonProps;
+  const common = { variant, size, showIcon, fullWidth, icon, loading, children } as CommonProps;
   return (
-    <button type="button" className={classes(common, className)} {...rest}>
+    <button
+      type="button"
+      className={classes(common, className)}
+      disabled={disabled === true || loading === true}
+      aria-busy={loading === true ? true : undefined}
+      {...rest}
+    >
       <Content {...common} />
     </button>
   );
@@ -90,12 +105,13 @@ export function ButtonLink({
   showIcon,
   fullWidth,
   icon,
+  loading,
   children,
   className,
   as: Component = 'a',
   ...rest
 }: ButtonLinkProps) {
-  const common = { variant, size, showIcon, fullWidth, icon, children } as CommonProps;
+  const common = { variant, size, showIcon, fullWidth, icon, loading, children } as CommonProps;
   return (
     <Component className={classes(common, className)} {...rest}>
       <Content {...common} />

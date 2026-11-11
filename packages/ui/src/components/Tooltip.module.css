@@ -1,0 +1,38 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+.bubble {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 40;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: var(--radius-tag);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
+}
+.wrap[data-side='bottom'] .bubble {
+  top: calc(100% + 8px);
+  bottom: auto;
+  transform: translate(-50%, -4px);
+}
+.wrap:hover .bubble,
+.wrap:focus-within .bubble {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.12s;
+}

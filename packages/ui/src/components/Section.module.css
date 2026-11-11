@@ -9,7 +9,7 @@
 .header {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   max-width: 760px;
 }
 .center {
@@ -21,7 +21,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: end;
-  gap: 40px;
+  gap: 48px;
   max-width: none;
 }
 .split > p {
