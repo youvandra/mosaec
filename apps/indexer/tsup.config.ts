@@ -1,3 +1,5 @@
+import { cpSync } from 'node:fs';
+
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
@@ -9,4 +11,9 @@ export default defineConfig({
   sourcemap: true,
   // Workspace packages ship TypeScript source, so they are bundled rather than imported at runtime.
   noExternal: [/^@mosaec\//],
+  // Migrations ship with the bundle so the service can apply them at start.
+  onSuccess: () => {
+    cpSync('../../packages/db/migrations', 'dist/migrations', { recursive: true });
+    return Promise.resolve();
+  },
 });
