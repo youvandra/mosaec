@@ -1,3 +1,4 @@
+import { ASSETS } from '@mosaec/config/assets';
 import { NETWORKS } from '@mosaec/config/networks';
 import {
   MosaecError,
@@ -90,7 +91,7 @@ export class MosaecViews {
   readonly verifier: string;
 
   constructor(
-    network: NetworkId,
+    private readonly network: NetworkId,
     private readonly rpc: NearRpc = new NearRpc(NETWORKS[network].rpcUrl),
   ) {
     this.registry = NETWORKS[network].registryAccountId;
@@ -153,5 +154,30 @@ export class MosaecViews {
       throw new MosaecError('UPSTREAM_RPC', { cause: new Error('unexpected balance') });
     }
     return BigInt(value);
+  }
+
+  /**
+   * Verifier balances `account` holds in the network's allowlisted tokens, non-zero lines only.
+   * A free pack records no contents on chain, so this is how much it holds.
+   */
+  async holdingsOf(account: string): Promise<{ token_id: string; amount: bigint }[]> {
+    const tokenIds = NETWORKS[this.network].assets.map(
+      (symbol) => ASSETS[symbol].tokenIds[this.network],
+    );
+    const values = await this.rpc.view(this.verifier, 'mt_batch_balance_of', {
+      account_id: account,
+      token_ids: tokenIds,
+    });
+    if (
+      !Array.isArray(values) ||
+      values.length !== tokenIds.length ||
+      !values.every((v) => typeof v === 'string' && /^\d+$/.test(v))
+    ) {
+      throw new MosaecError('UPSTREAM_RPC', { cause: new Error('unexpected batch balance') });
+    }
+    return tokenIds.flatMap((token_id, i) => {
+      const amount = BigInt(values[i] as string);
+      return amount > 0n ? [{ token_id, amount }] : [];
+    });
   }
 }

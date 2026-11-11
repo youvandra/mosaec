@@ -83,6 +83,7 @@ const STATUS = packStatusSchema.parse(
 const reader: PackReader = {
   positionOf: () => Promise.resolve(POSITION),
   packStatus: () => Promise.resolve(STATUS),
+  holdingsOf: () => Promise.resolve([]),
 };
 
 function txSource(pageSize = 50): FastnearTxSource {
