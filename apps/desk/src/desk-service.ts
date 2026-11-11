@@ -1,6 +1,6 @@
 import { mosaecCalls } from '@mosaec/sdk';
 
-import { evaluate } from './policy';
+import { evaluate, offerKey } from './policy';
 import { utcMidnight } from './repository';
 
 import type { DeskChain } from './chain';
@@ -105,6 +105,7 @@ export class DeskService {
         network: this.network,
         runId,
         packId: pack,
+        offerKey: null,
         verdict: 'refused',
         code: 'DESK_POLICY',
         reason: 'The pack is no longer offered.',
@@ -115,11 +116,13 @@ export class DeskService {
       return { status: 'refused', code: 'DESK_POLICY', reason: 'The pack is no longer offered.' };
     }
     const { offer, verdict } = review;
+    const key = offerKey(offer);
     if (!verdict.ok) {
       await this.repository.record({
         network: this.network,
         runId,
         packId: pack,
+        offerKey: key,
         verdict: 'refused',
         code: verdict.code,
         reason: verdict.reason,
@@ -136,6 +139,7 @@ export class DeskService {
         network: this.network,
         runId,
         packId: pack,
+        offerKey: key,
         verdict: settled ? 'fill' : 'error',
         code: settled ? null : (sent.outcome.code ?? 'E_STATE'),
         reason: settled ? why : 'The registry declined the fill; the USDC came back.',
@@ -157,6 +161,7 @@ export class DeskService {
         network: this.network,
         runId,
         packId: pack,
+        offerKey: key,
         verdict: 'error',
         code: 'UPSTREAM_RPC',
         reason,
@@ -212,11 +217,18 @@ export class DeskService {
     return results;
   }
 
-  async recordPass(pack: string, runId: string, actor: string, why: string, quote: Quote | null) {
+  async recordPass(
+    offer: OfferInput,
+    runId: string,
+    actor: string,
+    why: string,
+    quote: Quote | null,
+  ) {
     await this.repository.record({
       network: this.network,
       runId,
-      packId: pack,
+      packId: offer.pack,
+      offerKey: offerKey(offer),
       verdict: 'pass',
       code: null,
       reason: why,
@@ -227,11 +239,11 @@ export class DeskService {
   }
 
   /**
-   * True when `pack` already has a lasting verdict. Errors and budget or exposure refusals are
-   * temporary, so those packs are looked at again on the next pass.
+   * True when this offer already has a lasting verdict. Errors and budget or exposure refusals are
+   * temporary, so those offers are looked at again on the next pass; a re-offer is a new offer.
    */
-  async alreadyDecided(pack: string): Promise<boolean> {
-    const last = await this.repository.lastDecision(this.network, pack);
+  async alreadyDecided(offer: OfferInput): Promise<boolean> {
+    const last = await this.repository.lastDecision(this.network, offer.pack, offerKey(offer));
     if (last === null || last.verdict === 'error') return false;
     return !(
       last.verdict === 'refused' &&
@@ -239,11 +251,12 @@ export class DeskService {
     );
   }
 
-  async recordRefusal(pack: string, runId: string, verdict: Extract<Verdict, { ok: false }>) {
+  async recordRefusal(offer: OfferInput, runId: string, verdict: Extract<Verdict, { ok: false }>) {
     await this.repository.record({
       network: this.network,
       runId,
-      packId: pack,
+      packId: offer.pack,
+      offerKey: offerKey(offer),
       verdict: 'refused',
       code: verdict.code,
       reason: verdict.reason,
@@ -258,6 +271,7 @@ export class DeskService {
       network: this.network,
       runId,
       packId: null,
+      offerKey: null,
       verdict: 'error',
       code: 'DESK_AGENT',
       reason,
