@@ -67,7 +67,22 @@ impl Env {
 pub struct TestToken {
     pub rule: &'static TokenRule,
     pub account: AccountId,
+    /// Short name the asset prefix stands for (`zec`).
+    pub asset: &'static str,
+    /// NEP-148 symbol, the real asset's ticker.
+    pub symbol: &'static str,
+    /// NEP-148 name, marked as a testnet stand-in.
+    pub name: &'static str,
 }
+
+/// NEP-148 metadata of each testnet stand-in: (asset, symbol, name). Decimals come from the
+/// shared allowlist so caps and amounts mean the same thing as on mainnet.
+const TEST_TOKEN_META: [(&str, &str, &str); 4] = [
+    ("zec", "ZEC", "Zcash (Mosaec testnet)"),
+    ("btc", "BTC", "Bitcoin (Mosaec testnet)"),
+    ("sol", "SOL", "Solana (Mosaec testnet)"),
+    ("usdc", "USDC", "USD Coin (Mosaec testnet)"),
+];
 
 /// Accounts and settings of one deploy.
 #[derive(Debug, Clone)]
@@ -136,12 +151,21 @@ fn test_tokens(root: &AccountId, assets: &[&str]) -> Result<Vec<TestToken>> {
     assets
         .iter()
         .map(|asset| {
+            let Some(&(asset, symbol, name)) = TEST_TOKEN_META.iter().find(|m| m.0 == *asset) else {
+                bail!("unknown test asset `{asset}` (zec, btc, sol, usdc)");
+            };
             let account: AccountId = format!("{asset}.{root}").parse()?;
             let token_id = format!("nep141:{account}");
             let Some(rule) = TOKEN_RULES.iter().find(|r| r.testnet_id == token_id) else {
                 bail!("{token_id} is not on the testnet allowlist (zec, btc, sol, usdc under mosaec.testnet)");
             };
-            Ok(TestToken { rule, account })
+            Ok(TestToken {
+                rule,
+                account,
+                asset,
+                symbol,
+                name,
+            })
         })
         .collect()
 }

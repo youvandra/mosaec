@@ -20,7 +20,7 @@ use near_token::NearToken;
 use serde_json::json;
 
 use crate::rpc::AccountState;
-use crate::target::{Target, YOCTO_PER_NEAR};
+use crate::target::{Target, TestToken, YOCTO_PER_NEAR};
 
 /// Gas for each init call in a deploy step.
 const INIT_GAS: Gas = Gas::from_teragas(30);
@@ -127,9 +127,8 @@ pub fn slots(target: &Target, artifacts: &Artifacts) -> Result<Vec<Slot>> {
             funding: target.token_funding,
             init: vec![
                 InitCall {
-                    method: "new_default_meta",
-                    args: json!({ "owner_id": target.root, "total_supply": TEST_TOKEN_SUPPLY.to_string() })
-                        .to_string(),
+                    method: "new",
+                    args: test_token_init_args(target, token),
                     deposit: NearToken::from_yoctonear(0),
                 },
                 InitCall {
@@ -152,6 +151,26 @@ pub fn slots(target: &Target, artifacts: &Artifacts) -> Result<Vec<Slot>> {
         }],
     });
     Ok(slots)
+}
+
+/// A test token's init arguments: the whole supply to the root and NEP-148 metadata whose
+/// decimals match the allowlist.
+#[must_use]
+pub fn test_token_init_args(target: &Target, token: &TestToken) -> String {
+    json!({
+        "owner_id": target.root,
+        "total_supply": TEST_TOKEN_SUPPLY.to_string(),
+        "metadata": {
+            "spec": "ft-1.0.0",
+            "name": token.name,
+            "symbol": token.symbol,
+            "icon": null,
+            "reference": null,
+            "reference_hash": null,
+            "decimals": token.rule.decimals,
+        },
+    })
+    .to_string()
 }
 
 /// The registry's init arguments.
@@ -452,6 +471,20 @@ mod tests {
                 .contains("\"verifier\":\"intents.mosaec.testnet\"")
         );
         assert!(s[3].init[0].args.contains("\"network\":\"Testnet\""));
+    }
+
+    #[test]
+    fn test_tokens_carry_allowlist_decimals() {
+        let s = slots(&testnet(), &artifacts()).unwrap();
+        let meta = |i: usize| -> serde_json::Value {
+            assert_eq!(s[i].init[0].method, "new");
+            serde_json::from_str::<serde_json::Value>(&s[i].init[0].args).unwrap()["metadata"]
+                .clone()
+        };
+        assert_eq!(meta(1)["symbol"], "ZEC");
+        assert_eq!(meta(1)["decimals"], 8);
+        assert_eq!(meta(2)["symbol"], "USDC");
+        assert_eq!(meta(2)["decimals"], 6);
     }
 
     #[test]

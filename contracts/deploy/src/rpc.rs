@@ -4,10 +4,12 @@ use anyhow::{Context, Result, bail};
 use near_crypto::{PublicKey, Signer};
 use near_jsonrpc_client::{JsonRpcClient, methods};
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
-use near_primitives::action::Action;
+use near_primitives::action::{Action, DeleteAccountAction};
+use near_primitives::errors::{ActionError, ActionErrorKind, TxExecutionError};
 use near_primitives::hash::CryptoHash;
 use near_primitives::transaction::{Transaction, TransactionV0};
 use near_primitives::types::{AccountId, BlockReference, Finality};
+use near_primitives::views::ExecutionStatusView;
 use near_primitives::views::{
     AccessKeyPermissionView, FinalExecutionStatus, QueryRequest, TxExecutionStatus,
 };
@@ -144,6 +146,34 @@ impl Rpc {
         receiver: &AccountId,
         actions: Vec<Action>,
     ) -> Result<Sent> {
+        self.send_checked(signer, receiver, actions, None).await
+    }
+
+    /// Sends a `DeleteAccount` from `signer` to itself. The gas refund to the deleted account
+    /// always fails with `AccountDoesNotExist`; that one failure is expected and ignored.
+    ///
+    /// # Errors
+    /// When the transaction or any other receipt fails.
+    pub async fn send_delete_account(
+        &self,
+        signer: &Signer,
+        beneficiary: &AccountId,
+    ) -> Result<Sent> {
+        let account = signer.get_account_id();
+        let action = Action::DeleteAccount(DeleteAccountAction {
+            beneficiary_id: beneficiary.clone(),
+        });
+        self.send_checked(signer, &account, vec![action], Some(&account))
+            .await
+    }
+
+    async fn send_checked(
+        &self,
+        signer: &Signer,
+        receiver: &AccountId,
+        actions: Vec<Action>,
+        deleted: Option<&AccountId>,
+    ) -> Result<Sent> {
         let public_key = signer.public_key();
         let request = QueryRequest::ViewAccessKey {
             account_id: signer.get_account_id(),
@@ -177,7 +207,11 @@ impl Rpc {
             .receipts_outcome
             .iter()
             .filter_map(|r| match &r.outcome.status {
-                near_primitives::views::ExecutionStatusView::Failure(e) => Some(format!("{e:?}")),
+                ExecutionStatusView::Failure(e)
+                    if !is_refund_to(deleted, &r.outcome.executor_id, e) =>
+                {
+                    Some(format!("{e:?}"))
+                }
                 _ => None,
             })
             .collect();
@@ -187,6 +221,24 @@ impl Rpc {
         }
         Ok(Sent { tx_hash })
     }
+}
+
+/// True for the gas refund that fails because `deleted` no longer exists.
+fn is_refund_to(
+    deleted: Option<&AccountId>,
+    executor: &AccountId,
+    error: &TxExecutionError,
+) -> bool {
+    let Some(deleted) = deleted else {
+        return false;
+    };
+    matches!(
+        error,
+        TxExecutionError::ActionError(ActionError {
+            kind: ActionErrorKind::AccountDoesNotExist { account_id },
+            ..
+        }) if account_id == deleted && executor == deleted
+    )
 }
 
 fn is_missing(message: &str) -> bool {
