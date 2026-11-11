@@ -129,12 +129,20 @@ export class Indexer {
         continue;
       }
       const status = await this.reader.packStatus(packId);
+      const holdings =
+        view.position.stage.state === 'free' ? await this.reader.holdingsOf(packId) : [];
       await this.repository.upsertPack(
-        packRow(network, view, status, {
-          refreshedHeight: height,
-          lastOutcome: await this.repository.lastOutcome(network, packId),
-          mintedHeight: await this.repository.mintedHeight(network, packId),
-        }),
+        packRow(
+          network,
+          view,
+          status,
+          {
+            refreshedHeight: height,
+            lastOutcome: await this.repository.lastOutcome(network, packId),
+            mintedHeight: await this.repository.mintedHeight(network, packId),
+          },
+          holdings,
+        ),
       );
     }
   }

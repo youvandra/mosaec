@@ -5,6 +5,8 @@ import type { PackStatus, PositionView } from '@mosaec/domain';
 export interface PackReader {
   positionOf(pack: string): Promise<PositionView | undefined>;
   packStatus(pack: string): Promise<PackStatus>;
+  /** Verifier balances the pack holds; read only while it is free. */
+  holdingsOf(pack: string): Promise<readonly { token_id: string; amount: bigint }[]>;
 }
 
 const EMPTY_TERMS = {
@@ -37,6 +39,8 @@ export function packRow(
     lastOutcome: 'Redeemed' | 'Forfeited' | null;
     mintedHeight: bigint | null;
   },
+  /** What a free pack holds in the verifier; ignored in other states, whose stage records it. */
+  holdings: readonly { token_id: string; amount: bigint }[] = [],
 ): PackRow {
   const { position } = view;
   const base: PackRow = {
@@ -56,7 +60,7 @@ export function packRow(
   const { stage } = position;
   switch (stage.state) {
     case 'free':
-      return base;
+      return holdings.length === 0 ? base : { ...base, contents: contentsJson(holdings) };
     case 'offered':
       return {
         ...base,
