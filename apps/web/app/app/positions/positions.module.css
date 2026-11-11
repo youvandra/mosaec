@@ -1,0 +1,176 @@
+.desk {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.book {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bookHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  font-size: 12px;
+  text-align: center;
+}
+.list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Source: Accounts › Spaces card. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+}
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cardBody > :first-child {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cardValue {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.track {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+.track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.track span[data-late='true'] {
+  background: var(--ill-orange);
+}
+.none {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-secondary);
+}
+.connect {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  gap: 40px;
+  align-items: center;
+  padding: 48px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-secondary);
+}
+.connectCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 480px;
+}
+.connectAction {
+  margin-top: 8px;
+}
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+}
+@media (max-width: 1023.98px) {
+  .connect {
+    grid-template-columns: 1fr;
+    padding: 32px;
+  }
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 479.98px) {
+  .connect {
+    padding: 20px;
+    border-radius: var(--radius-panel);
+  }
+  .list {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+  .cardTop {
+    margin-bottom: 8px;
+  }
+  .cardValue {
+    font-size: 26px;
+  }
+  .none {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}

@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { parseOutcome } from '@mosaec/sdk';
 
+import { track } from '../track';
+
 import { useNetwork } from './network';
 import { fetchTransaction, hashOf, toTransaction } from './transactions';
 
@@ -106,6 +108,7 @@ export function WalletProvider({ children }: { readonly children: ReactNode }) {
       const wallet = await selector.wallet(walletId);
       // No function-call key is requested: every Mosaec call needs a deposit or the wallet's own approval.
       await wallet.signIn({ accounts: [] });
+      track('wallet_connected');
     },
     [selector],
   );

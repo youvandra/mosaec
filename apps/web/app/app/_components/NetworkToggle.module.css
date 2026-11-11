@@ -1,17 +1,21 @@
 .toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
+  display: inline-grid;
+  grid-template-columns: auto 1fr 1fr;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
   border-radius: var(--radius-pill);
   background: var(--bg-tertiary);
 }
 .option {
-  padding: 7px 10px;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
+  transition:
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
 }
 .option[aria-checked='true'] {
   background: var(--bg-primary);
@@ -21,4 +25,8 @@
 .option:disabled {
   cursor: not-allowed;
   color: var(--text-tertiary);
+}
+.mark {
+  margin: 0 4px 0 3px;
+  border-radius: 50%;
 }

@@ -1,59 +1,291 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 8px 14px 8px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition:
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
+}
+.back:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
 .header {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
-.title {
+.titleRow {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
-.titleText {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.idLine {
+.headerActions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
+.idChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.3s var(--ease-out);
+}
+.idChip:hover {
+  color: var(--accent);
+}
+
 .grid {
   display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
   align-items: start;
 }
 .col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   min-width: 0;
 }
-.cards {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 16px 0 8px;
-}
-.history {
+.aside {
+  position: sticky;
+  top: 92px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
-.event {
+
+/* Deal hero: one ticket card. Coins, then the money both ways, then the dates. */
+.deal {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-primary);
+  border-radius: 28px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+.deal > * {
+  padding: 24px 28px;
+}
+.deal > * + * {
+  border-top: 1px solid var(--border-primary);
+}
+.dealHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+.coins {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.coinsText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.coinsAmount {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38px;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.outcome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+.outcome .t-caption {
+  color: var(--text-secondary);
+}
+
+.ledger {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-primary);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: 16px;
+  background: var(--bg-secondary);
 }
-.event:last-child {
-  border-bottom: 0;
+.ledgerArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-card);
+}
+.amount {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.amount:last-child {
+  padding-left: 20px;
+  border-left: 1px solid var(--border-strong);
+}
+.amountValue {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.amountUnit {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.amountNote {
+  color: var(--text-secondary);
+}
+.positive {
+  color: var(--positive);
+}
+.track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trackStep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 26px;
+}
+.trackStep::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border-primary);
+}
+.trackStep[data-reached='true']::before {
+  background: var(--accent);
+}
+.trackStep:first-child::before {
+  left: 7px;
+}
+.trackStep:last-child::before {
+  right: auto;
+  width: 7px;
+}
+.dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-strong);
+}
+.trackStep[data-done='true'] .dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-subtle);
+}
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--warning-subtle);
+  color: var(--warning);
+  font-size: 14px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 28px;
+  border: 1px solid var(--border-primary);
+}
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.panelHead :global(.t-caption) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 16px 18px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-secondary);
+}
+.holder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  text-align: center;
+}
+.holder > * {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .link {
   text-decoration: underline;
@@ -63,8 +295,74 @@
 .link:hover {
   color: var(--accent);
 }
-@media (max-width: 1199.98px) {
+
+.tx {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  transition:
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out);
+}
+.tx:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+@media (max-width: 1023.98px) {
   .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .aside {
+    position: static;
+  }
+}
+@media (max-width: 639.98px) {
+  .deal,
+  .panel {
+    border-radius: var(--radius-panel);
+  }
+  .deal > * {
+    padding: 18px;
+  }
+  .panel {
+    padding: 16px;
+  }
+  .rights {
     grid-template-columns: 1fr;
+  }
+  .track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 20px;
+  }
+}
+
+/* The ticket stacks by its own width, so a narrow column reads like a phone. */
+@container (max-width: 600px) {
+  .dealHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .outcome {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .ledger {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .amount:last-child {
+    grid-column: 1 / -1;
+    padding: 14px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--border-strong);
+  }
+  .amountValue {
+    gap: 4px;
+    font-size: 21px;
   }
 }

@@ -151,3 +151,109 @@ export async function getPositions(network: NetworkId, accountId: string): Promi
     positionsSchema,
   );
 }
+
+const deskBalanceSchema = z.object({
+  symbol: z.string(),
+  tokenId: z.string(),
+  decimals: z.number().int(),
+  amount: z.string().nullable(),
+});
+
+const deskOverviewSchema = z.object({
+  network: z.enum(NETWORK_IDS),
+  accountId: z.string(),
+  policy: z.object({
+    assets: z.array(z.string()),
+    maxLtvBps: z.number().int(),
+    minAprBps: z.number().int(),
+    minTermNs: z.string(),
+    maxTermNs: z.string(),
+    maxFillUsdc: z.string(),
+    maxExposureUsdc: z.string(),
+    dailyBudgetUsdc: z.string(),
+    maxFillsPerHour: z.number().int(),
+    paused: z.boolean(),
+  }),
+  balances: z.array(deskBalanceSchema),
+  stats: z.object({
+    fills: z.number().int(),
+    lentUsdc: z.string(),
+    openExposureUsdc: z.string(),
+    running: z.number().int(),
+    repaid: z.number().int(),
+    earnedUsdc: z.string(),
+    coinsKept: z.number().int(),
+  }),
+  prices: z.array(z.object({ symbol: z.string(), usd: z.string(), observedAt: z.string() })),
+});
+
+const deskDecisionSchema = z.object({
+  id: z.string(),
+  decidedAt: z.string(),
+  runId: z.string(),
+  packId: z.string().nullable(),
+  verdict: z.enum(['fill', 'pass', 'refused', 'error']),
+  code: z.string().nullable(),
+  reason: z.string(),
+  quote: z
+    .object({
+      collateral: z.object({ symbol: z.string(), amount: z.string() }),
+      principal: z.string(),
+      repayment: z.string(),
+      interest: z.string(),
+      termNs: z.string(),
+      aprBps: z.number(),
+      ltvBps: z.number(),
+    })
+    .partial()
+    .nullable(),
+  principal: z.string().nullable(),
+  txHash: z.string().nullable(),
+  actor: z.string(),
+});
+
+export type DeskOverview = z.output<typeof deskOverviewSchema>;
+export type DeskDecision = z.output<typeof deskDecisionSchema>;
+
+/** The house desk's holdings, results and policy. */
+export async function getDesk(network: NetworkId): Promise<DeskOverview> {
+  checkNetwork(network);
+  return getJson(`/desk?network=${network}`, deskOverviewSchema);
+}
+
+/** The desk's latest decisions, newest first. */
+export async function getDeskDecisions(
+  network: NetworkId,
+  limit = 30,
+): Promise<readonly DeskDecision[]> {
+  checkNetwork(network);
+  return (
+    await getJson(
+      `/desk/decisions?network=${network}&limit=${limit.toString()}`,
+      z.object({ items: z.array(deskDecisionSchema) }),
+    )
+  ).items;
+}
+
+export interface FaucetGrant {
+  readonly accountId: string;
+  readonly txHash: string;
+}
+
+/** Asks the testnet faucet for test ZEC and USDC. Throws `ApiError` with the API's message. */
+export async function claimFaucet(accountId: string): Promise<FaucetGrant> {
+  const response = await fetch(`${baseUrl()}/faucet?network=testnet`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ accountId }),
+  });
+  const body = (await response.json()) as {
+    txHash?: string;
+    accountId?: string;
+    error?: { message?: string };
+  };
+  if (!response.ok || body.txHash === undefined) {
+    throw new ApiError(body.error?.message ?? 'The faucet is unavailable.', response.status);
+  }
+  return { accountId: body.accountId ?? accountId, txHash: body.txHash };
+}

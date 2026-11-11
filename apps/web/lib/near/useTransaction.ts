@@ -3,8 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
+import { explorerTxUrl } from '@mosaec/config/networks';
 import { ERROR_CATALOG } from '@mosaec/domain';
+import { useToast } from '@mosaec/ui';
 
+import { reportError, reportWarning } from '../report';
+
+import { useNetwork } from './network';
 import { useWallet } from './wallet';
 
 import type { SentTransaction } from './transactions';
@@ -28,33 +33,88 @@ function failureMessage(tx: SentTransaction): string {
     : 'The transaction failed on chain.';
 }
 
-/** Sends calls through the connected wallet and reports the result in the catalog's words. */
-export function useTransaction() {
+export interface TxMessages {
+  /** Toast title while the wallet signs, such as "Filling pawn #4". */
+  readonly pending?: string;
+  /** Toast title once every transaction settled. */
+  readonly success?: string;
+}
+
+/**
+ * Sends calls through the connected wallet and reports the result in one toast that moves from
+ * pending to done; errors stay until dismissed. `state` drives the button only.
+ */
+export function useTransaction(messages: TxMessages = {}) {
   const { send } = useWallet();
+  const { network } = useNetwork();
+  const toast = useToast();
   const router = useRouter();
   const [state, setState] = useState<TxState>({ phase: 'idle' });
+  const { pending = 'Confirm in your wallet', success = 'Transaction settled' } = messages;
 
   const run = useCallback(
-    async (calls: readonly ContractCall[]): Promise<readonly SentTransaction[] | null> => {
+    async (
+      calls: readonly ContractCall[],
+      override: TxMessages = {},
+    ): Promise<readonly SentTransaction[] | null> => {
       setState({ phase: 'pending' });
+      const id = toast.show({
+        tone: 'pending',
+        title: override.pending ?? pending,
+        body: 'Approve the request in your wallet. It settles in a few seconds.',
+      });
+      const link = (hash: string | undefined) =>
+        hash === undefined
+          ? undefined
+          : { label: 'View transaction', href: explorerTxUrl(network, hash) };
       try {
         const result = await send(calls);
-        if (result.kind === 'redirected') return null;
+        if (result.kind === 'redirected') {
+          toast.dismiss(id);
+          return null;
+        }
         const failed = result.transactions.find((tx) => tx.outcome.status !== 'settled');
         if (failed !== undefined) {
-          setState({ phase: 'error', message: failureMessage(failed), hash: failed.hash });
+          const message = failureMessage(failed);
+          reportWarning('transaction not settled', {
+            area: 'tx',
+            code: failed.outcome.code ?? failed.outcome.status,
+          });
+          setState({ phase: 'error', message, hash: failed.hash });
+          toast.update(id, {
+            tone: 'error',
+            title: 'Not settled',
+            body: message,
+            action: link(failed.hash),
+            duration: null,
+          });
           return null;
         }
         setState({ phase: 'success', transactions: result.transactions });
+        toast.update(id, {
+          tone: 'success',
+          title: override.success ?? success,
+          action: link(result.transactions.at(-1)?.hash),
+        });
         router.refresh();
         return result.transactions;
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : 'The wallet did not sign.';
+        /* A person closing the wallet is a choice, not a fault. */
+        if (!/reject|cancel|denied|closed|user/i.test(message)) {
+          reportError(cause, { area: 'wallet-send' });
+        }
         setState({ phase: 'error', message });
+        toast.update(id, {
+          tone: 'error',
+          title: 'Wallet did not sign',
+          body: message,
+          duration: null,
+        });
         return null;
       }
     },
-    [send, router],
+    [send, router, toast, network, pending, success],
   );
 
   const reset = useCallback(() => {

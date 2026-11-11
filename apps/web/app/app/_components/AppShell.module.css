@@ -1,8 +1,9 @@
+/* Source: Home › Workspace › App Panel (sidebar 216, padding 22/14, items 8/10 radius 10). */
 .shell {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  grid-template-columns: 232px minmax(0, 1fr);
   min-height: 100dvh;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
 }
 .sidebar {
   position: sticky;
@@ -10,124 +11,201 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 20px 16px;
-  border-right: 1px solid var(--border-primary);
+  gap: 2px;
+  padding: 22px 14px;
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  overflow-y: auto;
 }
 .brand {
-  padding: 4px 8px 8px;
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 0 0 18px 2px;
+  border-radius: var(--radius-pill);
 }
 .group {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-bottom: 12px;
 }
 .groupTitle {
-  padding: 0 12px 6px;
-  font-size: 12px;
+  padding: 4px 10px 6px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--text-tertiary);
+  color: var(--text-inverse-secondary);
 }
-.link {
+.item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: var(--radius-control);
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
   font-size: 15px;
   font-weight: 500;
-  color: var(--text-secondary);
-  transition:
-    background-color 0.2s var(--ease-link),
-    color 0.2s var(--ease-link);
+  letter-spacing: -0.01em;
+  color: var(--text-inverse);
+  transition: background-color 0.3s var(--ease-out);
 }
-.link:hover {
-  color: var(--text-primary);
-  background: var(--bg-tertiary);
+.item svg {
+  flex: none;
+  color: var(--text-inverse-secondary);
 }
-.link[aria-current='page'] {
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-card);
+.item:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
-.sidebarFoot {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.item[aria-current='page'] {
+  background: var(--surface-inverse-raised);
 }
-.main {
+.item[aria-current='page'] svg {
+  color: var(--text-inverse);
+}
+.itemLabel {
+  flex: 1;
   min-width: 0;
+}
+.badge {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--ill-lime);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.badgeDue {
+  background: var(--ill-orange);
+  color: var(--text-inverse);
+}
+.duePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  background: var(--warning-subtle);
+  color: var(--warning);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.duePill:hover {
+  background: #ffe9c2;
+}
+@media (max-width: 639.98px) {
+  .duePill span {
+    display: none;
+  }
+  .duePill {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+.badgeMuted {
+  background: var(--surface-inverse-muted);
+  color: var(--text-inverse-secondary);
+}
+.fill {
+  flex: 1;
+}
+.foot {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 32px;
-  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  gap: 12px;
+  min-height: 68px;
+  padding: 14px 40px;
+  background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
   border-bottom: 1px solid var(--border-primary);
+  backdrop-filter: blur(15px) saturate(1.6);
+  -webkit-backdrop-filter: blur(15px) saturate(1.6);
 }
-.topActions {
+.title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .content {
-  flex: 1;
   width: 100%;
-  max-width: 1136px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 48px 40px 96px;
 }
-.mobileBrand {
-  display: none;
-}
+.phoneBrand,
+.phoneWallet,
 .tabbar {
   display: none;
 }
-@media (max-width: 809.98px) {
+
+@media (max-width: 1199.98px) {
+  .topbar {
+    padding: 14px 24px;
+  }
+  .content {
+    padding: 40px 24px 88px;
+  }
+}
+
+@media (max-width: 899.98px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
     display: none;
   }
-  .mobileBrand {
+  .phoneBrand,
+  .phoneWallet {
     display: inline-flex;
   }
-  .pageTitle {
+  .phoneWallet {
+    min-width: 0;
+  }
+  .phoneWallet > button {
+    max-width: 148px;
+  }
+  .title {
     display: none;
   }
   .topbar {
+    justify-content: space-between;
     padding: 12px 16px;
   }
   .content {
-    padding: 20px 16px 104px;
-  }
-  .networkTop {
-    display: none;
+    padding: 28px 16px 120px;
   }
   .tabbar {
     position: fixed;
     inset: auto 12px 12px;
-    z-index: 20;
+    z-index: 50;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     padding: 6px;
     border-radius: var(--radius-nav);
     background: var(--surface-glass);
     border: 1px solid var(--border-primary);
     box-shadow: var(--shadow-nav);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
   }
   .tab {
     display: flex;
@@ -135,18 +213,16 @@
     align-items: center;
     gap: 2px;
     padding: 8px 4px;
-    border-radius: 20px;
+    border-radius: 22px;
     font-size: 11px;
     font-weight: 500;
     color: var(--text-secondary);
+    transition:
+      background-color 0.3s var(--ease-out),
+      color 0.3s var(--ease-out);
   }
   .tab[aria-current='page'] {
-    color: var(--text-primary);
-    background: var(--bg-primary);
-  }
-}
-@media (min-width: 810px) {
-  .sidebarNetwork {
-    display: block;
+    color: var(--text-inverse);
+    background: var(--surface-inverse);
   }
 }

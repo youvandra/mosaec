@@ -10,8 +10,9 @@ export default function BorrowPage() {
   return (
     <>
       <PageHeader
-        title="Borrow against your coins"
-        lead="Seal coins in a pack, name the loan and sign the offer. A lender fills it, you receive USDC and the Ticket, and you buy the coins back by the date."
+        title="Borrow against"
+        accent="your coins."
+        lead="Lock coins, get USDC now, repay by the date."
       />
       <Suspense>
         <BorrowFlow />

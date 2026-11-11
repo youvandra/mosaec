@@ -1,0 +1,74 @@
+.connect {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.guarantees {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+}
+.guarantee {
+  display: flex;
+  gap: 12px;
+}
+.guarantee svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--positive);
+}
+.guarantee > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.toolName {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+}
+.stepTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.stepNum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+@media (max-width: 1023.98px) {
+  .connect,
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 479.98px) {
+  .guarantees,
+  .step {
+    border-radius: 22px;
+  }
+}

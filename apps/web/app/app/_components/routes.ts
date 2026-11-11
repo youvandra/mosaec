@@ -12,33 +12,56 @@ export function packPath(packId: string): string {
 export interface AppRoute {
   readonly label: string;
   readonly href: string;
-  readonly icon: 'market' | 'positions' | 'borrow' | 'verify';
+  readonly icon: 'market' | 'positions' | 'balances' | 'borrow' | 'verify' | 'desk' | 'agent';
+  /** A live badge the shell fills in, such as the desk loop status. */
+  readonly badge?: 'desk-status';
 }
 
+/** Sidebar groups, in the source's App Panel order: group label, then its items. */
 export const ROUTE_GROUPS: readonly {
   readonly title: string;
   readonly routes: readonly AppRoute[];
 }[] = [
-  { title: 'Market', routes: [{ label: 'Open Pawns', href: appPath(), icon: 'market' }] },
   {
-    title: 'Desk',
-    routes: [{ label: 'Positions', href: appPath('/positions'), icon: 'positions' }],
+    title: 'Home',
+    routes: [
+      { label: 'Market', href: appPath(), icon: 'market' },
+      { label: 'Positions', href: appPath('/positions'), icon: 'positions' },
+      { label: 'Balances', href: appPath('/balances'), icon: 'balances' },
+    ],
   },
   {
-    title: 'Tools',
+    title: 'Pawn',
     routes: [
       { label: 'Borrow', href: appPath('/borrow'), icon: 'borrow' },
       { label: 'Verify', href: appPath('/verify'), icon: 'verify' },
     ],
   },
+  {
+    title: 'Agents',
+    routes: [
+      { label: 'House Desk', href: appPath('/desk'), icon: 'desk', badge: 'desk-status' },
+      { label: 'Connect Agent', href: appPath('/agents'), icon: 'agent' },
+    ],
+  },
 ];
 
-export const ALL_ROUTES = ROUTE_GROUPS.flatMap((group) => group.routes);
+/** Five tabs fit a phone; the agent pages stay in the sidebar and the menu. */
+export const PHONE_TABS: readonly AppRoute['icon'][] = [
+  'market',
+  'positions',
+  'balances',
+  'borrow',
+  'verify',
+];
+
+export const ALL_ROUTES: readonly AppRoute[] = ROUTE_GROUPS.flatMap((group) => group.routes);
 
 /** The route a pathname belongs to; the market is the fallback for pack pages. */
 export function activeRoute(pathname: string): AppRoute | undefined {
   const exact = ALL_ROUTES.find((route) => route.href === pathname);
   if (exact !== undefined) return exact;
+  if (pathname.startsWith(appPath('/packs/'))) return ALL_ROUTES[0];
   return [...ALL_ROUTES]
     .filter((route) => route.href !== APP_ROOT)
     .find((route) => pathname.startsWith(`${route.href}/`));
