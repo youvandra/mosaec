@@ -1,0 +1,228 @@
+.link {
+  display: contents;
+}
+.quote {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+  padding-bottom: 28px;
+}
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+  align-self: stretch;
+  margin-bottom: -28px;
+}
+.offerHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btnInk,
+.btnBlue {
+  padding: 10px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+}
+.btnInk {
+  background: var(--surface-inverse);
+}
+.btnBlue {
+  background: var(--accent);
+}
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+}
+.chipRow {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  animation: suite-ticker 22s linear infinite;
+}
+.chipRow.reverse {
+  animation-direction: reverse;
+  animation-duration: 18s;
+}
+@keyframes suite-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.cardStack {
+  position: relative;
+  width: 260px;
+  height: 284px;
+}
+.cardStack > div {
+  position: absolute;
+}
+.f1 {
+  top: 0;
+  left: 20px;
+  animation: suite-float 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+.f2 {
+  top: 60px;
+  left: 0;
+  animation: suite-float 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+.f3 {
+  top: 120px;
+  left: 14px;
+  animation: suite-float 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes suite-float {
+  from {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  to {
+    transform: translateY(-8px) rotate(var(--r, 0deg));
+  }
+}
+.limit {
+  width: 260px;
+  margin: 18px 0 28px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+}
+.list {
+  width: 100%;
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 14px;
+  transition: background-color 0.18s var(--ease-link);
+}
+.listRow:hover {
+  background: var(--bg-secondary);
+}
+.listRow span:nth-child(2) {
+  flex: 1;
+  font-weight: 500;
+}
+.listRow span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+.chat {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 28px;
+}
+.bubble {
+  align-self: flex-end;
+  max-width: 360px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: var(--bg-tertiary);
+  font-size: 15px;
+}
+.answer {
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.results {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.result {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  font-size: 12px;
+}
+.result strong {
+  display: block;
+  color: var(--positive);
+  font-size: 13px;
+}
+.yield {
+  width: 100%;
+  max-width: 280px;
+  padding: 16px;
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+}
+.yieldHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ybars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 64px;
+  margin-top: 14px;
+}
+.ybar {
+  flex: 1;
+  border-radius: 6px;
+  background: var(--accent-secondary);
+  transition: background-color 0.15s var(--ease-link);
+}
+.ybar:hover,
+.ybar:last-child {
+  background: var(--accent);
+}
+@media (max-width: 809.98px) {
+  .quote {
+    grid-template-columns: 1fr;
+  }
+  .results {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chipRow,
+  .f1,
+  .f2,
+  .f3 {
+    animation: none;
+  }
+}

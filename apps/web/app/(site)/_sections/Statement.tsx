@@ -1,7 +1,9 @@
-import { CalendarCheckIcon, LockKeyIcon, TicketIcon } from '@phosphor-icons/react/dist/ssr';
+'use client';
+
+import { CalendarCheckIcon, LockKeyIcon, TicketIcon } from '@phosphor-icons/react';
 import Image from 'next/image';
 
-import { AppIcon, cx } from '@mosaec/ui';
+import { AppIcon, cx, useInViewMotion } from '@mosaec/ui';
 
 import { ASSET_MARK } from '../../../lib/asset-marks';
 
@@ -34,10 +36,11 @@ const PIECES: readonly (string | ReactNode)[] = [
 
 /** One sentence with inline tiles; each word rises in turn. */
 export function Statement() {
+  const ref = useInViewMotion<HTMLParagraphElement>(0.4);
   let index = 0;
   return (
     <section className={styles.section} aria-label="What Mosaec is">
-      <p className={cx('t-statement', styles.text)} data-reveal="view">
+      <p ref={ref} className={cx('t-statement', styles.text)}>
         {PIECES.flatMap((piece, pieceIndex) => {
           if (typeof piece !== 'string') {
             const style = { '--i': index++ } as CSSProperties;

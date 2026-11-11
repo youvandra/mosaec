@@ -1,7 +1,9 @@
 import {
-  AsteriskIcon,
   CalendarCheckIcon,
+  CaretRightIcon,
+  GithubLogoIcon,
   LockKeyIcon,
+  SparkleIcon,
   TicketIcon,
 } from '@phosphor-icons/react/dist/ssr';
 import Image from 'next/image';
@@ -15,26 +17,49 @@ import { SITE } from '../../../lib/site';
 
 import styles from './Footer.module.css';
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { AppIconColor } from '@mosaec/ui';
+import type { ReactNode } from 'react';
 
 interface OrbitTile {
-  readonly ring: number;
-  readonly angle: number;
+  readonly top: number;
+  readonly left: number;
+  readonly color: AppIconColor;
+  readonly mark?: boolean;
   readonly node: ReactNode;
 }
 
-const RING_RADIUS = [70, 130, 190] as const;
-const RING_SPIN = ['36s', '52s', '70s'] as const;
-
-const TILES: readonly OrbitTile[] = [
-  { ring: 1, angle: 20, node: <Image src={ASSET_MARK.ZEC} alt="" width={24} height={24} /> },
-  { ring: 1, angle: 200, node: <LockKeyIcon weight="fill" /> },
-  { ring: 2, angle: 110, node: <Image src={ASSET_MARK.USDC} alt="" width={24} height={24} /> },
-  { ring: 2, angle: 300, node: <TicketIcon weight="fill" /> },
-  { ring: 2, angle: 220, node: <CalendarCheckIcon weight="fill" /> },
+/** Holder positions copied from the design source's two orbit groups. */
+const INNER: readonly OrbitTile[] = [
+  {
+    top: -4,
+    left: 174,
+    color: 'light',
+    mark: true,
+    node: <Image src={ASSET_MARK.ZEC} alt="" width={26} height={26} />,
+  },
+  { top: 222, left: 44, color: 'green', node: <CalendarCheckIcon weight="fill" /> },
 ];
-const TILE_COLORS = ['light', 'ink', 'light', 'orange', 'green'] as const;
-const TILE_SIZE = 42;
+const OUTER: readonly OrbitTile[] = [
+  { top: 234, left: 348, color: 'ink', node: <LockKeyIcon weight="fill" /> },
+  {
+    top: 291,
+    left: 23,
+    color: 'light',
+    mark: true,
+    node: <Image src={ASSET_MARK.USDC} alt="" width={26} height={26} />,
+  },
+  { top: -18, left: 136, color: 'orange', node: <TicketIcon weight="fill" /> },
+];
+
+function Holders({ tiles }: { readonly tiles: readonly OrbitTile[] }) {
+  return tiles.map((tile, index) => (
+    <span key={index} className={styles.holder} style={{ top: tile.top, left: tile.left }}>
+      <AppIcon color={tile.color} size={42} mark={tile.mark ?? false}>
+        {tile.node}
+      </AppIcon>
+    </span>
+  ));
+}
 
 function Orbit() {
   return (
@@ -43,36 +68,14 @@ function Orbit() {
       <span className={cx(styles.ring, styles.r2)} />
       <span className={cx(styles.ring, styles.r3)} />
       <span className={styles.core}>
-        <AppIcon color="ink" size={56}>
-          <AsteriskIcon weight="bold" />
-        </AppIcon>
+        <Image src="/brand/mark-white.png" alt="" width={68} height={50} />
       </span>
-      {TILES.map((tile, index) => {
-        const radius = RING_RADIUS[tile.ring] ?? 0;
-        const rad = (tile.angle * Math.PI) / 180;
-        const spin = { '--spin': RING_SPIN[tile.ring] } as CSSProperties;
-        const place: CSSProperties = {
-          left: radius + radius * Math.cos(rad) - TILE_SIZE / 2,
-          top: radius + radius * Math.sin(rad) - TILE_SIZE / 2,
-        };
-        return (
-          <span
-            key={index}
-            className={styles.spin}
-            style={{ ...spin, width: radius * 2, height: radius * 2 }}
-          >
-            <span style={{ ...place, ...spin }}>
-              <AppIcon
-                color={TILE_COLORS[index] ?? 'light'}
-                size={TILE_SIZE}
-                mark={TILE_COLORS[index] === 'light'}
-              >
-                {tile.node}
-              </AppIcon>
-            </span>
-          </span>
-        );
-      })}
+      <span className={cx(styles.group, styles.g1)}>
+        <Holders tiles={INNER} />
+      </span>
+      <span className={cx(styles.group, styles.g2)}>
+        <Holders tiles={OUTER} />
+      </span>
     </div>
   );
 }
@@ -83,30 +86,51 @@ const COLUMNS = [
   {
     title: 'Product',
     links: [
+      { label: 'Borrow', href: '/borrow' },
+      { label: 'Lend', href: '/lend' },
+      { label: 'Agents', href: '/agents' },
+      { label: 'Rates', href: '/rates' },
       { label: 'Open App', href: SITE.appUrl },
-      { label: 'How It Works', href: '/#how' },
-      { label: 'Safety', href: '/#safety' },
-      { label: 'FAQ', href: '/#faq' },
     ],
   },
   {
-    title: 'Source',
+    title: 'Trust',
     links: [
-      { label: 'GitHub', href: SITE.sourceUrl },
+      { label: 'Verify a Pack', href: '/verify' },
+      { label: 'Safety Rules', href: '/verify#rules' },
       { label: 'Registry on NearBlocks', href: registryUrl },
+      { label: 'Security Contact', href: `mailto:${SITE.securityEmail}` },
     ],
   },
   {
-    title: 'Contact',
+    title: 'Developers',
     links: [
+      { label: 'Overview', href: '/developers' },
+      { label: 'SDK', href: '/developers#sdk' },
+      { label: 'API', href: '/developers#api' },
+      { label: 'GitHub', href: SITE.sourceUrl },
       { label: 'Support', href: `mailto:${SITE.supportEmail}` },
-      { label: 'Security', href: `mailto:${SITE.securityEmail}` },
     ],
   },
 ] as const;
 
-function isExternal(href: string): boolean {
-  return href.startsWith('http') || href.startsWith('mailto:');
+function FooterLink({ href, label }: { readonly href: string; readonly label: string }) {
+  const external = href.startsWith('http') || href.startsWith('mailto:');
+  const content = (
+    <>
+      {label}
+      {external && <CaretRightIcon size={12} className={styles.linkCaret} />}
+    </>
+  );
+  return external ? (
+    <a href={href} className={styles.link}>
+      {content}
+    </a>
+  ) : (
+    <Link href={href} className={styles.link}>
+      {content}
+    </Link>
+  );
 }
 
 export function Footer() {
@@ -114,8 +138,11 @@ export function Footer() {
     <footer className={styles.tray}>
       <div className={styles.cta}>
         <div className={styles.ctaCopy}>
-          <Tag badge="8" shape={<AsteriskIcon weight="bold" size={16} color="var(--ill-lime)" />}>
-            Get Started
+          <Tag
+            badge="Start"
+            shape={<SparkleIcon weight="fill" size={16} color="var(--ill-lime)" />}
+          >
+            Open a Pawn
           </Tag>
           <h2 className="t-h2">
             Your coins, a date
@@ -123,14 +150,14 @@ export function Footer() {
             and a fair price.
           </h2>
           <p className="t-body">
-            Open a pack with up to 1 ZEC on testnet and walk the full loan in a few minutes.
+            Seal up to 1 ZEC on testnet and walk a full loan, from pack to redemption, in minutes.
           </p>
           <div className={styles.ctaActions}>
             <ButtonLink href={SITE.appUrl} as={Link}>
               Open App
             </ButtonLink>
-            <ButtonLink href={SITE.sourceUrl} variant="secondary" showIcon>
-              Read the Code
+            <ButtonLink href="/borrow" as={Link} variant="secondary" showIcon>
+              How a Pawn Works
             </ButtonLink>
           </div>
         </div>
@@ -138,29 +165,29 @@ export function Footer() {
       </div>
       <div className={styles.columns}>
         <div className={styles.brand}>
-          <Logo />
-          <p className="t-body-sm">The pawn ticket for native assets, settled on NEAR.</p>
+          <Logo interactive />
+          <p className="t-body-sm">
+            The pawn ticket for native assets: a sealed pack, a Title and a Ticket, settled on NEAR.
+          </p>
         </div>
         {COLUMNS.map((column) => (
           <nav key={column.title} className={styles.col} aria-label={column.title}>
             <h2>{column.title}</h2>
-            {column.links.map((link) =>
-              isExternal(link.href) ? (
-                <a key={link.label} href={link.href} className={styles.link}>
-                  {link.label}
-                </a>
-              ) : (
-                <Link key={link.label} href={link.href} className={styles.link}>
-                  {link.label}
-                </Link>
-              ),
-            )}
+            {column.links.map((link) => (
+              <FooterLink key={link.label} href={link.href} label={link.label} />
+            ))}
           </nav>
         ))}
       </div>
+      <div className={styles.divider} />
       <div className={styles.bottom}>
-        <span className="t-caption">© 2026 Mosaec. MIT licensed.</span>
-        <span className="t-caption">Design by Viyako</span>
+        <span className="t-caption">© 2026 Mosaec. Source under the MIT licence.</span>
+        <span className={styles.bottomRight}>
+          <span className="t-caption">Design by Viyako</span>
+          <a href={SITE.sourceUrl} className={styles.social} aria-label="Mosaec on GitHub">
+            <GithubLogoIcon size={20} weight="fill" />
+          </a>
+        </span>
       </div>
     </footer>
   );

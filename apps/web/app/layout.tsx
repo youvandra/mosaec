@@ -26,7 +26,6 @@ export const metadata: Metadata = {
   applicationName: SITE.name,
   openGraph: { type: 'website', siteName: SITE.name, url: SITE.url },
   twitter: { card: 'summary_large_image' },
-  icons: { icon: '/brand/mark-black.png', apple: '/brand/mark-black.png' },
 };
 
 export const viewport: Viewport = {
@@ -37,7 +36,20 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={`${switzer.variable} ${GeistMono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${switzer.variable} ${GeistMono.variable}`}
+    >
+      <head>
+        {/* Load animations run only in a visible tab and are dropped after 2.4 s, so content never waits on them. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if(document.visibilityState==='visible'&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var h=document.documentElement;h.classList.add('motion-ok');setTimeout(function(){h.classList.remove('motion-ok')},2400)}",
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

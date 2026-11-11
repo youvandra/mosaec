@@ -1,139 +1,92 @@
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 160px var(--gutter) 96px;
-  background: linear-gradient(180deg, #ededed 0%, #f7f7f7 40%, #ffffff 100%);
+  padding: 128px var(--gutter) 48px;
+  background: var(--bg-primary);
 }
-.stage {
-  position: relative;
-  max-width: 1136px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 112px 0 40px;
+.glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 760px;
+  background: linear-gradient(180deg, var(--bg-tertiary) 0%, rgba(240, 240, 240, 0) 100%);
+  pointer-events: none;
 }
 .content {
   position: relative;
-  z-index: 1;
+  max-width: 1136px;
+  margin: 0 auto;
+  padding: 30px 0 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  max-width: 760px;
+  text-align: center;
+}
+.orbitSlot {
+  position: relative;
+  width: 60px;
+  height: 110px;
 }
 .title {
-  margin-top: 4px;
+  max-width: 780px;
 }
 .lead {
-  max-width: 540px;
+  max-width: 520px;
 }
 .actions {
   display: flex;
   gap: 10px;
-  margin-top: 16px;
+  padding-top: 16px;
   flex-wrap: wrap;
   justify-content: center;
 }
-
-/* Hanging tiles: each hangs on a thread from the top of the stage and bobs. */
-.hang {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 0;
+.tile {
+  top: var(--top);
+  width: 60px;
+  height: 60px;
 }
-.hang::before {
-  content: '';
-  width: 1px;
-  height: var(--thread, 120px);
-  background: transparent;
+.left {
+  left: var(--side);
 }
-.bob {
-  animation: mosaec-float 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
-  animation-delay: var(--bob-delay, 0s);
+.right {
+  right: var(--side);
 }
-.h1 {
-  top: -120px;
-  left: 50%;
-  margin-left: -30px;
-  --thread: 100px;
+.center {
+  left: 0;
+  top: 50px;
 }
-.h2 {
-  top: -120px;
-  left: 14%;
-  --thread: 180px;
-  --bob-delay: -1.2s;
-}
-.h3 {
-  top: -120px;
-  right: 14%;
-  --thread: 184px;
-  --bob-delay: -0.6s;
-}
-.h4 {
-  top: -120px;
-  left: 2%;
-  --thread: 352px;
-  --bob-delay: -2s;
-}
-.h5 {
-  top: -120px;
-  right: 2%;
-  --thread: 342px;
-  --bob-delay: -1.6s;
-}
-.h6 {
-  top: -120px;
-  left: 8%;
-  --thread: 532px;
-  --bob-delay: -0.3s;
-}
-.h7 {
-  top: -120px;
-  right: 9%;
-  --thread: 530px;
-  --bob-delay: -2.4s;
-}
-
 .folders {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 24px;
   max-width: 1136px;
-  margin: 72px auto 0;
+  margin: 0 auto;
 }
-
 @media (max-width: 1199.98px) {
-  .h4,
-  .h5 {
-    display: none;
-  }
-}
-
-@media (max-width: 809.98px) {
-  .hero {
-    padding-top: 120px;
-    padding-bottom: 72px;
-  }
-  .stage {
-    padding-top: 96px;
-  }
-  .h2,
-  .h3,
-  .h6,
-  .h7 {
+  .far {
     display: none;
   }
   .folders {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    margin-top: 48px;
+    gap: 8px 16px;
+  }
+}
+@media (max-width: 809.98px) {
+  .hero {
+    padding-top: 104px;
+  }
+  .tile:not(.center) {
+    display: none;
   }
   .actions {
     width: 100%;
     flex-direction: column;
+    align-items: stretch;
+  }
+  .folders {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
   }
 }

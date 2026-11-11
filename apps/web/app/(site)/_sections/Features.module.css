@@ -1,0 +1,128 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 360px;
+  padding: 22px 22px 0;
+  border-radius: var(--radius-panel);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  transition: background-color 0.35s var(--ease-link);
+}
+.card:hover {
+  background: var(--bg-tertiary);
+}
+.eyebrow {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.45s var(--spring-pop);
+}
+.card:hover .stage {
+  transform: translateY(-8px);
+}
+.plus {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.45s var(--spring-pop);
+}
+.card:hover .plus {
+  transform: rotate(90deg);
+}
+.rows {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.row span:last-child {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.fade {
+  opacity: 0.45;
+}
+.mini {
+  width: 200px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stack {
+  position: relative;
+  width: 210px;
+  height: 160px;
+}
+.stack > * {
+  position: absolute;
+  transform-origin: center;
+}
+.s1 {
+  top: 0;
+  left: 20px;
+  transform: rotate(-12deg) scale(0.78);
+}
+.s2 {
+  top: 22px;
+  left: -6px;
+  transform: rotate(6deg) scale(0.78);
+}
+.s3 {
+  top: 44px;
+  left: 4px;
+  transform: rotate(-4deg) scale(0.82);
+}
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 90px;
+}
+.bar {
+  flex: 1;
+  border-radius: 6px;
+  background: var(--accent-secondary);
+}
+.barLast {
+  background: var(--accent);
+}
+@media (max-width: 1199.98px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 809.98px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

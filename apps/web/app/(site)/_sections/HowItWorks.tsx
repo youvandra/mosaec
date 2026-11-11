@@ -14,7 +14,7 @@ import { AskVisual, ExitVisual, FillVisual, PackVisual, RedeemVisual } from './t
 import { TourNav } from './TourNav';
 
 import type { AppIconColor } from '@mosaec/ui';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 interface Step {
   readonly id: string;
@@ -79,7 +79,7 @@ export function HowItWorks() {
     <Section id="how" label="How it works">
       <SectionHeader className={styles.header}>
         <Reveal>
-          <Tag badge="2" shape={<PathIcon weight="bold" size={16} color="var(--ill-orange)" />}>
+          <Tag badge="4" shape={<PathIcon weight="bold" size={16} color="var(--ill-orange)" />}>
             How It Works
           </Tag>
         </Reveal>
@@ -88,8 +88,13 @@ export function HowItWorks() {
       <div className={styles.body}>
         <TourNav steps={STEPS.map(({ id, label }) => ({ id, label }))} />
         <div className={styles.cards}>
-          {STEPS.map((step) => (
-            <Reveal key={step.id} id={step.id} className={styles.card}>
+          {STEPS.map((step, index) => (
+            <div
+              key={step.id}
+              id={step.id}
+              className={styles.card}
+              style={{ '--i': index } as CSSProperties}
+            >
               <div className={styles.cardHead}>
                 <AppIcon color={step.color} size={44}>
                   {step.icon}
@@ -101,7 +106,7 @@ export function HowItWorks() {
                 <strong className="t-h5">{step.lead}</strong>
                 <p className="t-body">{step.body}</p>
               </div>
-            </Reveal>
+            </div>
           ))}
         </div>
       </div>

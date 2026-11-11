@@ -43,7 +43,7 @@ export function Loss() {
         <div className={styles.copy}>
           <Reveal>
             <Tag
-              badge="1"
+              badge="3"
               shape={<TrendDownIcon weight="bold" size={16} color="var(--ill-mint)" />}
             >
               The Loss
