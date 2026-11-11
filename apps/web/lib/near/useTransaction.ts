@@ -33,7 +33,8 @@ function failureMessage(tx: SentTransaction): string {
     : 'The transaction failed on chain.';
 }
 
-const REFRESH_AFTER_MS = [3_000, 8_000] as const;
+/* The indexer trails the chain by 10 to 45 s (finality plus the transactions API). */
+const REFRESH_AFTER_MS = [3_000, 8_000, 15_000, 30_000, 45_000, 60_000] as const;
 
 export interface TxMessages {
   /** Toast title while the wallet signs, such as "Filling pawn #4". */
@@ -98,7 +99,7 @@ export function useTransaction(messages: TxMessages = {}) {
           title: override.success ?? success,
           action: link(result.transactions.at(-1)?.hash),
         });
-        /* The indexer lands a block or two behind the wallet: refresh now and twice more. */
+        /* Refresh now and again as the indexer catches up; the timers follow the person to the next page. */
         router.refresh();
         for (const ms of REFRESH_AFTER_MS) {
           window.setTimeout(() => {
