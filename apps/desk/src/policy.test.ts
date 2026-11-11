@@ -90,6 +90,12 @@ describe('evaluate', () => {
       ctx(),
       'DESK_POLICY',
     ],
+    [
+      'dust below the per-pawn floor, checked before the hourly quota',
+      offer({ price: 1n, kAmount: 2n }),
+      ctx({ fillsLastHour: 4 }),
+      'DESK_POLICY',
+    ],
     ['balance too low', offer(), ctx({ deskBalanceUsdc: 99_000_000n }), 'DESK_BUDGET'],
     ['daily budget spent', offer(), ctx({ lentTodayUsdc: 950_000_000n }), 'DESK_BUDGET'],
     ['hourly fills spent', offer(), ctx({ fillsLastHour: 4 }), 'DESK_BUDGET'],

@@ -142,7 +142,7 @@ function Policy({ desk }: { readonly desk: DeskOverview }) {
     ['Loan to value', `At most ${pct(p.maxLtvBps)}`],
     ['Rate', `At least ${pct(p.minAprBps)} a year`],
     ['Term', `${termText(p.minTermNs)} to ${termText(p.maxTermNs)}`],
-    ['Per pawn', `Up to ${cash(p.maxFillUsdc)} USDC`],
+    ['Per pawn', `${cash(p.minFillUsdc)} to ${cash(p.maxFillUsdc)} USDC`],
     ['Out at once', `Up to ${cash(p.maxExposureUsdc)} USDC`],
     ['Per day', `Up to ${cash(p.dailyBudgetUsdc)} USDC`],
     ['Fills per hour', `At most ${p.maxFillsPerHour.toString()}`],

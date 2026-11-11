@@ -25,6 +25,8 @@ export const deskPolicySchema = z.object({
   minAprBps: z.number().int().min(0),
   minTermNs: bigintString,
   maxTermNs: bigintString,
+  /** Smallest principal per fill, so dust offers cannot spend the hourly fill quota. */
+  minFillUsdc: bigintString,
   /** Largest principal per fill, in USDC's smallest unit. */
   maxFillUsdc: bigintString,
   /** Largest principal out at once across every running desk pawn. */
@@ -61,6 +63,7 @@ export const DESK_POLICIES: Readonly<Record<NetworkId, DeskPolicyInput>> = {
     minAprBps: 1_000,
     minTermNs: (10n * NS_PER_MINUTE).toString(),
     maxTermNs: (90n * NS_PER_DAY).toString(),
+    minFillUsdc: (10n * USDC_UNIT).toString(),
     maxFillUsdc: (250n * USDC_UNIT).toString(),
     maxExposureUsdc: (1_000n * USDC_UNIT).toString(),
     dailyBudgetUsdc: (1_000n * USDC_UNIT).toString(),
@@ -75,6 +78,7 @@ export const DESK_POLICIES: Readonly<Record<NetworkId, DeskPolicyInput>> = {
     minAprBps: 2_000,
     minTermNs: (7n * NS_PER_DAY).toString(),
     maxTermNs: (90n * NS_PER_DAY).toString(),
+    minFillUsdc: (10n * USDC_UNIT).toString(),
     maxFillUsdc: (50n * USDC_UNIT).toString(),
     maxExposureUsdc: (200n * USDC_UNIT).toString(),
     dailyBudgetUsdc: (100n * USDC_UNIT).toString(),

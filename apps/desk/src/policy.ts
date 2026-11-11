@@ -23,6 +23,20 @@ export interface OfferInput {
   readonly contentsHash: string;
 }
 
+/**
+ * Identity of one offer on a pack. A pack is reused (cancel and re-offer, or a new round after a
+ * redeem), so a verdict holds for this key only.
+ */
+export function offerKey(offer: OfferInput): string {
+  return [
+    offer.contentsHash,
+    offer.openUntilNs.toString(),
+    offer.price.toString(),
+    offer.kAmount.toString(),
+    offer.termNs.toString(),
+  ].join(':');
+}
+
 /** What the desk already holds and has done, read fresh before every verdict. */
 export interface DeskContext {
   readonly network: NetworkId;
@@ -148,6 +162,13 @@ export function evaluate(offer: OfferInput, ctx: DeskContext): Verdict {
     return refuse(
       'DESK_POLICY',
       `The loan is ${pct(ltv)} of the coins' value; the desk lends at most ${pct(policy.maxLtvBps)}.`,
+      quote,
+    );
+  }
+  if (offer.price < policy.minFillUsdc) {
+    return refuse(
+      'DESK_POLICY',
+      `The desk lends at least ${usdc(policy.minFillUsdc)} per pawn.`,
       quote,
     );
   }
