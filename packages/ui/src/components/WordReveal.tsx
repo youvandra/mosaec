@@ -16,6 +16,8 @@ export interface WordRevealProps {
   readonly className?: string | undefined;
   readonly start?: number;
   readonly after?: ReactNode;
+  /** Lets a section name itself after this heading with `aria-labelledby`. */
+  readonly id?: string;
 }
 
 interface Piece {
@@ -31,6 +33,7 @@ export function WordReveal({
   className,
   start = 0.2,
   after,
+  id,
 }: WordRevealProps) {
   const pieces: Piece[][] = lines.map((line) =>
     typeof line === 'string'
@@ -43,6 +46,7 @@ export function WordReveal({
   return (
     <Tag
       ref={trigger === 'view' ? ref : undefined}
+      id={id}
       className={className}
       style={style}
       data-reveal={trigger === 'load' ? 'words-load' : 'words'}

@@ -1,0 +1,80 @@
+.curtain {
+  display: none;
+}
+:global(.motion-ok) .curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: var(--bg-primary);
+  pointer-events: none;
+  animation: mosaec-loader-lift 0.45s var(--ease-out) 1.15s forwards;
+}
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-inverse);
+  animation: mosaec-loader-mark 0.9s var(--ease-out) 0.05s both;
+}
+.mark svg {
+  width: 60%;
+  height: auto;
+  color: var(--text-inverse);
+  transform: translateY(2%);
+}
+.track {
+  width: 140px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  animation: mosaec-loader-track 0.6s var(--ease-out) 0.15s both;
+}
+.progress {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--surface-inverse);
+  transform: translateX(-100%);
+  animation: mosaec-loader-fill 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards;
+}
+@keyframes mosaec-loader-mark {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-120deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes mosaec-loader-track {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes mosaec-loader-fill {
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes mosaec-loader-lift {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}

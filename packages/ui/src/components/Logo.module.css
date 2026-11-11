@@ -1,7 +1,10 @@
 .logo {
+  --logo-size: 44px;
+  --logo-badge: var(--surface-inverse);
+  --logo-ink: var(--text-inverse);
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(var(--logo-size) * 0.23);
   color: var(--text-primary);
 }
 .badge {
@@ -9,25 +12,30 @@
   align-items: center;
   justify-content: center;
   flex: none;
+  width: var(--logo-size);
+  height: var(--logo-size);
   border-radius: 50%;
-  background: var(--surface-inverse);
+  background: var(--logo-badge);
+  color: var(--logo-ink);
   transition: transform 0.6s var(--spring-pop);
 }
-.badge img {
-  width: 70%;
+/* 60% of the badge, nudged 2% down so the rising lobes sit on the optical centre. */
+.mark {
+  width: 60%;
   height: auto;
+  transform: translateY(2%);
 }
 .word {
-  font-size: 22px;
+  font-size: calc(var(--logo-size) * 0.5);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.04em;
 }
+/* On dark surfaces the badge inverts: white disc, ink mark, white wordmark. */
 .light {
+  --logo-badge: var(--text-inverse);
+  --logo-ink: var(--surface-inverse);
   color: var(--text-inverse);
-}
-.light .badge {
-  background: var(--bg-primary);
 }
 @media (hover: hover) {
   .interactive:hover .badge,
