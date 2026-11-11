@@ -8,7 +8,7 @@ import {
 import { ASSETS } from '@mosaec/config/assets';
 import { AppIcon } from '@mosaec/ui';
 
-import { formatUnits, padCents } from '../../../lib/format';
+import { formatCompact, formatUnits, padCents } from '../../../lib/format';
 import { SUGGESTED_MONTHLY_RATE_BPS } from '../../../lib/rates';
 
 import { Stat, StatRow } from './Stat';
@@ -17,7 +17,9 @@ import type { MarketData } from '../../../lib/market';
 
 const USDC = ASSETS.USDC;
 
+/** Totals stay exact to the cent until 10,000, then read as `12.5K` or `1M`. */
 function cash(amount: bigint): string {
+  if (amount / 10n ** BigInt(USDC.decimals) >= 10_000n) return formatCompact(amount, USDC.decimals);
   return padCents(formatUnits(amount, USDC.decimals, 2));
 }
 

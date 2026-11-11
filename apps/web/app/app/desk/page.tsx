@@ -17,7 +17,7 @@ import { AppIcon, ButtonLink, Callout, ErrorState, StatusPill, Tag, cx } from '@
 
 import { getDesk, getDeskDecisions } from '../../../lib/api';
 import { DESK_STATUS_LABEL, deskStatus } from '../../../lib/desk-status';
-import { formatDateTimeNs, formatUnits, padCents } from '../../../lib/format';
+import { formatCompact, formatDateTimeNs, formatUnits, padCents } from '../../../lib/format';
 import { termText } from '../../../lib/pack-view';
 import { ListCard, ListRow, SoftPill } from '../_components/ListCard';
 import { PageHeader, PageSection } from '../_components/PageHeader';
@@ -40,7 +40,9 @@ const USDC_DECIMALS = 6;
 const MS_TO_NS = 1_000_000n;
 
 function cash(amount: string | bigint): string {
-  return padCents(formatUnits(BigInt(amount), USDC_DECIMALS, 2));
+  const value = BigInt(amount);
+  if (value / 10n ** BigInt(USDC_DECIMALS) >= 10_000n) return formatCompact(value, USDC_DECIMALS);
+  return padCents(formatUnits(value, USDC_DECIMALS, 2));
 }
 
 function pct(bps: number): string {
