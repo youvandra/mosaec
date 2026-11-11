@@ -5,7 +5,7 @@ import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 
 function apiOrigin(): string {
-  return process.env.MOSAEC_API_URL ?? 'https://api.mosaec.finance';
+  return process.env.MOSAEC_API_URL ?? 'http://127.0.0.1:8787';
 }
 
 function originOf(url: string | undefined): string | null {

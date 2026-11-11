@@ -84,7 +84,7 @@ export class ApiError extends Error {
 /** Server code calls the API directly; the browser goes through the `/api` rewrite. */
 function baseUrl(): string {
   return typeof window === 'undefined'
-    ? (process.env.MOSAEC_API_URL ?? 'https://api.mosaec.finance')
+    ? (process.env.MOSAEC_API_URL ?? 'http://127.0.0.1:8787')
     : '/api';
 }
 

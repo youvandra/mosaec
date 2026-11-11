@@ -23,8 +23,9 @@ export const DEPLOYMENTS = {
     apiBaseUrl: 'https://api-staging.mosaec.finance',
   },
   production: {
-    webBaseUrl: 'https://app.mosaec.finance',
-    apiBaseUrl: 'https://api.mosaec.finance',
+    /* The app is served at mosaec.finance/app; the API sits behind the site's /api rewrite. */
+    webBaseUrl: 'https://mosaec.finance',
+    apiBaseUrl: 'https://mosaec.finance/api',
   },
 } as const satisfies Record<MosaecEnv, Deployment>;
 
