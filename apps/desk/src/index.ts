@@ -52,6 +52,9 @@ async function main(): Promise<void> {
       await repository.savePrices(observed, 'coingecko');
       const summary = await runDesk(service, model, log);
       log('desk run', { ...summary });
+      for (const item of await service.collect()) {
+        log('desk collect', { ...item, amount: item.amount.toString() });
+      }
     } catch (cause) {
       console.error(
         JSON.stringify({ level: 'error', message: 'desk run failed', cause: String(cause) }),

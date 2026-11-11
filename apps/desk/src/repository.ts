@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNotNull, sum } from 'drizzle-orm';
 
 import { schema } from '@mosaec/db';
 
@@ -31,6 +31,22 @@ export class DeskRepository {
       .select({ packId: packs.packId })
       .from(packs)
       .where(and(eq(packs.network, network), eq(packs.state, 'offered')));
+    return rows.map((row) => row.packId);
+  }
+
+  /** Free packs whose Title the desk holds and that still list contents (repayments or kept coins). */
+  async collectablePacks(network: string, deskAccountId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ packId: packs.packId })
+      .from(packs)
+      .where(
+        and(
+          eq(packs.network, network),
+          eq(packs.state, 'free'),
+          eq(packs.titleOwner, deskAccountId),
+          isNotNull(packs.contents),
+        ),
+      );
     return rows.map((row) => row.packId);
   }
 
