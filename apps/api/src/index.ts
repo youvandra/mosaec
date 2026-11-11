@@ -1,8 +1,40 @@
 import { serve } from '@hono/node-server';
 
+import { DEPLOYMENTS } from '@mosaec/config/env';
+import { NETWORKS } from '@mosaec/config/networks';
+import { connect } from '@mosaec/db';
+import { MosaecViews, NearRpc } from '@mosaec/sdk';
+
 import { createApp } from './app';
 import { loadApiEnv } from './env';
 
-const env = loadApiEnv(process.env);
+import type { ChainProbe } from './services/health-service';
+import type { NetworkId } from '@mosaec/config/assets';
 
-serve({ fetch: createApp().fetch, port: env.API_PORT });
+/** Reads per client address per minute. */
+const READS_PER_MINUTE = 60;
+
+const env = loadApiEnv(process.env);
+const { db } = connect(env.DATABASE_URL);
+
+const rpcFor = (network: NetworkId): NearRpc => new NearRpc(NETWORKS[network].rpcUrl);
+const chain: ChainProbe = {
+  finalHeight: async (network) => {
+    const block = (await rpcFor(network).request('block', { finality: 'final' })) as {
+      header: { height: number | bigint };
+    };
+    return BigInt(block.header.height);
+  },
+  registryPaused: async (network) =>
+    (await new MosaecViews(network, rpcFor(network)).config()).paused,
+};
+
+serve({
+  fetch: createApp({
+    db,
+    chain,
+    allowedOrigins: [DEPLOYMENTS[env.MOSAEC_ENV].webBaseUrl],
+    readsPerMinute: READS_PER_MINUTE,
+  }).fetch,
+  port: env.API_PORT,
+});
