@@ -30,7 +30,13 @@ export const TERM_OPTIONS: readonly TermOption[] = [
   { id: 'd90', label: '90 days', termNs: 90n * NS_PER_DAY },
 ];
 
-/** Repayment for `principal` at a monthly rate over `termNs`, rounded up to the smallest unit. */
+/** One cent of USDC (6 decimals): repayments are suggested in whole cents. */
+const CENT = 10_000n;
+
+/**
+ * Repayment for `principal` (USDC units) at a monthly rate over `termNs`. Interest rounds up to a
+ * whole cent, so even a minutes-long rehearsal term suggests a readable amount.
+ */
 export function suggestedRepayment(
   principal: bigint,
   monthlyRateBps: number,
@@ -38,6 +44,6 @@ export function suggestedRepayment(
 ): bigint {
   const monthNs = DAYS_PER_MONTH * NS_PER_DAY;
   const numerator = principal * BigInt(monthlyRateBps) * termNs;
-  const denominator = BPS * monthNs;
-  return principal + (numerator + denominator - 1n) / denominator;
+  const denominator = BPS * monthNs * CENT;
+  return principal + ((numerator + denominator - 1n) / denominator) * CENT;
 }
