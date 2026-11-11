@@ -48,6 +48,7 @@ export class DeskService {
         ...policy,
         minTermNs: policy.minTermNs.toString(),
         maxTermNs: policy.maxTermNs.toString(),
+        minFillUsdc: policy.minFillUsdc.toString(),
         maxFillUsdc: policy.maxFillUsdc.toString(),
         maxExposureUsdc: policy.maxExposureUsdc.toString(),
         dailyBudgetUsdc: policy.dailyBudgetUsdc.toString(),

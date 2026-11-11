@@ -206,6 +206,7 @@ const deskOverviewSchema = z.object({
     minAprBps: z.number().int(),
     minTermNs: z.string(),
     maxTermNs: z.string(),
+    minFillUsdc: z.string(),
     maxFillUsdc: z.string(),
     maxExposureUsdc: z.string(),
     dailyBudgetUsdc: z.string(),
