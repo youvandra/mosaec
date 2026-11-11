@@ -11,14 +11,16 @@
   flex: none;
   border-radius: 50%;
   background: var(--surface-inverse);
+  transition: transform 0.6s var(--spring-pop);
 }
 .badge img {
-  width: 66%;
+  width: 70%;
   height: auto;
 }
 .word {
   font-size: 22px;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: -0.04em;
 }
 .light {
@@ -26,4 +28,11 @@
 }
 .light .badge {
   background: var(--bg-primary);
+}
+@media (hover: hover) {
+  .interactive:hover .badge,
+  a:hover > .logo .badge,
+  a:focus-visible > .logo .badge {
+    transform: rotate(90deg) scale(1.06);
+  }
 }

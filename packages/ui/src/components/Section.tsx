@@ -9,7 +9,7 @@ export function Section({
   children,
   label,
 }: {
-  readonly id?: string;
+  readonly id?: string | undefined;
   readonly className?: string | undefined;
   readonly children: ReactNode;
   readonly label?: string;

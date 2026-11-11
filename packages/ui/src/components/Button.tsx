@@ -43,8 +43,16 @@ function Content(props: CommonProps) {
     props.icon ?? (props.showIcon === true ? <CaretRightIcon size={16} weight="bold" /> : null);
   return (
     <>
+      <span className={styles.bloom} aria-hidden="true" />
       <Label text={props.children} />
-      {icon !== null && <span className={styles.icon}>{icon}</span>}
+      {icon !== null && (
+        <span className={styles.icon} aria-hidden="true">
+          <span className={styles.iconTrack}>
+            {icon}
+            {icon}
+          </span>
+        </span>
+      )}
     </>
   );
 }
