@@ -49,6 +49,11 @@
   border: 1px solid var(--border-primary);
 }
 /* Cards in a row end on the same line: the action sits at the bottom whatever comes above it. */
+.collect {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--positive);
+}
 .cardAction {
   margin-top: auto;
 }

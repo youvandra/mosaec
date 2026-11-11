@@ -15,6 +15,7 @@ import { ASSETS } from '@mosaec/config/assets';
 import { AppIcon, ButtonLink, ErrorState, Segmented, Skeleton, StatusPill } from '@mosaec/ui';
 
 import { getPositions } from '../../../lib/api';
+import { payoutOf } from '../../../lib/collect';
 import { liveDealOf } from '../../../lib/deal';
 import { PAWN_STATUS } from '../../../lib/deal-status';
 import { formatDateNs, formatUnits, padCents } from '../../../lib/format';
@@ -135,7 +136,11 @@ function action(side: Side, pack: Pack): { label: string; primary: boolean } {
   if (side === 'borrowing') return { label: 'Repay', primary: true };
   if (side === 'lending') return { label: 'View Pawn', primary: false };
   if (pack.state === 'offered') return { label: 'View Offer', primary: false };
-  return { label: pack.contents.length > 0 ? 'Withdraw or Pawn' : 'Open a Pawn', primary: true };
+  if (pack.contents.length === 0) return { label: 'Open a Pawn', primary: true };
+  return {
+    label: payoutOf(pack.status, '').kind === 'own' ? 'Withdraw or Pawn' : 'Collect',
+    primary: true,
+  };
 }
 
 const MS_PER_NS = 1_000_000n;
@@ -225,6 +230,13 @@ function PositionCard({
       )}
       {side !== 'owned' && deal.outcome === 'running' && worth !== null && owed !== null && (
         <ValueCheck side={side === 'borrowing' ? 'borrower' : 'lender'} worth={worth} owed={owed} />
+      )}
+      {side === 'owned' && lead !== undefined && payoutOf(pack.status, '').kind !== 'own' && (
+        <span className={styles.collect}>
+          {payoutOf(pack.status, '').kind === 'repayment'
+            ? 'Repaid. Waiting for you to collect.'
+            : 'Unpaid at the date. The coins are yours to collect.'}
+        </span>
       )}
       {side === 'owned' && worth !== null && worth > 0 && (
         <span className="t-caption">Worth about {usdText(worth)} now</span>

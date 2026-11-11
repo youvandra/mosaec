@@ -7,6 +7,7 @@ import { NETWORKS } from '@mosaec/config/networks';
 import { MosaecViews, mosaecCalls } from '@mosaec/sdk';
 import { Button, ButtonLink, Callout, useConfirm } from '@mosaec/ui';
 
+import { payoutOf } from '../../../../lib/collect';
 import { formatDateTimeNs } from '../../../../lib/format';
 import { SIGN_FOOTNOTE } from '../../../../lib/legal';
 import { useNetwork } from '../../../../lib/near/network';
@@ -346,16 +347,22 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
 
   if (pack.state === 'free' && isTitle) {
     if (pack.contents.length > 0) {
+      const contentsText = pack.contents.map((line) => amountText(line, 8)).join(' + ');
+      const payout = payoutOf(pack.status, contentsText);
       cards.push(
         <SimpleAction
           key="withdraw"
-          title="Withdraw the contents"
-          body={`Moves ${pack.contents.map((line) => amountText(line, 8)).join(' + ')} to your verifier balance.`}
-          label="Withdraw to My Balance"
-          success="Withdrawn to your verifier balance."
+          title={payout.title}
+          body={payout.note}
+          label={payout.label}
+          success={
+            payout.kind === 'own'
+              ? 'Withdrawn to your verifier balance.'
+              : `Collected ${contentsText} to your verifier balance.`
+          }
           ask={{
-            title: 'Withdraw the contents?',
-            body: `Moves ${pack.contents.map((line) => amountText(line, 8)).join(' + ')} from the pack to your verifier balance.`,
+            title: payout.kind === 'own' ? 'Withdraw the contents?' : `${payout.title}?`,
+            body: `Moves ${contentsText} from the pack to your verifier balance.`,
           }}
           call={() =>
             pack.contents.map((line) =>
