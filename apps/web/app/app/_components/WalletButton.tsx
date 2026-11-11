@@ -1,0 +1,106 @@
+'use client';
+
+import { useState } from 'react';
+
+import { Button, Dialog, cx } from '@mosaec/ui';
+
+import { useWallet } from '../../../lib/near/wallet';
+
+import styles from './WalletButton.module.css';
+
+/** Connect button that turns into the account chip once a wallet is connected. */
+export function WalletButton() {
+  const { ready, accountId, walletName, options, connect, disconnect } = useWallet();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const close = () => {
+    setOpen(false);
+    setError(null);
+  };
+
+  if (accountId === null) {
+    return (
+      <>
+        <Button
+          size="sm"
+          disabled={!ready}
+          onClick={() => {
+            setOpen(true);
+          }}
+        >
+          Connect Wallet
+        </Button>
+        <Dialog open={open} title="Connect a NEAR wallet" onClose={close}>
+          <div className={styles.list}>
+            {options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={styles.wallet}
+                onClick={() => {
+                  setError(null);
+                  connect(option.id)
+                    .then(close)
+                    .catch((cause: unknown) => {
+                      setError(cause instanceof Error ? cause.message : 'The wallet declined.');
+                    });
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- icon URLs come from wallet modules */}
+                <img src={option.iconUrl} alt="" width={32} height={32} />
+                {option.name}
+              </button>
+            ))}
+          </div>
+          {error !== null && (
+            <p
+              className="t-body-sm"
+              role="alert"
+              style={{ color: 'var(--negative)', marginTop: 12 }}
+            >
+              {error}
+            </p>
+          )}
+          <p className={cx('t-caption', styles.note)}>
+            Mosaec asks for no access key. Each action opens your wallet for approval.
+          </p>
+        </Dialog>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.chip}
+        onClick={() => {
+          setOpen(true);
+        }}
+        aria-label={`Account ${accountId}`}
+      >
+        <span className={styles.avatar} aria-hidden="true">
+          {accountId.slice(0, 2)}
+        </span>
+        <span className={styles.account}>{accountId}</span>
+      </button>
+      <Dialog open={open} title="Your wallet" onClose={close}>
+        <div className={styles.menu}>
+          <p className="t-body-sm">
+            Connected as <strong>{accountId}</strong>
+            {walletName !== null ? ` with ${walletName}` : ''}.
+          </p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void disconnect().then(close);
+            }}
+          >
+            Disconnect
+          </Button>
+        </div>
+      </Dialog>
+    </>
+  );
+}
