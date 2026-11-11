@@ -21,6 +21,11 @@ export interface DeskChain {
   balanceUsdc(): Promise<bigint>;
   /** The offer on `pack` as the registry holds it right now, or `null` when it is not offered. */
   liveOffer(pack: string): Promise<OfferInput | null>;
+  /**
+   * What a pack holds when it is free and the desk holds its Title (a repayment, or coins kept
+   * after a forfeit); `null` in any other state.
+   */
+  collectable(pack: string): Promise<readonly { tokenId: string; amount: bigint }[] | null>;
   send(call: ContractCall): Promise<SentCall>;
 }
 
@@ -67,6 +72,15 @@ export class NearDeskChain implements DeskChain {
       contents: stage.contents.map((line) => ({ tokenId: line.token_id, amount: line.amount })),
       contentsHash: stage.contents_hash,
     };
+  }
+
+  async collectable(pack: string): Promise<readonly { tokenId: string; amount: bigint }[] | null> {
+    const view = await this.views.positionOf(pack);
+    if (view === undefined) return null;
+    const { stage, command_in_flight: busy } = view.position;
+    if (stage.state !== 'free' || busy || view.title_owner !== this.accountId) return null;
+    const lines = await this.views.holdingsOf(pack);
+    return lines.map((line) => ({ tokenId: line.token_id, amount: line.amount }));
   }
 
   async send(call: ContractCall): Promise<SentCall> {

@@ -28,6 +28,15 @@ export type FillResult =
       readonly txHash?: string;
     };
 
+export interface CollectResult {
+  readonly pack: string;
+  readonly tokenId: string;
+  readonly amount: bigint;
+  readonly status: 'collected' | 'error';
+  readonly txHash: string | null;
+  readonly reason?: string;
+}
+
 /**
  * The desk's one rule set, shared by the agent loop and the MCP tools: every read re-checks the
  * chain, and every fill re-runs the policy on fresh data right before it signs.
@@ -157,6 +166,50 @@ export class DeskService {
       });
       return { status: 'error', code: 'UPSTREAM_RPC', reason };
     }
+  }
+
+  /**
+   * Moves what the desk is owed out of its packs into its own verifier balance: repayments of
+   * redeemed pawns and coins kept after a forfeit. Each pack is re-read on chain before signing;
+   * one withdraw per token, in order, since a pack runs one command at a time.
+   */
+  async collect(): Promise<CollectResult[]> {
+    const calls = mosaecCalls(this.network);
+    const packIds = await this.repository.collectablePacks(this.network, this.policy.deskAccountId);
+    const results: CollectResult[] = [];
+    for (const pack of packIds) {
+      const lines = await this.chain.collectable(pack);
+      if (lines === null) continue;
+      for (const line of lines) {
+        try {
+          const sent = await this.chain.send(
+            calls.withdraw({
+              pack,
+              tokenId: line.tokenId,
+              amount: line.amount,
+              destination: { kind: 'verifier', accountId: this.policy.deskAccountId },
+            }),
+          );
+          results.push({
+            pack,
+            tokenId: line.tokenId,
+            amount: line.amount,
+            status: sent.outcome.status === 'settled' ? 'collected' : 'error',
+            txHash: sent.hash,
+          });
+        } catch (cause) {
+          results.push({
+            pack,
+            tokenId: line.tokenId,
+            amount: line.amount,
+            status: 'error',
+            txHash: null,
+            reason: cause instanceof Error ? cause.message : 'The withdraw could not be sent.',
+          });
+        }
+      }
+    }
+    return results;
   }
 
   async recordPass(pack: string, runId: string, actor: string, why: string, quote: Quote | null) {
