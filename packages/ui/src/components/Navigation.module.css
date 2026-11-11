@@ -18,31 +18,16 @@
   box-shadow: var(--shadow-nav);
   backdrop-filter: blur(15px) saturate(1.6);
   -webkit-backdrop-filter: blur(15px) saturate(1.6);
-  transition:
-    border-radius 0.4s var(--spring-soft),
-    box-shadow 0.4s var(--ease-out);
+  /* One morph for every state change, like the source's spring (0.5 s, no bounce). */
+  transition: border-radius 0.5s var(--spring-soft);
 }
 .expanded {
-  border-radius: 26px;
-  background: rgba(255, 255, 255, 0.96);
+  border-radius: 28px 28px 32px 32px;
 }
 .bar {
   display: flex;
   align-items: center;
   padding: 6px;
-}
-/* Desktop bar matches the source's 776 px pill so the mega panel has room. */
-@media (min-width: 1200px) {
-  .bar {
-    min-width: 760px;
-    transition: min-width 0.5s var(--spring-soft);
-  }
-  .compact .bar {
-    min-width: 0;
-  }
-  .bar .divider {
-    margin-left: auto;
-  }
 }
 .home {
   display: inline-flex;
@@ -143,37 +128,27 @@
   transform: rotate(180deg);
 }
 
-/* Mega panel grows out of the bar. */
+/* Mega panel grows out of the bar to the measured height of its content. */
 .panel {
-  display: grid;
   /* Width 0 + min-width 100%: the panel takes the bar's width and never widens the pill. */
   width: 0;
   min-width: 100%;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.45s var(--spring-soft);
-}
-.panel[data-open='true'] {
-  grid-template-rows: 1fr;
-}
-.panel > * {
+  height: 0;
   overflow: hidden;
-  min-height: 0;
+  transition: height 0.5s var(--spring-soft);
 }
 .panelBody {
   display: grid;
   gap: 8px;
   width: 100%;
   padding: 6px;
-  animation: mosaec-panel 0.35s var(--ease-out) both;
+  transition: opacity 0.3s var(--ease-out);
+}
+.panel[data-open='false'] .panelBody {
+  opacity: 0;
 }
 .withAside {
   grid-template-columns: 1fr 260px;
-}
-@keyframes mosaec-panel {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
 }
 .panelMain {
   display: flex;

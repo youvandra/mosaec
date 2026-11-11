@@ -3,13 +3,18 @@
 import { useEffect, useRef } from 'react';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+/** Default visible share that plays the entrance. */
+const ENTER_RATIO = 0.15;
 
 /**
- * Marks an element `out` while it is off screen and `in` once it enters, both ways, like the
- * design source's replaying appear effects. Server HTML carries no state, so content is visible
- * without script; a page opened in a background tab is left as rendered.
+ * Marks an element `in` once enough of it is on screen, and `out` again only after it has fully
+ * left through the bottom edge, so it replays on the next scroll down. The `out` state moves the
+ * element further down, away from the viewport, which keeps the observer from flipping it back
+ * and forth at the edge. Elements that leave through the top stay `in`. Server HTML carries no
+ * state, so content is visible without script; a page opened in a background tab is left as
+ * rendered.
  */
-export function useInViewMotion<T extends HTMLElement>(threshold = 0.2) {
+export function useInViewMotion<T extends HTMLElement>(enterRatio = ENTER_RATIO) {
   const ref = useRef<T>(null);
 
   useEffect(() => {
@@ -20,19 +25,20 @@ export function useInViewMotion<T extends HTMLElement>(threshold = 0.2) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry === undefined) return;
-        if (entry.isIntersecting) {
+        const below = entry.boundingClientRect.top > (entry.rootBounds?.bottom ?? innerHeight) - 1;
+        if (entry.intersectionRatio >= enterRatio) {
           node.dataset.motion = 'in';
-        } else if (node.dataset.motion !== undefined || entry.boundingClientRect.top > 0) {
+        } else if (!entry.isIntersecting && below) {
           node.dataset.motion = 'out';
         }
       },
-      { threshold, rootMargin: '0px 0px -8% 0px' },
+      { threshold: [0, enterRatio] },
     );
     observer.observe(node);
     return () => {
       observer.disconnect();
     };
-  }, [threshold]);
+  }, [enterRatio]);
 
   return ref;
 }

@@ -1,41 +1,123 @@
+/*
+ * Source: Payments hero "Payment succeeded" chip and Payouts "190 countries" chip.
+ * White fill, 1px border, shadow 0 12 24 -14, padding 10/14, gap 8, 20px solid check badge with an
+ * 11px white glyph, label 14/500/1.3 in ink. `sm` scales it to list rows (18px badge, 13px label).
+ */
 .pill {
+  --tone: var(--text-secondary);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 7px;
+  padding: 5px 12px 5px 11px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 12px 24px -14px rgba(20, 20, 20, 0.25);
+  font-size: 13px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
   white-space: nowrap;
 }
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
+.withBadge {
+  padding-left: 5px;
 }
+.md {
+  gap: 8px;
+  padding: 9px 14px 9px 13px;
+  font-size: 14px;
+}
+.md.withBadge {
+  padding-left: 9px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--tone);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.badge svg {
+  width: 10px;
+  height: 10px;
+}
+.md .badge {
+  width: 20px;
+  height: 20px;
+}
+.md .badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Live dot: solid core, a halo that breathes once every 2.4s. */
+.live {
+  position: relative;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+.live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--tone);
+  opacity: 0;
+}
+:global(.motion-ok) .live::after {
+  animation: status-halo 2.4s var(--ease-out) infinite;
+}
+@keyframes status-halo {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
 .positive {
-  background: var(--positive-subtle);
-  color: var(--positive);
+  --tone: var(--positive);
 }
 .negative {
-  background: var(--negative-subtle);
-  color: var(--negative);
+  --tone: var(--negative);
 }
 .warning {
-  background: var(--warning-subtle);
-  color: var(--warning);
+  --tone: var(--ill-orange);
 }
 .accent {
-  background: var(--accent-subtle);
-  color: var(--accent);
+  --tone: var(--accent);
 }
 .neutral {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  --tone: var(--text-secondary);
 }
+/* The source's dark "Arrives in seconds" chip: ink fill, lime glyph. */
 .inverse {
+  --tone: var(--ill-lime);
   background: var(--surface-inverse);
+  border-color: transparent;
   color: var(--text-inverse);
+  box-shadow: 0 12px 24px -14px rgba(20, 20, 20, 0.4);
+}
+.inverse .badge {
+  color: var(--text-primary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .live::after {
+    animation: none;
+  }
 }

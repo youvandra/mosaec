@@ -22,7 +22,7 @@ export function Reveal({
   as: Tag = 'div',
   delay = 0.1,
   trigger = 'view',
-  y = 40,
+  y = 24,
   className,
   children,
   id,
