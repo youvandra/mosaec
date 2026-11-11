@@ -117,6 +117,8 @@ describe('term constants match constants.rs', () => {
 describe('networks', () => {
   it('opens on testnet while mainnet is disabled', () => {
     expect(NETWORKS.mainnet.enabled).toBe(false);
+    expect(NETWORKS.mainnet.registryDeployHeight).toBeNull();
+    expect(NETWORKS.testnet.registryDeployHeight).toBe(277_143_566n);
     expect(DEFAULT_NETWORK).toBe('testnet');
   });
 

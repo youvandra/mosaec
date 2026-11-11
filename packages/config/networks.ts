@@ -12,6 +12,10 @@ export interface NetworkConfig {
   readonly enabled: boolean;
   readonly rpcUrl: string;
   readonly explorerUrl: string;
+  /** FastNEAR neardata archive the indexer reads blocks from. */
+  readonly neardataUrl: string;
+  /** Block that deployed the registry; the indexer starts there. `null` until deployed. */
+  readonly registryDeployHeight: bigint | null;
   readonly rootAccountId: string;
   readonly registryAccountId: string;
   readonly verifierAccountId: string;
@@ -42,6 +46,8 @@ export const NETWORKS = {
     enabled: false,
     rpcUrl: 'https://free.rpc.fastnear.com',
     explorerUrl: 'https://nearblocks.io',
+    neardataUrl: 'https://mainnet.neardata.xyz',
+    registryDeployHeight: null,
     rootAccountId: 'mosaec.near',
     registryAccountId: 'v0.mosaec.near',
     verifierAccountId: 'intents.near',
@@ -53,6 +59,8 @@ export const NETWORKS = {
     enabled: true,
     rpcUrl: 'https://rpc.testnet.fastnear.com',
     explorerUrl: 'https://testnet.nearblocks.io',
+    neardataUrl: 'https://testnet.neardata.xyz',
+    registryDeployHeight: 277_143_566n,
     rootAccountId: 'mosaec.testnet',
     registryAccountId: 'v0.mosaec.testnet',
     verifierAccountId: 'intents.mosaec.testnet',
