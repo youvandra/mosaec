@@ -24,6 +24,8 @@ export interface FaucetSender {
     receiverId: string,
     lines: readonly { tokenId: string; amount: bigint }[],
   ): Promise<string>;
+  /** Whether a NEAR account with this id exists; the verifier would credit any well-formed id. */
+  accountExists(network: NetworkId, accountId: string): Promise<boolean>;
   /** The faucet's verifier balance per token, in the order given. */
   balances(network: NetworkId, tokenIds: readonly string[]): Promise<readonly bigint[]>;
 }
@@ -68,6 +70,9 @@ export class FaucetService {
     }
     if ((await this.claims.countSince(network, since)) >= FAUCET_DAILY_CAP) {
       throw new MosaecError('FAUCET_DAILY_CAP');
+    }
+    if (!(await this.sender.accountExists(network, accountId))) {
+      throw new MosaecError('FAUCET_NO_ACCOUNT');
     }
     const lines = FAUCET_GRANT.map((line) => ({
       tokenId: ASSETS[line.symbol].tokenIds[network],

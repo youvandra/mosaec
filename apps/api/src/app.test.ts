@@ -82,6 +82,7 @@ describe('API', () => {
           faucetSent.push(receiverId);
           return Promise.resolve('FaucetTxHash');
         },
+        accountExists: (_network, accountId) => Promise.resolve(!accountId.startsWith('ghost')),
         balances: (_network, tokenIds) => Promise.resolve(tokenIds.map(() => faucetHeld)),
       },
     });
@@ -303,6 +304,15 @@ describe('API', () => {
     expect(again.status).toBe(429);
     expect(await code(again)).toBe('FAUCET_ACCOUNT_USED');
     expect((await claim('carol.testnet', '198.51.100.8', 'mainnet')).status).toBe(404);
+  });
+
+  it('refuses an account that does not exist, and sends nothing', async () => {
+    faucetSent.length = 0;
+    const res = await claim('ghost-name.testnet', '203.0.113.30');
+    expect(res.status).toBe(404);
+    expect(await code(res)).toBe('FAUCET_NO_ACCOUNT');
+    expect(faucetSent).toEqual([]);
+    expect((await claim('alice.testnet', '203.0.113.30')).status).toBe(200);
   });
 
   it('grants once a day per client address', async () => {

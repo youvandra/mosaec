@@ -72,6 +72,7 @@ export const ERROR_CATALOG = {
   FAUCET_ACCOUNT_USED: api(429, 'This account already received test tokens today.'),
   FAUCET_IP_USED: api(429, 'Test tokens already went to this network today. Try again tomorrow.'),
   FAUCET_DAILY_CAP: api(429, 'The faucet gave out its daily amount. Try again tomorrow.'),
+  FAUCET_NO_ACCOUNT: api(404, 'No NEAR testnet account has this name. Check the spelling.'),
   FAUCET_LOW: api(503, 'The faucet is being refilled. Try again later.', true),
   NOT_FOUND: api(404, 'Nothing exists at this address.'),
   VALIDATION: api(400, 'Some fields are invalid.'),
