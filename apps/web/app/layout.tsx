@@ -4,7 +4,11 @@ import '@mosaec/ui/base.css';
 import { GeistMono } from 'geist/font/mono';
 import localFont from 'next/font/local';
 
+import { ConfirmProvider, PageLoader, SmoothScroll, ToastProvider } from '@mosaec/ui';
+
 import { SITE } from '../lib/site';
+
+import { Analytics } from './Analytics';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
@@ -50,7 +54,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <PageLoader />
+        <SmoothScroll />
+        <ToastProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </ToastProvider>
+        <Analytics />
+      </body>
     </html>
   );
 }
