@@ -10,7 +10,7 @@ export default function AppNotFound() {
       title="No such pack or page"
       action={
         <ButtonLink href={appPath()} as={Link} size="sm" showIcon>
-          Back to Open Pawns
+          Back to the Market
         </ButtonLink>
       }
     >

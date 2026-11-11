@@ -1,0 +1,95 @@
+/* Source: Payments › Developers code window. */
+.window {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 24px;
+  background: var(--surface-inverse-raised);
+  border: 1px solid var(--border-inverse);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-nft);
+  overflow: hidden;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 14px;
+  border-bottom: 1px solid var(--border-inverse);
+}
+.tab {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inverse-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.code {
+  margin: 0;
+  padding: 18px 0;
+  list-style: none;
+  overflow-x: auto;
+}
+.line {
+  display: flex;
+  gap: 20px;
+  padding: 0 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 28px;
+  white-space: pre;
+}
+.lineNo {
+  flex: none;
+  width: 14px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.28);
+}
+.key {
+  color: #8ab4ff;
+}
+.fn {
+  color: var(--ill-mint);
+}
+.str {
+  color: var(--ill-lime);
+}
+.num {
+  color: var(--ill-orange);
+}
+.punct {
+  color: rgba(255, 255, 255, 0.72);
+}
+.plain {
+  color: var(--text-inverse);
+}
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px 20px;
+  background: var(--surface-inverse);
+}
+.cmdRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.cmd {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.out {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 26px;
+  color: var(--text-inverse-secondary);
+}
+.out :global(.ok) {
+  color: var(--ill-lime);
+}

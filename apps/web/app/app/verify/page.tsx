@@ -13,8 +13,9 @@ export default function VerifyPage() {
   return (
     <>
       <PageHeader
-        title="Verify a pack"
-        lead="Paste a pack account. Your browser reads the chain directly and checks the rules that keep its coins in place."
+        title="Trust the chain,"
+        accent="check the pack."
+        lead="Paste a pack. Your browser checks it against the chain."
       />
       <Suspense>
         <VerifyPanel />

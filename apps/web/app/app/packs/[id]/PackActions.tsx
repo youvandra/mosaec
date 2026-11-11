@@ -5,17 +5,24 @@ import { useEffect, useState } from 'react';
 
 import { NETWORKS } from '@mosaec/config/networks';
 import { MosaecViews, mosaecCalls } from '@mosaec/sdk';
-import { Button, ButtonLink } from '@mosaec/ui';
+import { Button, ButtonLink, Callout, useConfirm } from '@mosaec/ui';
 
+import { formatDateTimeNs } from '../../../../lib/format';
+import { SIGN_FOOTNOTE } from '../../../../lib/legal';
 import { useNetwork } from '../../../../lib/near/network';
 import { useTransaction } from '../../../../lib/near/useTransaction';
 import { useWallet } from '../../../../lib/near/wallet';
 import { amountText } from '../../../../lib/pack-view';
+import { usdValue, useUsdPrices } from '../../../../lib/prices';
+import { track } from '../../../../lib/track';
 import styles from '../../_components/ActionCard.module.css';
+import { DueReminder } from '../../_components/DueReminder';
 import { Facts } from '../../_components/Panel';
-import { appPath } from '../../_components/routes';
-import { TxStatus } from '../../_components/TxStatus';
+import { appPath, packPath } from '../../_components/routes';
+import { ValueCheck } from '../../_components/ValueCheck';
 import { WalletButton } from '../../_components/WalletButton';
+
+import { TransferCard } from './TransferCard';
 
 import type { Amount, PackDetail } from '../../../../lib/api';
 import type { ReactNode } from 'react';
@@ -64,9 +71,19 @@ function balanceText(balance: bigint | null, like: Amount): string {
   return amountText({ ...like, amount: balance.toString() }, 6);
 }
 
+function dueText(terms: PackDetail['terms']): string {
+  if (terms?.termNs == null) return '-';
+  const days = Number(BigInt(terms.termNs) / (86_400n * 1_000_000_000n));
+  return days >= 1 ? `${days.toString()} days after you fill` : 'Within a day of the fill';
+}
+
 function FillCard({ pack }: { readonly pack: PackDetail }) {
   const { network } = useNetwork();
-  const { state, run } = useTransaction();
+  const confirm = useConfirm();
+  const { state, run } = useTransaction({
+    pending: `Filling pawn #${pack.index}`,
+    success: 'Filled. You hold the Title.',
+  });
   const [agreed, setAgreed] = useState(false);
   const offer = pack.offer;
   const terms = pack.terms;
@@ -75,8 +92,24 @@ function FillCard({ pack }: { readonly pack: PackDetail }) {
   const price = BigInt(offer.price.amount);
   const short = balance !== null && balance < price;
 
-  const fill = () => {
-    void run([
+  const fill = async () => {
+    const ok = await confirm({
+      footnote: SIGN_FOOTNOTE,
+      title: 'Fill this pawn?',
+      body: 'You pay the loan now and receive the Title. The borrower holds the Ticket.',
+      rows: [
+        ['You pay now', amountText(offer.price, 6)],
+        ['Repaid to you', amountText(terms.repayment, 6)],
+        ['Due', dueText(terms)],
+        ['If unpaid', pack.contents.map((line) => amountText(line, 8)).join(' + ')],
+      ],
+      warning:
+        'The fill is final. If the Ticket lapses you keep the coins, whatever they are worth.',
+      confirmLabel: 'Fill Pawn',
+    });
+    if (!ok) return;
+    track('fill_started');
+    const sent = await run([
       mosaecCalls(network).fill({
         pack: pack.id,
         terms: {
@@ -89,6 +122,7 @@ function FillCard({ pack }: { readonly pack: PackDetail }) {
         price,
       }),
     ]);
+    if (sent !== null) track('fill_settled');
   };
 
   return (
@@ -101,7 +135,7 @@ function FillCard({ pack }: { readonly pack: PackDetail }) {
           ['Your balance', balanceText(balance, offer.price)],
         ]}
       />
-      {short && <p className={styles.warn}>Your verifier balance is below the loan amount.</p>}
+      {short && <Callout tone="warning">Your verifier balance is below the loan amount.</Callout>}
       <label className={styles.check}>
         <input
           type="checkbox"
@@ -113,22 +147,58 @@ function FillCard({ pack }: { readonly pack: PackDetail }) {
         I understand the borrower may let the Ticket lapse, and then I keep the coins whatever they
         are worth.
       </label>
-      <Button fullWidth disabled={!agreed || short || state.phase === 'pending'} onClick={fill}>
+      <Button
+        fullWidth
+        disabled={!agreed || short}
+        loading={state.phase === 'pending'}
+        onClick={() => {
+          void fill();
+        }}
+      >
         {state.phase === 'pending' ? 'Waiting for the Wallet' : 'Fill This Pawn'}
       </Button>
-      <TxStatus state={state} success="Filled. You now hold the Title." />
     </Card>
   );
 }
 
 function RedeemCard({ pack }: { readonly pack: PackDetail }) {
   const { network } = useNetwork();
-  const { state, run } = useTransaction();
+  const confirm = useConfirm();
+  const { state, run } = useTransaction({
+    pending: `Redeeming pack #${pack.index}`,
+    success: 'Redeemed. Your coins are on the way.',
+  });
   const terms = pack.terms;
   const balance = useBalance(terms?.repayment.tokenId);
+  const prices = useUsdPrices();
   if (terms === null) return null;
   const k = BigInt(terms.repayment.amount);
+  const worth = usdValue(pack.contents, prices);
+  const owed = usdValue([terms.repayment], prices);
   const short = balance !== null && balance < k;
+  const redeem = async () => {
+    const ok = await confirm({
+      footnote: SIGN_FOOTNOTE,
+      title: 'Redeem your coins?',
+      rows: [
+        ['You pay', amountText(terms.repayment, 6)],
+        ['You receive', pack.contents.map((line) => amountText(line, 8)).join(' + ')],
+        ['Due by', terms.expiresAtNs === null ? '-' : formatDateTimeNs(terms.expiresAtNs)],
+      ],
+      body: 'The repayment goes to the Title holder and the pack releases its contents to you.',
+      confirmLabel: 'Pay and Redeem',
+    });
+    if (!ok) return;
+    const sent = await run([
+      mosaecCalls(network).exercise({
+        pack: pack.id,
+        kToken: terms.repayment.tokenId,
+        kAmount: k,
+      }),
+    ]);
+    if (sent !== null) track('redeem_settled');
+  };
+
   return (
     <Card title="Redeem your coins">
       <Facts
@@ -138,23 +208,28 @@ function RedeemCard({ pack }: { readonly pack: PackDetail }) {
           ['Your balance', balanceText(balance, terms.repayment)],
         ]}
       />
-      {short && <p className={styles.warn}>Your verifier balance is below the repayment.</p>}
+      {worth !== null && owed !== null && <ValueCheck side="borrower" worth={worth} owed={owed} />}
+      {short && <Callout tone="warning">Your verifier balance is below the repayment.</Callout>}
+      {terms.expiresAtNs !== null && (
+        <DueReminder
+          reminder={{
+            dueNs: terms.expiresAtNs,
+            packIndex: pack.index,
+            owed: amountText(terms.repayment, 2),
+            path: packPath(pack.id),
+          }}
+        />
+      )}
       <Button
         fullWidth
-        disabled={short || state.phase === 'pending'}
+        disabled={short}
+        loading={state.phase === 'pending'}
         onClick={() => {
-          void run([
-            mosaecCalls(network).exercise({
-              pack: pack.id,
-              kToken: terms.repayment.tokenId,
-              kAmount: k,
-            }),
-          ]);
+          void redeem();
         }}
       >
         {state.phase === 'pending' ? 'Waiting for the Wallet' : 'Redeem'}
       </Button>
-      <TxStatus state={state} success="Redeemed. The contents are on their way to you." />
     </Card>
   );
 }
@@ -165,28 +240,33 @@ function SimpleAction({
   label,
   success,
   call,
+  ask,
 }: {
   readonly title: string;
   readonly body: string;
   readonly label: string;
   readonly success: string;
   readonly call: () => Parameters<ReturnType<typeof useTransaction>['run']>[0];
+  /** Asked before the wallet opens. */
+  readonly ask: { readonly title: string; readonly body: string; readonly warning?: string };
 }) {
-  const { state, run } = useTransaction();
+  const confirm = useConfirm();
+  const { state, run } = useTransaction({ pending: title, success });
   return (
     <Card title={title}>
       <p className="t-body-sm">{body}</p>
       <Button
         variant="secondary"
         fullWidth
-        disabled={state.phase === 'pending'}
+        loading={state.phase === 'pending'}
         onClick={() => {
-          void run(call());
+          void confirm({ ...ask, confirmLabel: label, footnote: SIGN_FOOTNOTE }).then((ok) => {
+            if (ok) void run(call());
+          });
         }}
       >
         {state.phase === 'pending' ? 'Waiting for the Wallet' : label}
       </Button>
-      <TxStatus state={state} success={success} />
     </Card>
   );
 }
@@ -223,6 +303,10 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
           label="Cancel Offer"
           success="Offer cancelled."
           call={() => [calls.cancel(pack.id)]}
+          ask={{
+            title: 'Cancel your offer?',
+            body: 'The offer leaves the market and the pack unfreezes. You keep the Title and the coins.',
+          }}
         />,
       );
     } else {
@@ -235,9 +319,9 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
     if (pack.ticket?.owner === verifier) {
       cards.push(
         <Card key="intents" title="Ticket held inside NEAR Intents">
-          <p className={styles.warn}>
+          <Callout tone="warning">
             Withdraw the Ticket to a wallet before the date: only its direct holder can redeem.
-          </p>
+          </Callout>
         </Card>,
       );
     }
@@ -250,6 +334,11 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
           label="Expire Pawn"
           success="Expired. The pack is free for the Title holder."
           call={() => [calls.expire(pack.id)]}
+          ask={{
+            title: 'Close this pawn?',
+            body: 'The term has ended. Closing gives the contents to the Title holder.',
+            warning: 'The Ticket can no longer redeem after this.',
+          }}
         />,
       );
     }
@@ -264,6 +353,10 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
           body={`Moves ${pack.contents.map((line) => amountText(line, 8)).join(' + ')} to your verifier balance.`}
           label="Withdraw to My Balance"
           success="Withdrawn to your verifier balance."
+          ask={{
+            title: 'Withdraw the contents?',
+            body: `Moves ${pack.contents.map((line) => amountText(line, 8)).join(' + ')} from the pack to your verifier balance.`,
+          }}
           call={() =>
             pack.contents.map((line) =>
               calls.withdraw({
@@ -291,6 +384,13 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
       </Card>,
     );
   }
+
+  /* A Ticket only matters while its pawn runs; a Title always can move. */
+  const sendable = [
+    ...(isTitle ? (['title'] as const) : []),
+    ...(isTicket && pack.state === 'written' && !pastDeadline ? (['ticket'] as const) : []),
+  ];
+  if (sendable.length > 0) cards.push(<TransferCard key="send" pack={pack} rights={sendable} />);
 
   if (cards.length === 0) {
     return (

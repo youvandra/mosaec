@@ -1,8 +1,21 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { Button, ErrorState } from '@mosaec/ui';
 
-export default function AppError({ reset }: { readonly error: Error; readonly reset: () => void }) {
+import { reportError } from '../../lib/report';
+
+export default function AppError({
+  error,
+  reset,
+}: {
+  readonly error: Error & { digest?: string };
+  readonly reset: () => void;
+}) {
+  useEffect(() => {
+    reportError(error, { area: 'boundary' });
+  }, [error]);
   return (
     <ErrorState
       title="This page hit an error"

@@ -1,28 +1,46 @@
 import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowSquareOutIcon,
+  HandCoinsIcon,
   PackageIcon,
+  PauseCircleIcon,
+  ProhibitIcon,
+  SealCheckIcon,
   StampIcon,
+  StorefrontIcon,
   TicketIcon,
+  TimerIcon,
   WarningCircleIcon,
+  XCircleIcon,
 } from '@phosphor-icons/react/dist/ssr';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { ASSETS, assetByTokenId } from '@mosaec/config/assets';
 import { DEFAULT_NETWORK, explorerAccountUrl, explorerTxUrl } from '@mosaec/config/networks';
 import { AppIcon, ButtonLink, ErrorState, NftCard, StatusPill, cx } from '@mosaec/ui';
 
 import { ApiError, getPack } from '../../../../lib/api';
-import { formatDateNs } from '../../../../lib/format';
-import { amountText, contentsText, termText } from '../../../../lib/pack-view';
-import { STATUS_TONE } from '../../../../lib/status';
+import { NEAR_MARK } from '../../../../lib/asset-marks';
+import { dealApr, dealInterest, dealOf } from '../../../../lib/deal';
+import { DEAL_STATUS } from '../../../../lib/deal-status';
+import { formatDateNs, formatDateTimeNs, formatUnits, padCents } from '../../../../lib/format';
+import { amountText, cashNumber, cashText, termText } from '../../../../lib/pack-view';
+import { CoinMark } from '../../_components/CoinMark';
 import { Countdown } from '../../_components/Countdown';
-import { Facts, Panel } from '../../_components/Panel';
+import { ListCard, ListRow, SoftPill } from '../../_components/ListCard';
 import { appPath } from '../../_components/routes';
 
 import { PackActions } from './PackActions';
 import styles from './page.module.css';
 
 import type { PackDetail, PackEvent } from '../../../../lib/api';
+import type { Deal, DealOutcome } from '../../../../lib/deal';
+import type { AppIconColor } from '@mosaec/ui';
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 
 interface Props {
   readonly params: Promise<{ id: string }>;
@@ -39,62 +57,247 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const EVENT_LABEL: Readonly<Record<string, string>> = {
-  pack_minted: 'Pack minted',
-  offer_created: 'Offer opened',
-  offer_cancelled: 'Offer cancelled',
-  filled: 'Filled by a lender',
-  refused: 'Request refused',
-  payout_delivered: 'Loan paid to the borrower',
-  encumbrance_synced: 'Terms recorded in the pack',
-  exercise_decided: 'Redeemed by the Ticket holder',
-  contents_released: 'Contents released',
-  nft_burned: 'Ticket retired',
-  expired: 'Expired to the Title holder',
-  disruption_recorded: 'Verifier pause recorded',
-  withdrawn: 'Withdrawn',
-  mt_transfer: 'Token transfer',
-  nft_transfer: 'NFT transfer',
-  nft_mint: 'NFT minted',
-  nft_burn: 'NFT burned',
+/** What the status means, in one line under the header. Label, tone and glyph come from DEAL_STATUS. */
+const OUTCOME_LINE: Readonly<Record<DealOutcome, string>> = {
+  listed: 'Waiting for a lender.',
+  running: 'The loan is out. Repay by the date or the lender keeps the coins.',
+  redeemed: 'Repaid in time. The coins went home.',
+  forfeited: 'The date passed. The lender kept the coins.',
+  cancelled: 'Closed before anyone filled it.',
+  empty: 'No pawn yet.',
 };
 
-function Holder({ accountId }: { readonly accountId: string | null }) {
-  if (accountId === null) return <>n/a</>;
-  return (
-    <a
-      className={styles.link}
-      href={explorerAccountUrl(DEFAULT_NETWORK, accountId)}
-      target="_blank"
-      rel="noreferrer"
-    >
-      {accountId}
-    </a>
-  );
+/* History in plain words. */
+
+interface Line {
+  readonly title: string;
+  readonly detail?: string;
+  readonly icon: ReactNode;
+  readonly color: AppIconColor;
+}
+
+function short(account: unknown): string {
+  return typeof account === 'string'
+    ? account.replace(/\.mosaec\.testnet$|\.near$/, '')
+    : 'someone';
+}
+
+function tokenAmount(tokenId: unknown, amount: unknown): string {
+  if (typeof tokenId !== 'string' || typeof amount !== 'string') return '';
+  const asset = assetByTokenId(DEFAULT_NETWORK, tokenId);
+  if (asset === undefined) return amount;
+  const text = formatUnits(amount, asset.decimals, asset.role === 'settlement' ? 2 : 4);
+  return `${asset.role === 'settlement' ? padCents(text) : text} ${asset.symbol}`;
+}
+
+function usdc(amount: unknown): string {
+  return tokenAmount(ASSETS.USDC.tokenIds[DEFAULT_NETWORK], amount);
+}
+
+function lineOf(event: PackEvent): Line | null {
+  const d = (typeof event.data === 'object' && event.data !== null ? event.data : {}) as Record<
+    string,
+    unknown
+  >;
+  switch (event.event) {
+    case 'pack_minted':
+      return {
+        title: 'Pack created',
+        detail: `${short(d.owner_id)} received the Title`,
+        icon: <PackageIcon weight="fill" />,
+        color: 'ink',
+      };
+    case 'offer_created': {
+      const contents = Array.isArray(d.contents)
+        ? (d.contents as { token_id?: unknown; amount?: unknown }[])
+            .map((line) => tokenAmount(line.token_id, line.amount))
+            .join(' + ')
+        : '';
+      const terms = (d.terms ?? {}) as { k_amount?: unknown };
+      return {
+        title: 'Offer opened',
+        detail: `${contents} for ${usdc(d.price)}, repaying ${usdc(terms.k_amount)}`,
+        icon: <StorefrontIcon weight="fill" />,
+        color: 'blue',
+      };
+    }
+    case 'offer_cancelled':
+      return { title: 'Offer cancelled', icon: <XCircleIcon weight="fill" />, color: 'light' };
+    case 'filled':
+      return {
+        title: 'Filled by a lender',
+        detail: `${short(d.taker_id)} paid ${usdc(d.price)} and took the Title`,
+        icon: <HandCoinsIcon weight="fill" />,
+        color: 'green',
+      };
+    case 'payout_delivered':
+      return {
+        title: 'Loan delivered',
+        detail: `${usdc(d.amount)} reached ${short(d.maker_id)}`,
+        icon: <HandCoinsIcon weight="fill" />,
+        color: 'green',
+      };
+    case 'exercise_decided':
+      return {
+        title: 'Repaid',
+        detail: `${usdc(d.k_amount)} paid by the Ticket holder`,
+        icon: <SealCheckIcon weight="fill" />,
+        color: 'violet',
+      };
+    case 'contents_released':
+      return {
+        title: 'Coins released',
+        detail: `Back to ${short(d.owed_to)}`,
+        icon: <PackageIcon weight="fill" />,
+        color: 'violet',
+      };
+    case 'expired':
+      return {
+        title: 'Date passed unpaid',
+        detail: 'The coins stay with the Title holder',
+        icon: <TimerIcon weight="fill" />,
+        color: 'coral',
+      };
+    case 'disruption_recorded':
+      return {
+        title: 'Verifier pause recorded',
+        detail: 'The repayment window was extended by 24 hours',
+        icon: <PauseCircleIcon weight="fill" />,
+        color: 'orange',
+      };
+    case 'withdrawn':
+      return {
+        title: 'Withdrawn',
+        detail: `${tokenAmount(d.token_id, d.amount)} to ${short((d.destination as { account_id?: unknown } | undefined)?.account_id)}`,
+        icon: <ArrowSquareOutIcon weight="bold" />,
+        color: 'light',
+      };
+    case 'refused':
+      return {
+        title: 'Request refused',
+        detail: `${typeof d.code === 'string' ? d.code : 'Refused'}, any payment came back`,
+        icon: <ProhibitIcon weight="bold" />,
+        color: 'light',
+      };
+    default:
+      return null;
+  }
 }
 
 function History({ events }: { readonly events: readonly PackEvent[] }) {
-  const ordered = events.filter((event) => event.standard === 'mosaec');
-  if (ordered.length === 0) return <p className="t-body-sm">No events indexed yet.</p>;
+  const lines = events
+    .filter((event) => event.standard === 'mosaec')
+    .map((event) => ({ event, line: lineOf(event) }))
+    .filter((item): item is { event: PackEvent; line: Line } => item.line !== null);
   return (
-    <ol className={styles.history}>
-      {ordered.map((event) => (
-        <li key={event.receiptId} className={styles.event}>
-          <span className="t-label">{EVENT_LABEL[event.event] ?? event.event}</span>
-          {event.txHash !== null ? (
-            <a
-              className={cx('t-caption', styles.link)}
-              href={explorerTxUrl(DEFAULT_NETWORK, event.txHash)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Block {event.height}
-            </a>
-          ) : (
-            <span className="t-caption">Block {event.height}</span>
-          )}
+    <ListCard
+      title={`History · ${lines.length.toString()} events`}
+      pill={<SoftPill tone="neutral">Read from chain</SoftPill>}
+    >
+      {lines.length === 0 ? (
+        <ListRow
+          icon={
+            <AppIcon color="light" size={36}>
+              <PackageIcon weight="fill" />
+            </AppIcon>
+          }
+          title="No events indexed yet"
+        />
+      ) : (
+        lines.map(({ event, line }) => (
+          <ListRow
+            key={event.receiptId}
+            icon={
+              <AppIcon color={line.color} size={36}>
+                {line.icon}
+              </AppIcon>
+            }
+            title={line.title}
+            meta={line.detail}
+            valueNote={event.timestampNs !== null ? formatDateTimeNs(event.timestampNs) : undefined}
+            trailing={
+              event.txHash !== null ? (
+                <a
+                  className={styles.tx}
+                  href={explorerTxUrl(DEFAULT_NETWORK, event.txHash)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open the transaction on the explorer"
+                >
+                  <ArrowSquareOutIcon size={14} weight="bold" />
+                </a>
+              ) : undefined
+            }
+          />
+        ))
+      )}
+    </ListCard>
+  );
+}
+
+/* The deal hero and its lifecycle. */
+
+function Amount({
+  label,
+  value,
+  unit,
+  note,
+  tone,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly unit?: string | null | undefined;
+  readonly note?: ReactNode;
+  readonly tone?: 'positive';
+}) {
+  return (
+    <div className={styles.amount}>
+      <span className="t-caption">{label}</span>
+      <span className={cx(styles.amountValue, tone === 'positive' && styles.positive)}>
+        {value}
+        {unit != null && unit !== '' && <span className={styles.amountUnit}>{unit}</span>}
+      </span>
+      {note !== undefined && <span className={cx('t-caption', styles.amountNote)}>{note}</span>}
+    </div>
+  );
+}
+
+function Track({ deal }: { readonly deal: Deal }) {
+  const ended = deal.outcome === 'redeemed' || deal.outcome === 'forfeited';
+  const steps = [
+    { label: 'Listed', at: deal.listedAtNs, done: deal.listedAtNs !== null },
+    { label: 'Filled', at: deal.filledAtNs, done: deal.filledAtNs !== null },
+    {
+      label: 'Due',
+      at: deal.dueNs,
+      done: ended,
+      live: deal.outcome === 'running' && deal.dueNs !== null,
+    },
+    {
+      label: deal.outcome === 'forfeited' ? 'Coins kept' : 'Repaid',
+      at: ended ? deal.settledAtNs : null,
+      done: ended,
+    },
+  ];
+  return (
+    <ol className={styles.track}>
+      {steps.map((step, i) => (
+        <li
+          key={step.label}
+          className={styles.trackStep}
+          data-done={step.done}
+          data-reached={steps[i + 1]?.done === true}
+        >
+          <span className={styles.dot} aria-hidden="true" />
+          <span className="t-label">{step.label}</span>
           <span className="t-caption">
-            {event.timestampNs !== null ? formatDateNs(event.timestampNs) : ''}
+            {step.live === true && step.at !== null ? (
+              <Countdown untilNs={step.at} />
+            ) : step.at !== null ? (
+              formatDateNs(step.at)
+            ) : (
+              'Pending'
+            )}
           </span>
         </li>
       ))}
@@ -102,24 +305,182 @@ function History({ events }: { readonly events: readonly PackEvent[] }) {
   );
 }
 
-function termsRows(pack: PackDetail) {
-  const rows: [string, React.ReactNode][] = [];
-  if (pack.offer !== null) rows.push(['Loan', amountText(pack.offer.price, 6)]);
-  if (pack.terms !== null) {
-    rows.push(['Repayment', amountText(pack.terms.repayment, 6)]);
-    rows.push(['Term', termText(pack.terms.termNs)]);
-    if (pack.terms.expiresAtNs !== null) {
-      rows.push(['Due', formatDateNs(pack.terms.expiresAtNs)]);
-      rows.push(['Time left', <Countdown key="c" untilNs={pack.terms.expiresAtNs} />]);
-    }
-    if (pack.terms.disruptedAtNs !== null && pack.terms.deadlineNs !== null) {
-      rows.push(['Grace until', formatDateNs(pack.terms.deadlineNs)]);
-    }
+/** One line under the outcome: when the next thing happens. */
+function NextMoment({ pack, deal }: { readonly pack: PackDetail; readonly deal: Deal }) {
+  if (deal.outcome === 'listed' && pack.offer?.expiresAtNs != null) {
+    return (
+      <>
+        Offer closes in <Countdown untilNs={pack.offer.expiresAtNs} compact />
+      </>
+    );
   }
-  if (pack.offer?.expiresAtNs !== null && pack.offer?.expiresAtNs !== undefined) {
-    rows.push(['Offer open until', formatDateNs(pack.offer.expiresAtNs)]);
+  if (deal.outcome === 'running' && deal.dueNs !== null) {
+    return (
+      <>
+        Due {formatDateNs(deal.dueNs)}, in <Countdown untilNs={deal.dueNs} compact />
+      </>
+    );
   }
-  return rows;
+  if (deal.settledAtNs !== null) {
+    return (
+      <>
+        {deal.outcome === 'cancelled' ? 'Closed' : 'Settled'} {formatDateNs(deal.settledAtNs)}
+      </>
+    );
+  }
+  return null;
+}
+
+/** The pawn as one ticket: the coins, the money both ways, then the dates. */
+function DealHero({ pack, deal }: { readonly pack: PackDetail; readonly deal: Deal }) {
+  const lead = deal.collateral[0];
+  const apr = dealApr(deal);
+  const interest = dealInterest(deal);
+  const live = deal.outcome === 'listed' || deal.outcome === 'running';
+  const terms = [apr === null ? null : `${apr.toFixed(1)}% APR`, termText(deal.termNs)]
+    .filter((part) => part !== null)
+    .join(' over ');
+  return (
+    <section className={styles.deal} aria-label="The deal">
+      <div className={styles.dealHead}>
+        <div className={styles.coins}>
+          <CoinMark symbol={lead?.symbol ?? null} size={52} />
+          <div className={styles.coinsText}>
+            <span className={styles.coinsAmount}>
+              {deal.collateral.length === 0
+                ? 'Empty'
+                : deal.collateral.map((line) => amountText(line)).join(' + ')}
+            </span>
+            <span className="t-caption">
+              {live ? 'Sealed in a keyless pack' : 'Was sealed in this pack'}
+            </span>
+          </div>
+        </div>
+        <div className={styles.outcome}>
+          <span className="t-label">{OUTCOME_LINE[deal.outcome]}</span>
+          <span className="t-caption">
+            <NextMoment pack={pack} deal={deal} />
+          </span>
+        </div>
+      </div>
+
+      {deal.principal !== null && (
+        <div className={styles.ledger}>
+          <Amount label="Loan" value={cashNumber(deal.principal)} unit={deal.principal.symbol} />
+          <span className={styles.ledgerArrow} aria-hidden="true">
+            <ArrowRightIcon size={16} weight="bold" />
+          </span>
+          <Amount
+            label="Repayment"
+            value={deal.repayment === null ? '–' : cashNumber(deal.repayment)}
+            unit={deal.repayment?.symbol}
+          />
+          <Amount
+            label="Lender earns"
+            value={
+              interest === null || deal.principal.decimals === null
+                ? '–'
+                : `+${padCents(formatUnits(interest, deal.principal.decimals, 2))}`
+            }
+            unit={deal.principal.symbol}
+            note={terms}
+            tone="positive"
+          />
+        </div>
+      )}
+
+      {deal.listedAtNs !== null && (
+        <div>
+          <Track deal={deal} />
+        </div>
+      )}
+
+      {pack.terms?.disruptedAtNs != null && pack.terms.deadlineNs !== null && (
+        <p className={styles.notice}>
+          <PauseCircleIcon size={16} weight="fill" />
+          The verifier paused during the term, so the repayment window runs until{' '}
+          {formatDateNs(pack.terms.deadlineNs)}.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function Holder({
+  label,
+  accountId,
+  empty,
+}: {
+  readonly label: string;
+  readonly accountId: string | null;
+  readonly empty: string;
+}) {
+  return (
+    <div className={styles.holder}>
+      <span className="t-caption">{label}</span>
+      {accountId === null ? (
+        <span className="t-label">{empty}</span>
+      ) : (
+        <a
+          className={cx('t-label', styles.link)}
+          href={explorerAccountUrl(DEFAULT_NETWORK, accountId)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {accountId}
+        </a>
+      )}
+    </div>
+  );
+}
+
+function Rights({ pack, deal }: { readonly pack: PackDetail; readonly deal: Deal }) {
+  const contents =
+    deal.collateral.length === 0
+      ? 'Empty'
+      : deal.collateral.map((line) => amountText(line)).join(' + ');
+  return (
+    <section className={styles.panel} aria-label="Rights">
+      <div className={styles.panelHead}>
+        <h2 className="t-h4">Two rights, two NFTs</h2>
+        <span className="t-caption">Each one trades on its own</span>
+      </div>
+      <div className={styles.rights}>
+        <div className={styles.right}>
+          <NftCard
+            kind="title"
+            tokenLabel={pack.title.id}
+            value={contents}
+            meta="Owns the pack"
+            icon={<StampIcon size={22} weight="fill" />}
+            notch="var(--bg-secondary)"
+          />
+          <Holder label="Title holder" accountId={pack.title.owner} empty="Nobody" />
+        </div>
+        <div className={styles.right}>
+          <NftCard
+            kind="ticket"
+            tone="lime"
+            tokenLabel={
+              pack.ticket?.id ??
+              (deal.outcome === 'listed' || deal.outcome === 'empty' ? 'Not issued' : 'Retired')
+            }
+            value={deal.repayment === null ? 'Issued at fill' : cashText(deal.repayment)}
+            meta={
+              deal.dueNs === null ? 'Buys the coins back' : `Before ${formatDateNs(deal.dueNs)}`
+            }
+            icon={<TicketIcon size={22} weight="fill" />}
+            notch="var(--bg-secondary)"
+          />
+          <Holder
+            label="Ticket holder"
+            accountId={pack.ticket?.owner ?? null}
+            empty={deal.outcome === 'listed' ? 'Issued to the borrower at fill' : 'Retired'}
+          />
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default async function PackPage({ params }: Props) {
@@ -151,103 +512,51 @@ export default async function PackPage({ params }: Props) {
   }
   if (pack === null) notFound();
 
-  const terms = termsRows(pack);
+  const deal = dealOf(DEFAULT_NETWORK, pack);
+  const outcome = { ...DEAL_STATUS[deal.outcome], line: OUTCOME_LINE[deal.outcome] };
+
   return (
     <>
+      <Link href={appPath()} className={styles.back}>
+        <ArrowLeftIcon size={16} weight="bold" />
+        Market
+      </Link>
       <div className={styles.header}>
-        <div className={styles.title}>
-          <AppIcon color="ink" size={52}>
-            <PackageIcon weight="fill" />
-          </AppIcon>
-          <div className={styles.titleText}>
-            <h1 className="t-h2">Pack #{pack.index}</h1>
-            <div className={styles.idLine}>
-              {pack.status === null ? (
-                <StatusPill tone="neutral">Free</StatusPill>
-              ) : (
-                <StatusPill tone={STATUS_TONE[pack.status]}>{pack.status}</StatusPill>
-              )}
-              <a
-                className={cx('t-caption', styles.link)}
-                href={explorerAccountUrl(DEFAULT_NETWORK, pack.id)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {pack.id}
-              </a>
-            </div>
-          </div>
+        <div className={styles.titleRow}>
+          <h1 className="t-h1">Pack #{pack.index}</h1>
+          <StatusPill tone={outcome.tone} icon={outcome.icon} size="md">
+            {outcome.label}
+          </StatusPill>
         </div>
-        <ButtonLink
-          href={`${appPath('/verify')}?pack=${encodeURIComponent(pack.id)}`}
-          as={Link}
-          variant="secondary"
-          size="sm"
-          showIcon
-        >
-          Verify This Pack
-        </ButtonLink>
+        <div className={styles.headerActions}>
+          <a
+            className={styles.idChip}
+            href={explorerAccountUrl(DEFAULT_NETWORK, pack.id)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Image src={NEAR_MARK.src} alt="NEAR" width={18} height={18} />
+            {pack.id}
+            <ArrowSquareOutIcon size={14} weight="bold" />
+          </a>
+          <ButtonLink
+            href={`${appPath('/verify')}?pack=${encodeURIComponent(pack.id)}`}
+            as={Link}
+            variant="secondary"
+            size="sm"
+            icon={<SealCheckIcon size={16} weight="fill" />}
+          >
+            Verify This Pack
+          </ButtonLink>
+        </div>
       </div>
       <div className={styles.grid}>
         <div className={styles.col}>
-          <Panel title="Contents">
-            <Facts
-              rows={
-                pack.contents.length === 0
-                  ? [['Holdings', 'Empty']]
-                  : pack.contents.map(
-                      (line) => [line.symbol ?? line.tokenId, amountText(line, 8)] as const,
-                    )
-              }
-            />
-          </Panel>
-          {terms.length > 0 && (
-            <Panel title="Terms">
-              <Facts rows={terms} />
-            </Panel>
-          )}
-          <Panel title="Rights">
-            <div className={styles.cards}>
-              <NftCard
-                kind="title"
-                tokenLabel={pack.title.id}
-                value={contentsText(pack)}
-                meta="Owns the pack"
-                icon={<StampIcon size={22} weight="fill" />}
-              />
-              {pack.ticket !== null && pack.terms !== null && (
-                <NftCard
-                  kind="ticket"
-                  tokenLabel={pack.ticket.id}
-                  value={amountText(pack.terms.repayment, 2)}
-                  meta={
-                    pack.terms.expiresAtNs !== null
-                      ? `Before ${formatDateNs(pack.terms.expiresAtNs)}`
-                      : ''
-                  }
-                  icon={<TicketIcon size={22} weight="fill" />}
-                />
-              )}
-            </div>
-            <Facts
-              rows={[
-                ['Title holder', <Holder key="t" accountId={pack.title.owner} />],
-                ...(pack.ticket !== null
-                  ? [
-                      ['Ticket holder', <Holder key="k" accountId={pack.ticket.owner} />] as [
-                        string,
-                        React.ReactNode,
-                      ],
-                    ]
-                  : []),
-              ]}
-            />
-          </Panel>
-          <Panel title="History">
-            <History events={pack.history} />
-          </Panel>
+          <DealHero pack={pack} deal={deal} />
+          <Rights pack={pack} deal={deal} />
+          <History events={pack.history} />
         </div>
-        <div className={styles.col}>
+        <div className={styles.aside}>
           <PackActions pack={pack} />
         </div>
       </div>
