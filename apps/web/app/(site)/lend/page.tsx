@@ -118,6 +118,7 @@ function Hero() {
             </Tag>
           </Reveal>
           <WordReveal
+            id="lend-title"
             as="h1"
             trigger="load"
             className="t-display"
@@ -217,7 +218,7 @@ function Yield() {
           <div className={styles.packCard}>
             <div className={styles.packHead}>
               <span className="t-label">What backs the loan</span>
-              <StatusPill tone="neutral" dot={false}>
+              <StatusPill tone="neutral" icon={LockKeyIcon}>
                 Sealed
               </StatusPill>
             </div>

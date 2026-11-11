@@ -9,27 +9,15 @@ import styles from './Faq.module.css';
 const QUESTIONS = [
   {
     q: 'What happens when the ZEC price falls?',
-    a: 'Nothing on chain. The pack reads a date and a payment, so a price drop leaves your Ticket intact. If the coins end up worth less than the repayment, you keep the USDC and let the Ticket lapse.',
+    a: 'Nothing happens on chain. The pack reads only the date and the payment.',
   },
   {
     q: 'What if I miss the date?',
     a: 'The Ticket expires and the Title holder owns the coins in the pack. The USDC you received stays yours, and you owe nothing further: the pack is the whole of the debt.',
   },
   {
-    q: 'Can I repay early?',
-    a: 'Yes. Pay the full repayment at any time before the date and the pack releases its coins to you in the same transaction chain.',
-  },
-  {
-    q: 'Who can move the coins in a pack?',
-    a: 'Only the pack contract, on two events: the agreed payment from the Ticket holder before the date, or a withdrawal by the Title holder after it. The pack has zero access keys.',
-  },
-  {
     q: 'Why would a lender fill a pawn?',
     a: 'A lender gets a fixed repayment on a fixed date, backed by coins worth about twice the loan, with no oracle to manipulate and no liquidation race to win. The Title can be sold before the date.',
-  },
-  {
-    q: 'Can I sell my Ticket?',
-    a: 'Yes. A Ticket is a standard NEAR NFT. Whoever holds it at the moment of payment receives the coins, so a buyer pays you for the gap between the coins and the repayment.',
   },
   {
     q: 'What does it cost?',
@@ -48,7 +36,7 @@ export function Faq() {
         <div className={styles.left}>
           <Reveal>
             <Tag
-              badge="8"
+              badge="6"
               shape={<QuestionIcon weight="bold" size={16} color="var(--ill-orange)" />}
             >
               FAQ

@@ -24,7 +24,7 @@ import { ASSET_MARK } from '../../../lib/asset-marks';
 import { CODE_HASHES } from '../../../lib/deployments';
 import { formatUnits } from '../../../lib/format';
 import { SITE } from '../../../lib/site';
-import { Bento, BentoTile, Eyebrow, FaqBlock, SectionIntro } from '../_blocks';
+import { Eyebrow, FaqBlock, SectionIntro } from '../_blocks';
 import { EXAMPLE_PAWN as E } from '../_content/facts';
 
 import styles from './verify.module.css';
@@ -89,6 +89,7 @@ function Hero() {
             </Tag>
           </Reveal>
           <WordReveal
+            id="verify-title"
             as="h1"
             trigger="load"
             className="t-display"
@@ -116,7 +117,7 @@ function Hero() {
               <div className="t-label">Pack check</div>
               <div className="t-caption">NEAR Testnet</div>
             </div>
-            <StatusPill tone="positive" className={styles.push}>
+            <StatusPill tone="positive" icon={CheckIcon} className={styles.push}>
               All Passed
             </StatusPill>
           </div>
@@ -270,11 +271,45 @@ function GuardianVisual() {
   );
 }
 
+const RULES = [
+  {
+    title: 'Zero keys',
+    body: 'A pack has no access key of any kind. No person or team can sign for it.',
+    visual: <KeysVisual />,
+  },
+  {
+    title: 'One code hash',
+    body: 'Every pack runs one global contract. Compare its hash with the published value.',
+    visual: <HashVisual />,
+  },
+  {
+    title: 'Repayment or date',
+    body: 'The coins leave on the repayment before the date, or on the date itself. No price decides.',
+    visual: <ReleaseVisual />,
+  },
+  {
+    title: 'Grace on a pause',
+    body: 'If the verifier pauses in the last day and someone records it, the borrower gets one more day.',
+    visual: <GraceVisual />,
+  },
+  {
+    title: 'Small caps',
+    body: 'The registry refuses any pack or payment above these amounts in this release.',
+    visual: <CapsVisual />,
+  },
+  {
+    title: 'Pause-only guardian',
+    body: 'The guardian can stop new pawns. It cannot move funds or change holders, terms or caps.',
+    visual: <GuardianVisual />,
+  },
+] as const;
+
+/** Six rules in the source's "Spend Controls" shape: a tile with a live mock, the rule below. */
 function Rules() {
   return (
     <Section id="rules" label="Rules">
       <SectionIntro
-        layout="split"
+        layout="center"
         eyebrow={
           <Eyebrow
             badge="1"
@@ -283,49 +318,19 @@ function Rules() {
           />
         }
         title={['Six rules,', 'each a line of code.']}
-        lead="Each rule is fixed in the registry or the pack contract, so it reads the same for every lender and borrower."
+        lead="Fixed in the registry and the pack contract, the same for every lender and borrower."
       />
-      <Bento>
-        <BentoTile
-          title="Zero Keys"
-          body="A pack has no access key of any kind, so no person or team can sign for it."
-        >
-          <KeysVisual />
-        </BentoTile>
-        <BentoTile
-          size="wide"
-          title="One Code Hash"
-          body="Every pack runs one global contract. Compare its hash with the published value below."
-        >
-          <HashVisual />
-        </BentoTile>
-        <BentoTile
-          size="wide"
-          title="Grace Window"
-          body="When the verifier pauses or locks inside the last day and someone records it, the borrower gets one more day."
-        >
-          <GraceVisual />
-        </BentoTile>
-        <BentoTile
-          title="Strike-Only Release"
-          body="The repayment before the date, or the date itself. No price decides."
-        >
-          <ReleaseVisual />
-        </BentoTile>
-        <BentoTile
-          title="Per-Pack Caps"
-          body="The registry refuses any pack or payment above these amounts in v0."
-        >
-          <CapsVisual />
-        </BentoTile>
-        <BentoTile
-          size="wide"
-          title="Pause-Only Guardian"
-          body="The guardian can stop new positions. It holds no method that moves funds or changes holders, terms or caps."
-        >
-          <GuardianVisual />
-        </BentoTile>
-      </Bento>
+      <div className={styles.rules}>
+        {RULES.map((rule, index) => (
+          <Reveal key={rule.title} as="figure" className={styles.rule} delay={(index % 3) * 0.06}>
+            <div className={styles.ruleTile}>{rule.visual}</div>
+            <figcaption className={styles.ruleCaption}>
+              <span className="t-h5">{rule.title}</span>
+              <span className="t-body-sm">{rule.body}</span>
+            </figcaption>
+          </Reveal>
+        ))}
+      </div>
     </Section>
   );
 }

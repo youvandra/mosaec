@@ -69,13 +69,13 @@
 }
 .core {
   position: absolute;
-  top: 182px;
-  left: 182px;
+  top: 188px;
+  left: 188px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--surface-inverse);
   box-shadow:
@@ -83,9 +83,11 @@
     0 12px 24px -10px rgba(20, 20, 20, 0.4);
   animation: footer-core 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
 }
-.core img {
-  width: 34px;
+.core svg {
+  width: 60%;
   height: auto;
+  color: var(--text-inverse);
+  transform: translateY(2%);
 }
 @keyframes footer-core {
   to {
@@ -177,6 +179,37 @@
   gap: 16px;
   padding: 0 8px;
   flex-wrap: wrap;
+}
+/* Chain credit: the source's small pill with a 18px mark. */
+.chain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-primary);
+  transition: background-color 0.3s var(--ease-out);
+}
+.chain:hover {
+  background: var(--bg-tertiary);
+}
+.bottomLeft {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.legal {
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: color var(--dur-hover) var(--ease-out);
+}
+.legal:hover {
+  color: var(--text-primary);
 }
 .bottomRight {
   display: flex;

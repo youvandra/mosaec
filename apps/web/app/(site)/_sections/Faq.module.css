@@ -1,7 +1,7 @@
 .grid {
   display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 120px;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 64px;
   align-items: start;
 }
 .left {
@@ -15,16 +15,17 @@
 .help {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   align-items: flex-start;
   width: 100%;
-  padding: 20px;
+  max-width: 400px;
+  padding: 22px;
   border-radius: var(--radius-panel);
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
 }
 .help > :last-child {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .items {
   display: flex;

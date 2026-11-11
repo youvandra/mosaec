@@ -7,9 +7,9 @@ import { AppIcon, ButtonLink, Reveal, Section, StatusPill, Tag, WordReveal, cx }
 
 import { listPacks } from '../../../lib/api';
 import { ASSET_MARK } from '../../../lib/asset-marks';
+import { PAWN_STATUS } from '../../../lib/deal-status';
 import { formatUnits } from '../../../lib/format';
 import { SITE } from '../../../lib/site';
-import { STATUS_TONE } from '../../../lib/status';
 
 import styles from './LivePacks.module.css';
 
@@ -50,11 +50,12 @@ function PackRow({ pack }: { readonly pack: Pack }) {
         <span className="t-label">Pack #{pack.index}</span>
         <span className="t-caption">{contentsLine(pack)}</span>
       </div>
-      {pack.status !== null ? (
-        <StatusPill tone={STATUS_TONE[pack.status]}>{pack.status}</StatusPill>
-      ) : (
-        <StatusPill tone="neutral">Free</StatusPill>
-      )}
+      <StatusPill
+        tone={PAWN_STATUS[pack.status ?? 'Free'].tone}
+        icon={PAWN_STATUS[pack.status ?? 'Free'].icon}
+      >
+        {PAWN_STATUS[pack.status ?? 'Free'].label}
+      </StatusPill>
     </li>
   );
 }
@@ -102,7 +103,7 @@ export function LivePacks() {
       <div className={styles.grid}>
         <div className={styles.copy}>
           <Reveal>
-            <Tag badge="6" shape={<EyeIcon weight="fill" size={16} color="var(--ill-mint)" />}>
+            <Tag badge="4" shape={<EyeIcon weight="fill" size={16} color="var(--ill-mint)" />}>
               Public Record
             </Tag>
           </Reveal>

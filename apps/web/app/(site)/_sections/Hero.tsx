@@ -4,7 +4,6 @@ import {
   RobotIcon,
   SealCheckIcon,
   SparkleIcon,
-  TicketIcon,
   HandCoinsIcon,
 } from '@phosphor-icons/react/dist/ssr';
 import Image from 'next/image';
@@ -12,7 +11,7 @@ import Link from 'next/link';
 
 import { AppIcon, ButtonLink, Reveal, Tag, WordReveal, cx } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, NEAR_MARK } from '../../../lib/asset-marks';
 import { PHOTOS } from '../../../lib/photos';
 import { SITE } from '../../../lib/site';
 import { Lanyard } from '../_components/Lanyard';
@@ -49,9 +48,10 @@ const TILES: readonly Tile[] = [
     top: 108,
   },
   {
-    label: 'Ticket',
-    color: 'orange',
-    content: <TicketIcon weight="fill" />,
+    label: 'NEAR',
+    color: 'light',
+    mark: true,
+    content: mark(NEAR_MARK.src),
     side: 'right',
     offset: 238,
     top: 112,
@@ -130,14 +130,15 @@ export function Hero() {
           </Tag>
         </Reveal>
         <WordReveal
+          id="hero-title"
           as="h1"
           trigger="load"
           className={cx('t-display', styles.title)}
           lines={['Pawn Your Coins,', { text: 'Keep the Upside', className: 't-accent' }]}
         />
         <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
-          Seal ZEC in a keyless NEAR account, sell its Title for USDC and keep the Ticket that buys
-          it back. A date and a price decide the loan; the market never does.
+          Borrow USDC against ZEC for a fixed repayment and a fixed date. The coins wait in a sealed
+          account until you pay.
         </Reveal>
         <Reveal trigger="load" delay={0.8} className={styles.actions}>
           <ButtonLink href={SITE.appUrl} as={Link}>

@@ -16,7 +16,7 @@ const ROWS = [
   { label: `Worth on ${L.measuredOn}`, value: `${L.valueToday}, sold for ${L.saleValue}` },
 ] as const;
 
-export function Loss() {
+export function Loss({ badge = '1' }: { readonly badge?: string }) {
   return (
     <Section id="loss" label="The loss, measured">
       <div className={styles.grid}>
@@ -43,7 +43,7 @@ export function Loss() {
         <div className={styles.copy}>
           <Reveal>
             <Tag
-              badge="3"
+              badge={badge}
               shape={<TrendDownIcon weight="bold" size={16} color="var(--ill-mint)" />}
             >
               The Loss

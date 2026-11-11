@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { AppIcon, ButtonLink, Reveal, Section, StatusPill, Tag, WordReveal, cx } from '@mosaec/ui';
 
 import { ASSET_MARK } from '../../../lib/asset-marks';
-import { STATUS_TONE } from '../../../lib/status';
+import { PAWN_STATUS } from '../../../lib/deal-status';
 import { Checks, CompareBars, Eyebrow, FaqBlock, Journey, SectionIntro } from '../_blocks';
 import { EXAMPLE_PAWN as E, ROLLING_REPLAY as R } from '../_content/facts';
 
@@ -112,14 +112,14 @@ function Hero() {
             </Tag>
           </Reveal>
           <WordReveal
+            id="borrow-title"
             as="h1"
             trigger="load"
             className={cx('t-display', styles.title)}
             lines={['Borrow on ZEC.', { text: 'Never liquidated.', className: styles.lime ?? '' }]}
           />
           <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
-            Seal ZEC in a pack, sell its Title for USDC and hold the Ticket that buys it back. A
-            repayment and a date close the loan; the ZEC price plays no part.
+            USDC today against your ZEC, for 30, 60 or 90 days, at a repayment you set.
           </Reveal>
           <Reveal trigger="load" delay={0.8} className={styles.actions}>
             <ButtonLink href={APP_BORROW} as={Link} variant="inverse">
@@ -392,34 +392,6 @@ function SellTicket() {
 
 /* 4. How a pawn ends (Payouts > Coverage). */
 
-interface Ending {
-  readonly title: string;
-  readonly body: string;
-  readonly status: PawnStatus;
-  readonly dot: string;
-}
-
-const ENDINGS: readonly Ending[] = [
-  {
-    title: 'You repay',
-    body: 'The repayment reaches the pack before the date and the ZEC returns to you.',
-    status: 'Redeemed',
-    dot: 'var(--ill-green)',
-  },
-  {
-    title: 'You sell the Ticket',
-    body: 'The buyer repays and takes the coins. Your sale price is yours to keep.',
-    status: 'Redeemed',
-    dot: 'var(--ill-orange)',
-  },
-  {
-    title: 'You let it lapse',
-    body: 'At the date the Ticket voids and the lender keeps the coins. The USDC stays with you and nothing more is owed.',
-    status: 'Forfeited',
-    dot: 'var(--ill-coral)',
-  },
-];
-
 const STATUSES: readonly PawnStatus[] = [
   'Open',
   'Active',
@@ -446,27 +418,15 @@ function Endings() {
           <WordReveal className="t-h1" lines={['Missed the date?', 'The pack is the debt.']} />
         </div>
         <Reveal as="p" className={cx('t-body-lg', styles.darkLead)} delay={0.2}>
-          A pawn ends in one of three ways. Each one closes on chain, and none of them reaches past
-          the coins in the pack.
+          At the date an unpaid Ticket voids and the lender keeps the coins. The USDC stays with you
+          and nothing more is owed.
         </Reveal>
       </div>
-      <Reveal className={styles.endings}>
-        {ENDINGS.map((ending) => (
-          <div key={ending.title} className={styles.ending}>
-            <div className={styles.endingHead}>
-              <span className={styles.dot} style={{ background: ending.dot }} aria-hidden="true" />
-              <span className="t-h4">{ending.title}</span>
-              <span className={cx('t-mono', styles.endingCode)}>{ending.status}</span>
-            </div>
-            <p className="t-body-sm">{ending.body}</p>
-          </div>
-        ))}
-      </Reveal>
       <Reveal className={styles.statusRow} delay={0.2}>
         <span className={cx('t-caption', styles.statusLabel)}>Every status a pawn shows</span>
         {STATUSES.map((status) => (
-          <StatusPill key={status} tone={STATUS_TONE[status]}>
-            {status}
+          <StatusPill key={status} tone={PAWN_STATUS[status].tone} icon={PAWN_STATUS[status].icon}>
+            {PAWN_STATUS[status].label}
           </StatusPill>
         ))}
       </Reveal>

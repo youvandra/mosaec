@@ -1,0 +1,80 @@
+/* Same pieces as the first-load loader (44px mark, 140x3 track), timed for a page change:
+   0.25s in, the track fills while the page loads, 0.4s out. Opacity and transform only. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: var(--bg-primary);
+  animation: route-in 0.25s var(--ease-out) both;
+}
+.curtain[data-phase='lift'] {
+  animation: route-out 0.4s var(--ease-out) both;
+  pointer-events: none;
+}
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-inverse);
+  animation: route-mark 0.6s var(--ease-out) both;
+}
+.mark svg {
+  width: 60%;
+  height: auto;
+  color: var(--text-inverse);
+  transform: translateY(2%);
+}
+.track {
+  width: 140px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+.progress {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--surface-inverse);
+  transform: translateX(-100%);
+  animation: route-fill 0.65s cubic-bezier(0.65, 0, 0.35, 1) 0.05s forwards;
+}
+.curtain[data-phase='lift'] .progress {
+  transform: none;
+  animation: none;
+}
+@keyframes route-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes route-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes route-mark {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-60deg);
+  }
+}
+@keyframes route-fill {
+  to {
+    transform: translateX(-12%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .curtain {
+    display: none;
+  }
+}
