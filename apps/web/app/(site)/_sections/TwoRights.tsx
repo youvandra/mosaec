@@ -32,7 +32,7 @@ export function TwoRights() {
     <Section id="rights" label="Two rights">
       <div className={styles.panel}>
         <Reveal>
-          <Tag badge="3" shape={<CardsIcon weight="fill" size={16} color="var(--ill-lime)" />}>
+          <Tag badge="5" shape={<CardsIcon weight="fill" size={16} color="var(--ill-lime)" />}>
             Title and Ticket
           </Tag>
         </Reveal>

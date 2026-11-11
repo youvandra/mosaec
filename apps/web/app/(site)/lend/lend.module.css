@@ -1,0 +1,502 @@
+/* Lend page, modelled on the design source's Treasury page. */
+
+/* Hero. */
+.hero {
+  padding: 170px var(--gutter) 0;
+}
+.heroTop {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: end;
+  max-width: var(--container);
+  margin: 0 auto 40px;
+}
+.heroTitle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+.heroSide {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 6px;
+  color: var(--text-secondary);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* The grey board with the rate and floating position cards. */
+.board {
+  position: relative;
+  max-width: var(--container);
+  height: 600px;
+  margin: 0 auto;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+.boardGlow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 760px;
+  height: 520px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(0, 102, 255, 0.22), rgba(0, 102, 255, 0));
+  pointer-events: none;
+}
+.bars {
+  position: absolute;
+  inset: auto 24px 0;
+  height: 220px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.bars span {
+  flex: 1;
+  height: var(--h);
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, var(--accent-secondary), var(--accent-subtle));
+}
+.rate {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, 90%);
+  text-align: center;
+}
+.rateValue {
+  font-size: 72px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+.rateNote {
+  max-width: 340px;
+}
+.floater {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-panel);
+  animation: mosaec-float 3.6s ease-in-out var(--float-delay, 0s) infinite alternate;
+}
+.dim {
+  opacity: 0.6;
+}
+.floaterLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.floaterValue {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.floaterSub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.up {
+  color: var(--positive);
+  font-weight: 500;
+}
+.f1 {
+  left: 32px;
+  top: 40px;
+}
+.f2 {
+  left: 250px;
+  top: 28px;
+}
+.f3 {
+  right: 36px;
+  top: 52px;
+}
+.f4 {
+  right: 48px;
+  bottom: 64px;
+}
+.f5 {
+  left: 64px;
+  bottom: 90px;
+}
+
+/* Bento. */
+.bento {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 300px;
+  padding: 32px;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.tile:hover {
+  background: var(--bg-tertiary);
+}
+.tileWide {
+  grid-column: span 2;
+  flex-direction: row;
+  align-items: center;
+}
+.tileCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  max-width: 440px;
+}
+.packCard,
+.console,
+.titleStage {
+  transition: transform 0.45s var(--spring-pop);
+}
+.tile:hover .packCard,
+.tile:hover .console,
+.tile:hover .titleStage {
+  transform: translateY(-6px);
+}
+.packCard {
+  width: 100%;
+  max-width: 400px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-panel);
+}
+.packHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+.packLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-primary);
+  font-size: 14px;
+}
+.packLine strong {
+  font-weight: 500;
+}
+.console {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-card);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-panel);
+}
+.consoleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--surface-inverse-raised);
+}
+.consoleRow span {
+  color: var(--text-inverse-secondary);
+  text-transform: uppercase;
+}
+.consoleRow strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.titleStage {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+.titleCard {
+  transform: rotate(-4deg);
+}
+
+/* Numbers. */
+.numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.number {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-secondary);
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.number:hover {
+  background: var(--bg-tertiary);
+}
+.numberText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dots {
+  display: grid;
+  grid-template-columns: repeat(4, 12px);
+  gap: 6px;
+  flex: none;
+}
+.dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  transition: background-color 0.4s var(--ease-link);
+}
+.dots .dotLit {
+  background: var(--accent);
+}
+.number:hover .dots span:not(.dotLit) {
+  background: var(--accent-secondary);
+}
+
+/* Custody. */
+.dark {
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+}
+.custody {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.custodyCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+.darkLead {
+  color: var(--text-inverse-secondary);
+}
+.chain {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.hop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface-inverse-raised);
+  border: 1px solid var(--border-inverse);
+}
+.hop + .hop::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -29px;
+  height: 28px;
+  border-left: 1px dashed var(--surface-inverse-muted);
+}
+.hop + .hop::after {
+  content: '';
+  position: absolute;
+  left: calc(50% - 3px);
+  top: -18px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ill-lime);
+}
+.hopText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.hopText span:last-child {
+  color: var(--text-inverse-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Open pawns. */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 64px;
+  align-items: center;
+}
+.splitCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 480px;
+  padding: 48px 32px;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+}
+.offerCard {
+  width: 100%;
+  max-width: 420px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+  transition: transform 0.45s var(--spring-pop);
+}
+.stage:hover .offerCard {
+  transform: translateY(-8px);
+}
+.offerHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.offer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.offer:last-child {
+  border-bottom: 0;
+}
+.offerMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.offerEmpty {
+  padding: 28px 20px;
+}
+
+@media (max-width: 1199.98px) {
+  .f2 {
+    display: none;
+  }
+  .custody,
+  .split {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+@media (max-width: 809.98px) {
+  .hero {
+    padding-top: 120px;
+  }
+  .heroTop {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .board {
+    height: auto;
+    padding: 28px 16px 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-radius: var(--radius-panel);
+  }
+  .rate {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    margin: 12px auto 16px;
+  }
+  .rateValue {
+    font-size: 44px;
+  }
+  .floater {
+    position: relative;
+    inset: auto;
+    width: 100%;
+  }
+  .f5 {
+    display: none;
+  }
+  .bars {
+    height: 120px;
+    inset: auto 12px 0;
+    gap: 3px;
+  }
+  .bento,
+  .numbers {
+    grid-template-columns: 1fr;
+  }
+  .tileWide {
+    grid-column: auto;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tile {
+    padding: 22px 20px;
+    border-radius: var(--radius-panel);
+  }
+  .number {
+    padding: 22px 20px;
+  }
+  .stage {
+    min-height: 0;
+    padding: 28px 12px;
+    border-radius: var(--radius-panel);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floater {
+    animation: none;
+  }
+}

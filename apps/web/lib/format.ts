@@ -16,6 +16,12 @@ export function formatUnits(
   return shown === '' ? grouped : `${grouped}.${shown}`;
 }
 
+/** A display amount padded to cents, such as `512.5` to `512.50`. */
+export function padCents(value: string): string {
+  const [whole = '0', fraction = ''] = value.split('.');
+  return `${whole}.${fraction.padEnd(2, '0')}`;
+}
+
 const NS_PER_MS = 1_000_000n;
 
 /** A nanosecond timestamp as a short UTC date, such as `9 Feb 2027`. */

@@ -1,0 +1,324 @@
+/* Developers page, modelled on the design source's Payments > Developers section. */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 170px var(--gutter) 96px;
+  background: var(--bg-primary);
+}
+.glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 640px;
+  background: linear-gradient(180deg, var(--bg-tertiary) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.heroContent {
+  position: relative;
+  max-width: 1136px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+.title {
+  max-width: 820px;
+}
+.lead {
+  max-width: 560px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Dark SDK band. */
+.dark {
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+}
+.dim {
+  color: var(--text-inverse-secondary);
+}
+.sdkGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 64px;
+  align-items: center;
+}
+.sdkCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-inverse-secondary);
+}
+.kickerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ill-lime);
+}
+.codeWrap {
+  min-width: 0;
+  transition: transform 0.45s var(--spring-pop);
+}
+.codeWrap:hover {
+  transform: translateY(-6px);
+}
+.kw {
+  color: #c792ea;
+}
+.str {
+  color: #f78c6c;
+}
+.fn {
+  color: #82aaff;
+}
+.cm {
+  color: #6a6a6a;
+}
+.resources {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 72px;
+}
+.resource {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 20px 20px 22px;
+  border-left: 1px solid var(--border-inverse);
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.resource:hover {
+  background: var(--surface-inverse-raised);
+}
+.resourceIcon {
+  color: var(--ill-lime);
+  transition: transform 0.45s var(--spring-pop);
+}
+.resource:hover .resourceIcon {
+  transform: translateY(-3px);
+}
+
+/* API table. */
+.inline {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+}
+.tableWrap {
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border-primary);
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.table th {
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.table td {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-primary);
+  vertical-align: middle;
+}
+.table tbody tr {
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+.method {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radius-tag);
+  background: var(--positive-subtle);
+  color: var(--positive);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+.path {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Contracts. */
+.contracts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.contractCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.contractCard:hover {
+  background: var(--bg-tertiary);
+}
+.contractRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-control);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  min-width: 0;
+}
+.hash,
+.account code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  text-decoration: none;
+  min-width: 0;
+}
+.account:hover {
+  text-decoration: underline;
+}
+.account svg {
+  flex: none;
+}
+
+/* Error catalog. */
+.errors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 20px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-elevated);
+  transition:
+    transform 0.45s var(--spring-pop),
+    box-shadow var(--dur-hover) var(--ease-link);
+}
+.error:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card);
+}
+.errorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.errorCode {
+  padding: 4px 10px;
+  border-radius: var(--radius-tag);
+  background: var(--surface-inverse);
+  color: var(--ill-lime);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Final call to action. */
+.cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 72px 32px;
+  border-radius: var(--radius-tray);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  text-align: center;
+}
+.cta p {
+  max-width: 520px;
+}
+
+@media (max-width: 1199.98px) {
+  .sdkGrid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .resources {
+    grid-template-columns: 1fr 1fr;
+  }
+  .errors {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 809.98px) {
+  .hero {
+    padding-top: 120px;
+    padding-bottom: 48px;
+  }
+  .actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .resources,
+  .contracts,
+  .errors {
+    grid-template-columns: 1fr;
+  }
+  .resources {
+    margin-top: 48px;
+  }
+  .contractCard {
+    padding: 20px;
+    border-radius: var(--radius-panel);
+  }
+  .contractRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .cta {
+    padding: 48px 20px;
+    border-radius: var(--radius-panel);
+  }
+}

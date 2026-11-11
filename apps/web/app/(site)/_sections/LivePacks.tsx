@@ -1,4 +1,4 @@
-import { CheckIcon, EyeIcon } from '@phosphor-icons/react/dist/ssr';
+import { CheckIcon, EyeIcon, GlobeIcon, LightningIcon } from '@phosphor-icons/react/dist/ssr';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -128,7 +128,15 @@ export function LivePacks() {
           </Reveal>
         </div>
         <Reveal className={styles.panel}>
+          <span className={cx(styles.floatChip, styles.chipTop)}>
+            <GlobeIcon size={16} weight="bold" color="var(--accent)" />
+            v0.mosaec.testnet
+          </span>
           <PackList />
+          <span className={cx(styles.floatChip, styles.chipDark)}>
+            <LightningIcon size={16} weight="fill" color="var(--ill-lime)" />
+            One receipt chain
+          </span>
         </Reveal>
       </div>
     </Section>

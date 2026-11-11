@@ -1,0 +1,490 @@
+/* Verify page, modelled on the design source's Accounts page. */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 170px var(--gutter) 64px;
+  background: var(--bg-primary);
+}
+.glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 700px;
+  background: linear-gradient(180deg, var(--positive-subtle) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.heroGrid {
+  position: relative;
+  max-width: 1136px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-panel);
+}
+.checklistHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.push {
+  margin-left: auto;
+}
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--bg-secondary);
+  transition: transform 0.45s var(--spring-pop);
+}
+.checks li:hover {
+  transform: translateX(4px);
+}
+.checks li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.detail {
+  overflow-wrap: anywhere;
+}
+.tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--positive);
+  color: #fff;
+}
+
+/* Bento visuals. */
+.keys {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding-bottom: 28px;
+}
+.keyRows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 260px;
+}
+.keyRows div,
+.cap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  font-size: 14px;
+}
+.keyRows strong {
+  color: var(--positive);
+  font-variant-numeric: tabular-nums;
+}
+.hashCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 28px;
+  padding: 18px;
+  border-radius: var(--radius-card);
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+}
+.hashCard :global(.t-caption) {
+  color: var(--text-inverse-secondary);
+}
+.hash {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ill-lime);
+  overflow-wrap: anywhere;
+}
+.hashPacks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hashPack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inverse-raised);
+  font-size: 12px;
+}
+.hashPack svg {
+  color: var(--ill-green);
+}
+.paths {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding-bottom: 28px;
+}
+.path {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-control);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+}
+.grace {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 520px;
+  padding-bottom: 36px;
+}
+.graceTrack {
+  position: relative;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+.graceWindow,
+.graceExtra {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  transform-origin: left;
+  transition: transform 0.9s var(--spring-soft);
+}
+.graceWindow {
+  left: 25%;
+  background: var(--accent);
+}
+.graceExtra {
+  left: 50%;
+  background: var(--ill-lime);
+  transition-delay: 0.2s;
+}
+[data-motion='out'] .graceWindow,
+[data-motion='out'] .graceExtra {
+  transform: scaleX(0);
+}
+.graceMarks {
+  position: relative;
+  height: 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.graceMarks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.graceMarks span:nth-child(1) {
+  left: 25%;
+}
+.graceMarks span:nth-child(2) {
+  left: 50%;
+}
+.graceMarks span:nth-child(3) {
+  left: 75%;
+}
+.graceLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.graceLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dotWindow,
+.dotExtra {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.dotWindow {
+  background: var(--accent);
+}
+.dotExtra {
+  background: var(--ill-lime);
+}
+.caps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding-bottom: 28px;
+}
+.cap {
+  justify-content: flex-start;
+  padding: 8px 12px;
+}
+.cap strong {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.guardian {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  padding-bottom: 28px;
+}
+.guardCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guardHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.guardItem {
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  font-weight: 500;
+}
+.guardStop {
+  background: var(--warning-subtle);
+  color: var(--warning);
+}
+.guardOpen {
+  background: var(--positive-subtle);
+  color: var(--positive);
+}
+
+/* Custody diagram (Accounts > Confidence). */
+.diagram {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 64px 72px;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+}
+.node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  min-width: 0;
+}
+.nodeRing {
+  display: inline-flex;
+  margin-bottom: 4px;
+  transition: transform 0.45s var(--spring-pop);
+}
+.node:hover .nodeRing {
+  transform: translateY(-6px);
+}
+.nodeCenter .nodeRing {
+  padding: 40px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  box-shadow:
+    0 0 0 1px var(--border-strong),
+    0 0 0 20px var(--bg-secondary),
+    0 0 0 21px var(--border-primary);
+}
+.wire {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin-bottom: 44px;
+  background-image: linear-gradient(90deg, var(--accent-secondary) 50%, transparent 0);
+  background-size: 8px 2px;
+}
+.wire i {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+  animation: verify-travel 3.2s var(--ease-link) infinite alternate;
+}
+@keyframes verify-travel {
+  from {
+    left: 0;
+  }
+  to {
+    left: 100%;
+  }
+}
+.diagramNote {
+  max-width: 640px;
+  margin: 32px auto 0;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* Review grid (Accounts > Built In). */
+.review {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.reviewItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 16px;
+  border-radius: var(--radius-card);
+  text-align: center;
+  transition: background-color var(--dur-hover) var(--ease-link);
+}
+.reviewItem:hover {
+  background: var(--bg-secondary);
+}
+.reviewIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: var(--bg-tertiary);
+  font-size: 22px;
+  transition: transform 0.45s var(--spring-pop);
+}
+.reviewItem:hover .reviewIcon {
+  transform: translateY(-4px);
+}
+.mail {
+  color: var(--accent);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.mail:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1199.98px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .diagram {
+    padding: 48px 32px;
+  }
+  .review {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 809.98px) {
+  .hero {
+    padding-top: 120px;
+    padding-bottom: 32px;
+  }
+  .actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .checklist {
+    padding: 18px;
+  }
+  .guardian {
+    grid-template-columns: 1fr;
+  }
+  .diagram {
+    flex-direction: column;
+    padding: 36px 20px;
+    border-radius: var(--radius-panel);
+  }
+  .wire {
+    flex: none;
+    width: 2px;
+    height: 48px;
+    margin: 0;
+    background-image: linear-gradient(180deg, var(--accent-secondary) 50%, transparent 0);
+    background-size: 2px 8px;
+  }
+  .wire i {
+    left: 50%;
+    animation-name: verify-travel-y;
+  }
+  .nodeCenter .nodeRing {
+    padding: 28px;
+  }
+}
+@keyframes verify-travel-y {
+  from {
+    top: 0;
+  }
+  to {
+    top: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wire i {
+    animation: none;
+  }
+}

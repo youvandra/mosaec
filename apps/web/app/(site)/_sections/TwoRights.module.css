@@ -58,3 +58,21 @@
     transform: rotate(-4deg);
   }
 }
+
+.cardWrap {
+  animation: rights-float 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+.right:nth-child(2) .cardWrap {
+  animation-duration: 4.1s;
+  animation-direction: alternate-reverse;
+}
+@keyframes rights-float {
+  to {
+    transform: translateY(-12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cardWrap {
+    animation: none;
+  }
+}
