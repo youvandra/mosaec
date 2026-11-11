@@ -1,0 +1,122 @@
+.wrap {
+  position: fixed;
+  inset: 16px 16px auto;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.nav {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: var(--radius-nav);
+  background: var(--surface-glass);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-nav);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  transition:
+    padding var(--dur-hover) var(--ease-out),
+    gap var(--dur-hover) var(--ease-out);
+}
+.compact {
+  gap: 4px;
+}
+.home {
+  display: inline-flex;
+  border-radius: 50%;
+}
+.links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px 0 12px;
+}
+.link {
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.linkTrack {
+  display: flex;
+  height: 20px;
+  overflow: visible;
+  flex-direction: column;
+  transition: transform var(--dur-hover) var(--ease-out);
+}
+.linkTrack > span {
+  line-height: 20px;
+}
+.linkClip {
+  display: block;
+  height: 20px;
+  overflow: hidden;
+}
+.link:hover .linkTrack {
+  transform: translateY(-20px);
+}
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-strong);
+  margin-right: 4px;
+}
+.menuButton {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+}
+.drawer {
+  display: none;
+}
+
+@media (max-width: 1199.98px) {
+  .links {
+    padding: 0 4px 0 8px;
+  }
+  .link {
+    padding: 8px 8px;
+  }
+}
+
+@media (max-width: 809.98px) {
+  .wrap {
+    inset: 12px 12px auto;
+  }
+  .nav {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .links,
+  .divider,
+  .cta {
+    display: none;
+  }
+  .menuButton {
+    display: inline-flex;
+  }
+  .drawer[data-open='true'] {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 8px 6px 6px;
+  }
+  .drawer .link {
+    height: auto;
+    padding: 12px;
+    font-size: 17px;
+  }
+}

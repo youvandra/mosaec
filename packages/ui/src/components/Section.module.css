@@ -1,0 +1,35 @@
+.section {
+  padding: var(--section-y) var(--gutter);
+}
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+}
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+}
+.center {
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+}
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 40px;
+  max-width: none;
+}
+.split > p {
+  padding-bottom: 6px;
+}
+@media (max-width: 809.98px) {
+  .split {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

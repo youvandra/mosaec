@@ -1,0 +1,125 @@
+.folder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: inherit;
+}
+.body {
+  position: relative;
+  width: 100%;
+  height: 196px;
+}
+.back {
+  position: absolute;
+  inset: 0 0 0 0;
+  border-radius: 28px 28px 28px 28px;
+  background: #ececec;
+}
+.back::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 18px;
+  width: 38%;
+  height: 24px;
+  border-radius: 14px 14px 0 0;
+  background: #ececec;
+}
+.paper {
+  position: absolute;
+  top: -6px;
+  width: 30%;
+  height: 120px;
+  border-radius: 12px;
+  background: #fff;
+  border: 4px solid #fff;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 18px;
+  transition: transform 0.45s var(--ease-out);
+}
+.paper img {
+  width: 44px;
+  height: 44px;
+}
+.p1 {
+  left: 12%;
+  transform: rotate(-6deg);
+}
+.p2 {
+  left: 36%;
+  transform: rotate(2deg);
+  top: -14px;
+}
+.p3 {
+  left: 58%;
+  transform: rotate(7deg);
+}
+.folder:hover .p1 {
+  transform: translate(-10px, -12px) rotate(-12deg);
+}
+.folder:hover .p2 {
+  transform: translateY(-18px) rotate(0deg);
+}
+.folder:hover .p3 {
+  transform: translate(10px, -12px) rotate(12deg);
+}
+.front {
+  position: absolute;
+  inset: 40px 0 0 0;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(250, 250, 250, 0.96));
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 -10px 30px -18px rgba(20, 20, 20, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.front::after {
+  content: '';
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 28px;
+  height: 1px;
+  background: var(--border-primary);
+}
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 52px;
+  border: 2px dashed var(--border-strong);
+  border-radius: 6px;
+  background: #fff;
+  transform: rotate(-4deg);
+}
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  transform: rotate(4deg);
+  font-size: 24px;
+}
+.caption {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+}

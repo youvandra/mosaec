@@ -1,0 +1,146 @@
+.tray {
+  margin: 0 16px 16px;
+  padding: 32px 40px 0;
+  border-radius: var(--radius-tray);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+}
+.cta {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  min-height: 380px;
+  padding: 48px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-panel);
+}
+.ctaCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+.ctaActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.orbit {
+  position: relative;
+  justify-self: center;
+  width: 380px;
+  height: 380px;
+}
+.ring {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+.r1 {
+  width: 140px;
+  height: 140px;
+}
+.r2 {
+  width: 260px;
+  height: 260px;
+}
+.r3 {
+  width: 380px;
+  height: 380px;
+}
+.core {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 56px;
+  height: 56px;
+}
+.spin {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  animation: mosaec-spin var(--spin, 40s) linear infinite;
+}
+.spin > span {
+  position: absolute;
+  animation: mosaec-spin var(--spin, 40s) linear infinite reverse;
+}
+@keyframes mosaec-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.columns {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 32px;
+  padding: 56px 8px;
+}
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 220px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.col h2 {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.link {
+  font-size: 15px;
+  color: var(--text-secondary);
+  transition: color 0.2s var(--ease-link);
+  width: fit-content;
+}
+.link:hover {
+  color: var(--text-primary);
+}
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 8px 28px;
+  border-top: 1px solid var(--border-strong);
+  flex-wrap: wrap;
+}
+@media (max-width: 1199.98px) {
+  .cta {
+    grid-template-columns: 1fr;
+  }
+  .orbit {
+    display: none;
+  }
+  .columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 809.98px) {
+  .tray {
+    margin: 0 8px 8px;
+    padding: 8px 12px 0;
+    border-radius: var(--radius-panel);
+  }
+  .cta {
+    padding: 32px 24px;
+    min-height: 0;
+  }
+  .columns {
+    grid-template-columns: 1fr;
+    padding: 40px 8px;
+  }
+}

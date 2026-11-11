@@ -1,0 +1,54 @@
+.icon {
+  --size: 88px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  border-radius: calc(var(--size) * 0.3);
+  box-shadow: var(--shadow-icon);
+  color: #fff;
+}
+.icon > img,
+.icon > svg {
+  width: 46%;
+  height: 46%;
+}
+.blue {
+  background: linear-gradient(180deg, #2f7bff 0%, var(--ill-blue) 100%);
+}
+.ink {
+  background: linear-gradient(180deg, #3a3a3a 0%, var(--surface-inverse) 100%);
+}
+.green {
+  background: linear-gradient(180deg, #2ee672 0%, #00c247 100%);
+}
+.light {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
+  color: var(--text-primary);
+}
+.orange {
+  background: linear-gradient(180deg, #ff8a47 0%, var(--ill-orange) 100%);
+}
+.mint {
+  background: linear-gradient(180deg, #62f0d6 0%, var(--ill-mint) 100%);
+  color: var(--text-primary);
+}
+.violet {
+  background: linear-gradient(180deg, #857eff 0%, var(--ill-violet) 100%);
+}
+.coral {
+  background: linear-gradient(180deg, #e8957a 0%, var(--ill-coral) 100%);
+}
+.teal {
+  background: linear-gradient(180deg, #2fa0ae 0%, var(--ill-teal) 100%);
+}
+.lime {
+  background: linear-gradient(180deg, #e0ff66 0%, var(--ill-lime) 100%);
+  color: var(--text-primary);
+}
+.mark > img {
+  width: 62%;
+  height: 62%;
+}

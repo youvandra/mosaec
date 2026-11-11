@@ -1,0 +1,28 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.warning .fill {
+  background: var(--warning);
+}
+.positive .fill {
+  background: var(--positive);
+}

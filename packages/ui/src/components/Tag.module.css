@@ -1,0 +1,45 @@
+.tag {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-tag);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.shape {
+  display: inline-flex;
+}
+.label {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-tag);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.005em;
+  color: var(--text-primary);
+}
+.inverse .label {
+  background: var(--surface-inverse-raised);
+  border-color: var(--border-inverse);
+  color: var(--text-inverse);
+}
+@media (max-width: 809.98px) {
+  .badge,
+  .label {
+    font-size: 13px;
+  }
+}

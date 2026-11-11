@@ -1,0 +1,123 @@
+.grid {
+  display: grid;
+  grid-template-columns: 600px 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.panel {
+  position: relative;
+  overflow: hidden;
+  min-height: 560px;
+  border-radius: var(--radius-tray);
+  background: var(--surface-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px;
+}
+.glow {
+  position: absolute;
+  left: -60px;
+  top: 50%;
+  width: 420px;
+  height: 420px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 102, 255, 0.55) 0%, rgba(0, 102, 255, 0) 70%);
+}
+.bigIcon {
+  position: absolute;
+  left: 80px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.console {
+  position: relative;
+  width: 252px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 22px;
+  background: #1c1c1c;
+  border: 1px solid var(--border-inverse);
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 14px;
+  border-radius: 16px;
+  background: var(--surface-inverse-raised);
+}
+.row dt {
+  color: var(--text-inverse-secondary);
+}
+.row dd {
+  color: var(--text-inverse);
+  font-size: 15px;
+  font-weight: 500;
+}
+.bar {
+  position: relative;
+  overflow: hidden;
+}
+.bar::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill);
+  background: var(--surface-inverse-muted);
+}
+.bar > * {
+  position: relative;
+}
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+.stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 24px 4px 16px;
+  border-left: 1px solid var(--border-strong);
+}
+.source {
+  color: var(--text-tertiary);
+}
+@media (max-width: 1199.98px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+  .bigIcon {
+    display: none;
+  }
+  .panel {
+    justify-content: center;
+  }
+}
+@media (max-width: 809.98px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .panel {
+    order: 2;
+    min-height: 0;
+    padding: 24px 16px;
+  }
+  .console {
+    width: 100%;
+  }
+  .stats {
+    flex-direction: column;
+  }
+}
