@@ -9,6 +9,7 @@ import { useToast } from '@mosaec/ui';
 
 import { reportError, reportWarning } from '../report';
 
+import { markConfirming, packsOf } from './confirming';
 import { useNetwork } from './network';
 import { useWallet } from './wallet';
 
@@ -94,6 +95,8 @@ export function useTransaction(messages: TxMessages = {}) {
           return null;
         }
         setState({ phase: 'success', transactions: result.transactions });
+        const lastHash = result.transactions.at(-1)?.hash;
+        if (lastHash !== undefined) markConfirming(calls.flatMap(packsOf), lastHash);
         toast.update(id, {
           tone: 'success',
           title: override.success ?? success,

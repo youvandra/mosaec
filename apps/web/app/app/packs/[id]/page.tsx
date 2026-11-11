@@ -33,6 +33,7 @@ import { Countdown } from '../../_components/Countdown';
 import { ListCard, ListRow, SoftPill } from '../../_components/ListCard';
 import { appPath } from '../../_components/routes';
 
+import { ConfirmingPill } from './ConfirmingPill';
 import { PackActions } from './PackActions';
 import styles from './page.module.css';
 
@@ -528,6 +529,10 @@ export default async function PackPage({ params }: Props) {
           <StatusPill tone={outcome.tone} icon={outcome.icon} size="md">
             {outcome.label}
           </StatusPill>
+          <ConfirmingPill
+            pack={pack.id}
+            hashes={pack.history.flatMap((event) => (event.txHash === null ? [] : [event.txHash]))}
+          />
         </div>
         <div className={styles.headerActions}>
           <a
