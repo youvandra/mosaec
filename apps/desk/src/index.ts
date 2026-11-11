@@ -49,7 +49,8 @@ async function main(): Promise<void> {
     running = true;
     try {
       const observed = await prices.current();
-      await repository.savePrices(observed, 'coingecko');
+      /* Only a fresh read is a heartbeat; a cached or stale answer must not look live. */
+      if (prices.fresh) await repository.savePrices(observed, 'coingecko');
       const summary = await runDesk(service, model, log);
       log('desk run', { ...summary });
       for (const item of await service.collect()) {
