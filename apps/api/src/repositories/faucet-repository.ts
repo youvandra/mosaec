@@ -1,4 +1,4 @@
-import { and, eq, gte } from 'drizzle-orm';
+import { and, count, eq, gte } from 'drizzle-orm';
 
 import { schema } from '@mosaec/db';
 
@@ -22,6 +22,15 @@ export class FaucetRepository {
       )
       .limit(1);
     return row !== undefined;
+  }
+
+  /** Grants on `network` since `since`, across every account. */
+  async countSince(network: string, since: Date): Promise<number> {
+    const [row] = await this.db
+      .select({ n: count() })
+      .from(faucetClaims)
+      .where(and(eq(faucetClaims.network, network), gte(faucetClaims.claimedAt, since)));
+    return row?.n ?? 0;
   }
 
   async record(network: string, accountId: string, txHash: string): Promise<void> {

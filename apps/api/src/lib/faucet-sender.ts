@@ -19,6 +19,17 @@ export class NearFaucetSender implements FaucetSender {
     private readonly secretKey: string,
   ) {}
 
+  async balances(network: NetworkId, tokenIds: readonly string[]): Promise<readonly bigint[]> {
+    const { rpcUrl, verifierAccountId } = NETWORKS[network];
+    const provider = new JsonRpcProvider({ url: rpcUrl });
+    const raw = await provider.callFunction<readonly string[]>(
+      verifierAccountId,
+      'mt_batch_balance_of',
+      { account_id: this.accountId, token_ids: tokenIds },
+    );
+    return (raw ?? []).map((value) => BigInt(value));
+  }
+
   async send(
     network: NetworkId,
     receiverId: string,
