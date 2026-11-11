@@ -6,6 +6,10 @@ const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
+  transpilePackages: ['@mosaec/ui', '@mosaec/sdk', '@mosaec/domain', '@mosaec/config'],
+  experimental: {
+    optimizePackageImports: ['@phosphor-icons/react'],
+  },
   // Lint runs once from the repository root with the shared flat config.
   eslint: { ignoreDuringBuilds: true },
 };
