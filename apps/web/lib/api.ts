@@ -90,12 +90,21 @@ function baseUrl(): string {
 
 const DEFAULT_REVALIDATE_SECONDS = 15;
 
-async function getJson<T extends z.ZodType>(path: string, schema: T): Promise<z.output<T>> {
+/**
+ * Lists may be up to 15 s old; one pack and one account's positions are always read fresh, since
+ * they are what a person just changed with a transaction.
+ */
+async function getJson<T extends z.ZodType>(
+  path: string,
+  schema: T,
+  fresh = false,
+): Promise<z.output<T>> {
   let response: Response;
   try {
-    response = await fetch(`${baseUrl()}${path}`, {
-      next: { revalidate: DEFAULT_REVALIDATE_SECONDS },
-    });
+    response = await fetch(
+      `${baseUrl()}${path}`,
+      fresh ? { cache: 'no-store' } : { next: { revalidate: DEFAULT_REVALIDATE_SECONDS } },
+    );
   } catch (cause) {
     throw new ApiError('The Mosaec API is unreachable.', undefined, { cause });
   }
@@ -131,6 +140,7 @@ export async function getPack(network: NetworkId, packId: string): Promise<PackD
     return await getJson(
       `/packs/${encodeURIComponent(packId)}?network=${network}`,
       packDetailSchema,
+      true,
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
@@ -149,6 +159,7 @@ export async function getPositions(network: NetworkId, accountId: string): Promi
   return getJson(
     `/accounts/${encodeURIComponent(accountId)}/positions?network=${network}`,
     positionsSchema,
+    true,
   );
 }
 
