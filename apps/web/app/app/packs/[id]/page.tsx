@@ -46,7 +46,8 @@ interface Props {
   readonly params: Promise<{ id: string }>;
 }
 
-export const revalidate = 10;
+/* Always rendered per request: a static route would be prefetched and held in the router cache, so a pack would show its state from before the last transaction. */
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
