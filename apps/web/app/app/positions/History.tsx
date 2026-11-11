@@ -111,7 +111,7 @@ function Timeline({ entries }: { readonly entries: readonly HistoryEntry[] }) {
             key={`${entry.packId}-${deal.settledAtNs ?? ''}`}
             href={packPath(entry.packId)}
             icon={<CoinTile symbol={lead?.symbol ?? null} />}
-            title={`Pack #${entry.index} · ${lead === undefined ? 'empty' : amountText(lead)}`}
+            title={`Pack #${entry.index} · ${lead === undefined ? 'Empty' : amountText(lead)}`}
             meta={[
               entry.role === 'lender' ? 'You lent' : 'You borrowed',
               deal.settledAtNs === null ? null : formatDateNs(deal.settledAtNs),

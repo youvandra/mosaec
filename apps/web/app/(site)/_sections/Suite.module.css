@@ -83,6 +83,10 @@
   align-items: center;
   gap: 28px;
   width: 280px;
+  max-width: 100%;
+  /* The tall tile has room above: centre the stack instead of pinning it to the bottom edge. */
+  align-self: center;
+  padding-bottom: 28px;
 }
 .rateStack {
   position: relative;
@@ -290,8 +294,15 @@
   background: var(--accent);
 }
 @media (max-width: 809.98px) {
+  /* One column: the offer card stands whole above the chips instead of tucking under the tile edge. */
   .quote {
     grid-template-columns: 1fr;
+    gap: 14px;
+    padding-bottom: 24px;
+  }
+  .offer {
+    margin-bottom: 0;
+    border-radius: 18px;
   }
   .results {
     grid-template-columns: 1fr;
