@@ -7,10 +7,16 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@mosaec/config": "workspace:*",
-    "typescript": "~5.9.3"
+    "@types/node": "^22.15.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.0"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
   }
 }
