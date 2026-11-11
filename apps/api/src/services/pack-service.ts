@@ -54,6 +54,20 @@ export class PackService {
     return { ...packDto(network, row, this.now()), history: history.map(eventDto) };
   }
 
+  /** Several packs with history in one call; ids that are not packs are left out. */
+  async details(network: NetworkId, packIds: readonly string[]) {
+    const now = this.now();
+    const items = await Promise.all(
+      packIds.map(async (packId) => {
+        const row = await this.packs.get(network, packId);
+        if (row === undefined) return null;
+        const history = await this.packs.history(network, packId, HISTORY_LIMIT);
+        return { ...packDto(network, row, now), history: history.map(eventDto) };
+      }),
+    );
+    return items.filter((item) => item !== null);
+  }
+
   /** What `accountId` lends (holds a written Title), borrows (holds a Ticket) and owns outright. */
   async positions(network: NetworkId, accountId: string) {
     const now = this.now();

@@ -22,3 +22,13 @@ export const listPacksQuery = networkQuery.extend({
 export const offersQuery = networkQuery.extend({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
+
+/** Most packs one details request may ask for. */
+export const MAX_DETAIL_IDS = 25;
+
+export const detailsQuery = networkQuery.extend({
+  ids: z
+    .string()
+    .transform((value) => [...new Set(value.split(',').filter((id) => id !== ''))])
+    .pipe(z.array(accountIdSchema).min(1).max(MAX_DETAIL_IDS)),
+});

@@ -134,6 +134,33 @@ export async function listPacks(network: NetworkId, limit: number): Promise<read
 }
 
 /** One pack with its event history, or `null` when the indexer has no such pack. */
+/** Most ids the API takes in one details request. */
+const DETAILS_PER_REQUEST = 25;
+
+/**
+ * Packs with their history, read in batches of 25. Lists may be up to 15 s old like every list;
+ * unknown ids are left out.
+ */
+export async function getPackDetails(
+  network: NetworkId,
+  packIds: readonly string[],
+): Promise<readonly PackDetail[]> {
+  checkNetwork(network);
+  const batches: string[][] = [];
+  for (let i = 0; i < packIds.length; i += DETAILS_PER_REQUEST) {
+    batches.push(packIds.slice(i, i + DETAILS_PER_REQUEST));
+  }
+  const pages = await Promise.all(
+    batches.map((ids) =>
+      getJson(
+        `/packs/details?network=${network}&ids=${ids.map(encodeURIComponent).join(',')}`,
+        z.object({ items: z.array(packDetailSchema) }),
+      ),
+    ),
+  );
+  return pages.flatMap((page) => page.items);
+}
+
 export async function getPack(network: NetworkId, packId: string): Promise<PackDetail | null> {
   checkNetwork(network);
   try {

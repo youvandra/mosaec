@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { getPack, listPacks } from '../../../lib/api';
+import { getPackDetails, listPacks } from '../../../lib/api';
 import { dealOf } from '../../../lib/deal';
 import { useNetwork } from '../../../lib/near/network';
 
@@ -35,18 +35,17 @@ export function useDealHistory(accountId: string): HistoryState {
     setState({ kind: 'loading' });
     (async () => {
       const packs = await listPacks(network, SCAN);
-      const details = await Promise.all(
-        packs.map((pack) => getPack(network, pack.id).catch(() => null)),
+      const details = await getPackDetails(
+        network,
+        packs.map((pack) => pack.id),
       );
       const entries: HistoryEntry[] = [];
-      details.forEach((detail, i) => {
-        const pack = packs[i];
-        if (detail === null || pack === undefined) return;
+      details.forEach((detail) => {
         const deal = dealOf(network, detail);
         if (deal.outcome !== 'redeemed' && deal.outcome !== 'forfeited') return;
         const role =
           deal.lender === accountId ? 'lender' : deal.borrower === accountId ? 'borrower' : null;
-        if (role !== null) entries.push({ packId: pack.id, index: pack.index, role, deal });
+        if (role !== null) entries.push({ packId: detail.id, index: detail.index, role, deal });
       });
       entries.sort((a, b) =>
         BigInt(b.deal.settledAtNs ?? '0') > BigInt(a.deal.settledAtNs ?? '0') ? 1 : -1,
