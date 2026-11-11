@@ -1,4 +1,4 @@
-import type { ErrorEvent } from '@sentry/nextjs';
+import type { ErrorEvent, Log } from '@sentry/nextjs';
 
 /** NEAR names of people. Mosaec's own contracts and NEAR Intents stay readable. */
 const ACCOUNT = /\b[a-z0-9_-]+(?:\.[a-z0-9_-]+)*\.(?:near|testnet)\b|\b[0-9a-f]{64}\b/g;
@@ -34,10 +34,32 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
   return event;
 }
 
-/** Shared options; the DSN comes from the environment, so builds without one send nothing. */
+/** Any JSON-safe value with account names replaced, for traces, logs and replay frames. */
+export function scrubDeep<T>(value: T): T {
+  return JSON.parse(scrubText(JSON.stringify(value))) as T;
+}
+
+function scrubLog(log: Log): Log {
+  return scrubDeep(log);
+}
+
+const DEV = process.env.NODE_ENV !== 'production';
+
+/**
+ * Shared options; the DSN comes from the environment, so builds without one send nothing. Every
+ * trace locally, one in ten in production. Logs are on by default in this SDK.
+ */
 export const SENTRY_BASE = {
   sendDefaultPii: false,
-  tracesSampleRate: 0,
+  tracesSampleRate: DEV ? 1 : 0.1,
   environment: process.env.NEXT_PUBLIC_MOSAEC_ENV ?? process.env.NODE_ENV,
+  ...(process.env.NEXT_PUBLIC_MOSAEC_RELEASE === undefined
+    ? {}
+    : { release: process.env.NEXT_PUBLIC_MOSAEC_RELEASE }),
   beforeSend: scrubEvent,
+  /* Spans carry URLs and route names; account names in them are replaced too. */
+  beforeSendSpan: scrubDeep,
+  /* A fixed name, so no machine host name leaves the server. */
+  serverName: 'mosaec-web',
+  beforeSendLog: scrubLog,
 } as const;
