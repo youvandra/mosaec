@@ -222,6 +222,8 @@ export const deskDecisions = pgTable(
     /** `run` groups the decisions of one loop pass. */
     runId: text('run_id').notNull(),
     packId: text('pack_id'),
+    /** Which offer on the pack the verdict is about; a re-offered pack gets a new key. */
+    offerKey: text('offer_key'),
     /** `fill` signed, `pass` declined by the agent, `refused` blocked by policy, `error` failed. */
     verdict: text('verdict', { enum: ['fill', 'pass', 'refused', 'error'] }).notNull(),
     /** Catalog code for `refused` and `error` (`DESK_POLICY`, `DESK_BUDGET`, ...). */

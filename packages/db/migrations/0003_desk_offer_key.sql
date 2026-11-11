@@ -1,0 +1,1 @@
+ALTER TABLE "desk_decisions" ADD COLUMN "offer_key" text;

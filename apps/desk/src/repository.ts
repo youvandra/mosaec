@@ -13,6 +13,7 @@ export interface DecisionInput {
   readonly network: string;
   readonly runId: string;
   readonly packId: string | null;
+  readonly offerKey: string | null;
   readonly verdict: DecisionVerdict;
   readonly code: string | null;
   readonly reason: string;
@@ -50,7 +51,10 @@ export class DeskRepository {
     return rows.map((row) => row.packId);
   }
 
-  /** Principal still out: desk fills whose pack is running with the desk holding the Title. */
+  /**
+   * Principal still out: for each pack running with the desk holding the Title, the principal of
+   * the desk's latest fill on it. Earlier rounds of the same pack were repaid or kept already.
+   */
   async exposure(network: string, deskAccountId: string): Promise<bigint> {
     const running = this.db
       .select({ packId: packs.packId })
@@ -62,8 +66,8 @@ export class DeskRepository {
           eq(packs.titleOwner, deskAccountId),
         ),
       );
-    const [row] = await this.db
-      .select({ total: sum(deskDecisions.principal) })
+    const rows = await this.db
+      .selectDistinctOn([deskDecisions.packId], { principal: deskDecisions.principal })
       .from(deskDecisions)
       .where(
         and(
@@ -71,8 +75,9 @@ export class DeskRepository {
           eq(deskDecisions.verdict, 'fill'),
           inArray(deskDecisions.packId, running),
         ),
-      );
-    return BigInt(row?.total ?? '0');
+      )
+      .orderBy(deskDecisions.packId, desc(deskDecisions.decidedAt));
+    return rows.reduce((total, row) => total + BigInt(row.principal ?? '0'), 0n);
   }
 
   async lentSince(network: string, since: Date): Promise<bigint> {
@@ -103,15 +108,22 @@ export class DeskRepository {
     return row?.n ?? 0;
   }
 
-  /** The latest decision on `packId`, so a settled verdict is not re-asked every loop. */
+  /** The latest decision on one offer of `packId`, so a settled verdict is not re-asked every loop. */
   async lastDecision(
     network: string,
     packId: string,
+    offerKey: string,
   ): Promise<{ verdict: DecisionVerdict; code: string | null } | null> {
     const [row] = await this.db
       .select({ verdict: deskDecisions.verdict, code: deskDecisions.code })
       .from(deskDecisions)
-      .where(and(eq(deskDecisions.network, network), eq(deskDecisions.packId, packId)))
+      .where(
+        and(
+          eq(deskDecisions.network, network),
+          eq(deskDecisions.packId, packId),
+          eq(deskDecisions.offerKey, offerKey),
+        ),
+      )
       .orderBy(desc(deskDecisions.decidedAt))
       .limit(1);
     return row ?? null;
@@ -122,6 +134,7 @@ export class DeskRepository {
       network: input.network,
       runId: input.runId,
       packId: input.packId,
+      offerKey: input.offerKey,
       verdict: input.verdict,
       code: input.code,
       reason: input.reason,

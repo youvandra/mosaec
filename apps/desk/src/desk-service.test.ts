@@ -72,3 +72,43 @@ describe('DeskService.collect', () => {
     expect(result?.status).toBe('error');
   });
 });
+
+describe('DeskService.alreadyDecided', () => {
+  const offer = {
+    pack: '3.v0.mosaec.testnet',
+    makerId: 'borrower.mosaec.testnet',
+    payToken: USDC,
+    price: 500_000_000n,
+    kToken: USDC,
+    kAmount: 510_000_000n,
+    termNs: 600_000_000_000n,
+    openUntilNs: 1n,
+    contents: [{ tokenId: BTC, amount: 1_000_000n }],
+    contentsHash: 'a'.repeat(64),
+  };
+
+  it('looks up the verdict of this offer only, so a re-offer is reviewed again', async () => {
+    const asked: string[] = [];
+    const repository = {
+      lastDecision: (_network: string, _pack: string, key: string) => {
+        asked.push(key);
+        return Promise.resolve(
+          key === asked[0] ? { verdict: 'refused' as const, code: 'DESK_POLICY' } : null,
+        );
+      },
+    } as unknown as DeskRepository;
+    const prices = { current: () => Promise.resolve({}) } as unknown as ReferencePrices;
+    const desk = new DeskService('testnet', POLICY, {} as DeskChain, repository, prices);
+
+    expect(await desk.alreadyDecided(offer)).toBe(true);
+    expect(
+      await desk.alreadyDecided({
+        ...offer,
+        price: 200_000_000n,
+        kAmount: 204_000_000n,
+        openUntilNs: 2n,
+      }),
+    ).toBe(false);
+    expect(asked[0]).not.toBe(asked[1]);
+  });
+});

@@ -90,7 +90,7 @@ export async function runDesk(
   const reviews = await service.reviewOffers();
   const fresh: OfferReview[] = [];
   for (const review of reviews) {
-    if (!(await service.alreadyDecided(review.offer.pack))) fresh.push(review);
+    if (!(await service.alreadyDecided(review.offer))) fresh.push(review);
   }
   let refused = 0;
   const allowed: OfferReview[] = [];
@@ -99,7 +99,7 @@ export async function runDesk(
       allowed.push(review);
     } else {
       refused += 1;
-      await service.recordRefusal(review.offer.pack, runId, review.verdict);
+      await service.recordRefusal(review.offer, runId, review.verdict);
     }
   }
   if (allowed.length === 0) {
@@ -108,6 +108,7 @@ export async function runDesk(
 
   const open = new Set(allowed.map((review) => review.offer.pack));
   const quotes = new Map(allowed.map((review) => [review.offer.pack, review.verdict.quote]));
+  const offers = new Map(allowed.map((review) => [review.offer.pack, review.offer]));
   const messages: ChatMessage[] = [
     { role: 'system', content: SYSTEM },
     { role: 'user', content: `Candidates:\n${JSON.stringify(allowed.map(candidate), null, 2)}` },
@@ -131,13 +132,16 @@ export async function runDesk(
           result = JSON.stringify(outcome);
           log('desk fill', { pack: input.pack, status: outcome.status });
         } else if (call.function.name === 'pass_offer') {
-          await service.recordPass(
-            input.pack,
-            runId,
-            model.id,
-            input.reason,
-            quotes.get(input.pack) ?? null,
-          );
+          const offer = offers.get(input.pack);
+          if (offer !== undefined) {
+            await service.recordPass(
+              offer,
+              runId,
+              model.id,
+              input.reason,
+              quotes.get(input.pack) ?? null,
+            );
+          }
           open.delete(input.pack);
           result = 'Recorded as passed.';
         } else {
