@@ -3,7 +3,6 @@ export const SITE = {
   name: 'Mosaec',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mosaec.finance',
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? '/app',
-  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? 'https://api.mosaec.finance',
   sourceUrl: 'https://github.com/youvandra/mosaec',
   supportEmail: 'support@mosaec.finance',
   securityEmail: 'security@mosaec.finance',

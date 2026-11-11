@@ -80,6 +80,11 @@
   height: 20px;
   overflow: hidden;
 }
+.labelTrack > span {
+  display: block;
+  height: 20px;
+  line-height: 20px;
+}
 .labelTrack {
   display: flex;
   flex-direction: column;

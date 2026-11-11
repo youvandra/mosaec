@@ -21,9 +21,10 @@ interface RpcEnvelope {
 
 /** Minimal NEAR JSON-RPC transport. Every response is parsed with bigint-safe JSON. */
 export class NearRpc {
+  /** Browsers throw "Illegal invocation" when `fetch` is called as a method of another object. */
   constructor(
     private readonly url: string,
-    private readonly fetchImpl: FetchLike = fetch,
+    private readonly fetchImpl: FetchLike = (input, init) => fetch(input, init),
   ) {}
 
   async request(method: string, params: unknown): Promise<unknown> {

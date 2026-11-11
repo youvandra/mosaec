@@ -1,0 +1,24 @@
+.toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+}
+.option {
+  padding: 7px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.option[aria-checked='true'] {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-card);
+}
+.option:disabled {
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+}

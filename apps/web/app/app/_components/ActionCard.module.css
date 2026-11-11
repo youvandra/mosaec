@@ -1,0 +1,31 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-card);
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.check input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+.muted {
+  color: var(--text-secondary);
+}
+.warn {
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--warning-subtle);
+  color: var(--warning);
+  font-size: 14px;
+}
