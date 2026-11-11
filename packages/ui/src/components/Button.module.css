@@ -8,17 +8,12 @@
   border-radius: var(--radius-pill);
   font-size: 16px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 19px;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   isolation: isolate;
-  transition:
-    background-color var(--dur-hover) var(--ease-link),
-    transform 0.15s var(--ease-link);
-}
-.button:active {
-  transform: scale(0.98);
+  transition: background-color 0.25s var(--ease-link);
 }
 .button[aria-disabled='true'],
 .button:disabled {
@@ -29,77 +24,105 @@
   padding: 10px 16px;
   font-size: 15px;
 }
-
-/* Fill rises from the bottom on hover. */
-.button::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  transform: translateY(101%);
-  border-radius: inherit;
-  transition: transform var(--dur-hover) var(--ease-out);
+.full {
+  width: 100%;
 }
-.button:hover:not(:disabled, [aria-disabled='true'])::before {
-  transform: translateY(0);
+
+/* Bloom: an accent disc that grows from the bottom edge (ink button only). */
+.bloom {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 100px;
+  z-index: -1;
+  border-radius: 50% 50% 0 0 / 60% 60% 0 0;
+  background: var(--accent);
+  transform: scale(0);
+  transform-origin: 50% 100%;
+  transition: transform 0.6s var(--spring-soft);
 }
 
 .primary {
   background: var(--surface-inverse);
   color: var(--text-inverse);
 }
-.primary::before {
-  background: var(--surface-inverse-raised);
-}
 .secondary {
   background: var(--bg-tertiary);
   color: var(--text-primary);
-}
-.secondary::before {
-  background: var(--bg-hover);
 }
 .accent {
   background: var(--accent);
   color: var(--on-accent);
 }
-.accent::before {
-  background: var(--accent-hover);
-}
 .inverse {
   background: var(--bg-primary);
   color: var(--text-primary);
 }
-.inverse::before {
-  background: var(--bg-tertiary);
+
+@media (hover: hover) {
+  .primary:hover:not(:disabled, [aria-disabled='true']) .bloom {
+    transform: scale(1.04);
+  }
+  .secondary:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+  .accent:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .inverse:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+  }
+}
+.primary:active .bloom {
+  transform: scale(1.04);
 }
 
-/* Label rolls up on hover. */
+/* Label roll: the label slides up and an identical copy follows it in. */
 .label {
-  position: relative;
-  display: inline-block;
-  height: 20px;
-  overflow: hidden;
-}
-.labelTrack > span {
   display: block;
-  height: 20px;
-  line-height: 20px;
+  height: 19px;
+  overflow: hidden;
 }
 .labelTrack {
   display: flex;
   flex-direction: column;
-  transition: transform var(--dur-hover) var(--ease-out);
+  gap: 8px;
+  transition: transform 0.55s var(--spring-pop);
 }
-.button:hover .labelTrack {
-  transform: translateY(-50%);
+.labelTrack > span {
+  display: block;
+  line-height: 19px;
 }
+/* Icon roll: the caret leaves to the right while its twin enters from the left. */
 .icon {
-  display: inline-flex;
-  transition: transform var(--dur-hover) var(--ease-out);
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  flex: none;
 }
-.button:hover .icon {
-  transform: translateX(2px);
+.iconTrack > svg {
+  flex: none;
+  max-width: none;
 }
-.full {
-  width: 100%;
+.iconTrack {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  transition: transform 0.45s var(--ease-roll);
+}
+@media (hover: hover) {
+  .button:hover .labelTrack {
+    transform: translateY(-27px);
+  }
+  .button:hover .iconTrack {
+    transform: translateX(28px);
+  }
+}
+.button:focus-visible .labelTrack {
+  transform: translateY(-27px);
 }

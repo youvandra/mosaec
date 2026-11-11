@@ -1,6 +1,9 @@
+'use client';
+
 import { Fragment } from 'react';
 
 import { cx } from './cx';
+import { useInViewMotion } from './useInViewMotion';
 import styles from './WordReveal.module.css';
 
 import type { CSSProperties, ElementType, ReactNode } from 'react';
@@ -34,10 +37,16 @@ export function WordReveal({
       ? line.split(' ').map((text) => ({ text, className: undefined }))
       : line.text.split(' ').map((text) => ({ text, className: line.className })),
   );
+  const ref = useInViewMotion<HTMLElement>(0.4);
   let index = 0;
   const style = { '--start': `${start.toString()}s` } as CSSProperties;
   return (
-    <Tag className={className} style={style} data-reveal={trigger === 'load' ? 'shown' : 'view'}>
+    <Tag
+      ref={trigger === 'view' ? ref : undefined}
+      className={className}
+      style={style}
+      data-reveal={trigger === 'load' ? 'words-load' : 'words'}
+    >
       {pieces.map((words, lineIndex) => (
         <Fragment key={lineIndex}>
           {lineIndex > 0 && <br />}
