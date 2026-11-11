@@ -7,6 +7,9 @@
 //! mosaec-deploy apply    --env testnet --yes           send the steps, then verify
 //! mosaec-deploy fund     --env testnet --asset zec --account alice.testnet --amount 50000000
 //! mosaec-deploy delete-token --env testnet --asset zec --yes   remove a test token so apply recreates it
+//! mosaec-deploy actor-new --env testnet --name borrower --near 1 --yes
+//! mosaec-deploy call --env testnet --as borrower.mosaec.testnet --contract v0.mosaec.testnet \
+//!     --method mint --args '{}' --deposit-yocto 51000000000000000000000 --tgas 300 --yes
 //! ```
 //! Options: `--root <account>`, `--rpc <url>`, `--assets zec,usdc` (testnet test tokens),
 //! `--dir <contracts workspace>` (default `.`).
@@ -14,11 +17,16 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail, ensure};
+use mosaec_deploy::ops::{Call, call_as, create_actor};
 use mosaec_deploy::plan::{format_near, plan, root_spend, slots};
 use mosaec_deploy::rpc::Rpc;
 use mosaec_deploy::target::{DEFAULT_TEST_ASSETS, Env, Target};
 use mosaec_deploy::{apply, delete_test_token, fund, keychain, load_artifacts, observe, verify};
-use near_primitives::types::AccountId;
+use near_primitives::types::{AccountId, Gas};
+use near_token::NearToken;
+
+/// Gas for `call` unless `--tgas` says otherwise.
+const DEFAULT_CALL_TGAS: u64 = 300;
 
 struct Args {
     command: String,
@@ -30,6 +38,14 @@ struct Args {
     asset: Option<String>,
     account: Option<String>,
     amount: Option<u128>,
+    name: Option<String>,
+    near: Option<u32>,
+    signer: Option<String>,
+    contract: Option<String>,
+    method: Option<String>,
+    payload: Option<String>,
+    deposit_yocto: u128,
+    tgas: u64,
     yes: bool,
 }
 
@@ -50,6 +66,14 @@ fn parse_args() -> Result<Args> {
         asset: None,
         account: None,
         amount: None,
+        name: None,
+        near: None,
+        signer: None,
+        contract: None,
+        method: None,
+        payload: None,
+        deposit_yocto: 0,
+        tgas: DEFAULT_CALL_TGAS,
         yes: false,
     };
     while let Some(flag) = it.next() {
@@ -66,6 +90,14 @@ fn parse_args() -> Result<Args> {
             "--asset" => args.asset = Some(value()?),
             "--account" => args.account = Some(value()?),
             "--amount" => args.amount = Some(value()?.parse()?),
+            "--name" => args.name = Some(value()?),
+            "--near" => args.near = Some(value()?.parse()?),
+            "--as" => args.signer = Some(value()?),
+            "--contract" => args.contract = Some(value()?),
+            "--method" => args.method = Some(value()?),
+            "--args" => args.payload = Some(value()?),
+            "--deposit-yocto" => args.deposit_yocto = value()?.parse()?,
+            "--tgas" => args.tgas = value()?.parse()?,
             "--yes" => args.yes = true,
             other => bail!("unknown option {other}"),
         }
@@ -112,8 +144,40 @@ async fn main() -> Result<()> {
             let sent = delete_test_token(&rpc, &target, &key, asset).await?;
             println!("deleted the {asset} test token: tx {}", sent.tx_hash);
         }
+        "actor-new" => {
+            let name = args.name.as_deref().context("--name is required")?;
+            let near = args.near.context("--near is required")?;
+            ensure!(args.yes, "actor-new creates an account; rerun with --yes");
+            let (rpc, key) = connect(&args, &target).await?;
+            let (actor, sent) =
+                create_actor(&rpc, &target, &key, name, NearToken::from_near(near.into())).await?;
+            println!("created {actor} with {near} NEAR: tx {}", sent.tx_hash);
+        }
+        "call" => {
+            let signer: AccountId = args
+                .signer
+                .as_deref()
+                .context("--as is required")?
+                .parse()?;
+            let call = Call {
+                contract: args
+                    .contract
+                    .as_deref()
+                    .context("--contract is required")?
+                    .parse()?,
+                method: args.method.clone().context("--method is required")?,
+                args: serde_json::from_str(args.payload.as_deref().unwrap_or("{}"))?,
+                deposit: NearToken::from_yoctonear(args.deposit_yocto),
+                gas: Gas::from_teragas(args.tgas),
+            };
+            ensure!(args.yes, "call sends a transaction; rerun with --yes");
+            let rpc = Rpc::connect(args.rpc.as_deref().unwrap_or(target.env.default_rpc()));
+            let method = call.method.clone();
+            let sent = call_as(&rpc, &signer, call).await?;
+            println!("{signer} called {method}: tx {}", sent.tx_hash);
+        }
         _ => bail!(
-            "usage: mosaec-deploy <key-new|key-show|plan|apply|fund|delete-token> --env mainnet|testnet"
+            "usage: mosaec-deploy <key-new|key-show|plan|apply|fund|delete-token|actor-new|call> --env mainnet|testnet"
         ),
     }
     Ok(())
