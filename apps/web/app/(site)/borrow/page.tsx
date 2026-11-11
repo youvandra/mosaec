@@ -449,7 +449,7 @@ const FAQ = [
   },
   {
     q: 'Is borrowing live?',
-    a: 'Mosaec runs on NEAR testnet with test ZEC and USDC. The mainnet registry is the next milestone, and the contracts have had an internal review.',
+    a: 'Mosaec runs on NEAR testnet with test ZEC, BTC, SOL and USDC. The mainnet registry is the next milestone, and the contracts have had an internal review.',
   },
 ] as const;
 

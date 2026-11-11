@@ -25,7 +25,7 @@ const QUESTIONS = [
   },
   {
     q: 'Is Mosaec live and audited?',
-    a: 'Mosaec runs on NEAR testnet with test ZEC and USDC, so every step is free to try. The contracts have had an internal review only, and the full source is public under the MIT licence.',
+    a: 'Mosaec runs on NEAR testnet with test ZEC, BTC, SOL and USDC, so every step is free to try. The contracts have had an internal review only, and the full source is public under the MIT licence.',
   },
 ] as const;
 
