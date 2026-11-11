@@ -4,34 +4,25 @@ export const MOSAEC_ENVS = ['local', 'staging', 'production'] as const;
 
 export type MosaecEnv = (typeof MOSAEC_ENVS)[number];
 
-/** Settings fixed per environment. Host-specific values and secrets come from the process environment. */
+/**
+ * Hosts fixed per environment. Chain values live in `networks.ts`; host-specific values and secrets
+ * come from the process environment.
+ */
 export interface Deployment {
-  readonly network: 'sandbox' | 'mainnet';
-  readonly registryAccountId: string;
-  readonly verifierAccountId: string;
   readonly webBaseUrl: string;
   readonly apiBaseUrl: string;
 }
 
 export const DEPLOYMENTS = {
   local: {
-    network: 'sandbox',
-    registryAccountId: 'registry.test.near',
-    verifierAccountId: 'intents.test.near',
     webBaseUrl: 'http://localhost:3000',
     apiBaseUrl: 'http://localhost:8787',
   },
   staging: {
-    network: 'mainnet',
-    registryAccountId: 'staging.mosaec.near',
-    verifierAccountId: 'intents.near',
     webBaseUrl: 'https://staging.mosaec.finance',
     apiBaseUrl: 'https://api-staging.mosaec.finance',
   },
   production: {
-    network: 'mainnet',
-    registryAccountId: 'v0.mosaec.near',
-    verifierAccountId: 'intents.near',
     webBaseUrl: 'https://app.mosaec.finance',
     apiBaseUrl: 'https://api.mosaec.finance',
   },

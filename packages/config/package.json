@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./assets": "./assets.ts",
     "./env": "./env.ts",
+    "./networks": "./networks.ts",
     "./eslint": "./eslint.js",
     "./prettier": "./prettier.js",
     "./vitest": "./vitest.js",
