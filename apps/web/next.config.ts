@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { withSentryConfig } from '@sentry/nextjs/config';
+
 import type { NextConfig } from 'next';
 
 function apiOrigin(): string {
@@ -73,4 +75,13 @@ const config: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
 };
 
-export default config;
+/*
+ * Sentry build hooks: server and route instrumentation, plus source map upload when
+ * SENTRY_AUTH_TOKEN is set at build time. Without the token the upload is skipped.
+ */
+export default withSentryConfig(config, {
+  org: 'mosaec',
+  project: 'mosaec-web',
+  silent: !process.env.CI,
+  telemetry: false,
+});
