@@ -379,17 +379,9 @@ export function FaqBlock({
 }) {
   return (
     <Section label={title}>
-      <div className={cx(styles.headerStack, styles.headerCenter)} style={{ gap: 32 }}>
+      <div className={styles.faq}>
         <WordReveal className="t-h1" lines={[title]} />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-            width: '100%',
-            textAlign: 'left',
-          }}
-        >
+        <div className={styles.faqItems}>
           {items.map((item, index) => (
             <FaqItem key={item.q} question={item.q} defaultOpen={index === 0}>
               {item.a}

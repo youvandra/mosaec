@@ -1,0 +1,67 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 170px var(--gutter) 24px;
+  text-align: center;
+  background: var(--bg-primary);
+}
+.hero > * {
+  position: relative;
+}
+.glow {
+  position: absolute !important;
+  inset: 0 0 auto;
+  height: 640px;
+  background: linear-gradient(180deg, var(--accent-subtle) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+.title {
+  max-width: 900px;
+}
+.lead {
+  max-width: 560px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+.body {
+  padding-top: 48px !important;
+}
+
+.empty {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  align-items: center;
+  gap: 32px;
+  padding: 40px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-secondary);
+}
+.emptyCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 440px;
+}
+.emptyCopy p {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 809.98px) {
+  .hero {
+    padding-top: 128px;
+  }
+  .empty {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+}

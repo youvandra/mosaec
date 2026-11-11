@@ -66,53 +66,132 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px 6px 6px;
+  gap: 10px;
+  padding: 6px 16px 6px 6px;
   border-radius: var(--radius-pill);
   background: var(--bg-primary);
   border: 1px solid var(--border-primary);
-  font-size: 13px;
+  box-shadow: var(--shadow-card);
+  font-size: 15px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
-.cardStack {
+.rates {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 280px;
+}
+.rateStack {
   position: relative;
-  width: 260px;
-  height: 284px;
+  width: 220px;
+  height: 230px;
 }
-.cardStack > div {
+.rateCard {
   position: absolute;
-}
-.f1 {
-  top: 0;
-  left: 20px;
-  animation: suite-float 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
-}
-.f2 {
-  top: 60px;
   left: 0;
-  animation: suite-float 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 220px;
+  height: 130px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-nft);
+  transition: transform 0.6s var(--spring-soft);
 }
-.f3 {
-  top: 120px;
-  left: 14px;
-  animation: suite-float 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+.rateCard:nth-child(1) {
+  top: 0;
+  transform: rotate(-7deg) translateX(14px);
 }
-@keyframes suite-float {
-  from {
-    transform: translateY(0) rotate(var(--r, 0deg));
-  }
-  to {
-    transform: translateY(-8px) rotate(var(--r, 0deg));
-  }
+.rateCard:nth-child(2) {
+  top: 50px;
+  transform: rotate(3deg) translateX(-6px);
 }
-.limit {
-  width: 260px;
-  margin: 18px 0 28px;
-  padding: 14px;
-  border-radius: var(--radius-card);
+.rateCard:nth-child(3) {
+  top: 100px;
+  transform: rotate(-2deg) translateX(8px);
+}
+:global(a):hover .rateCard:nth-child(1) {
+  transform: rotate(-10deg) translate(20px, -6px);
+}
+:global(a):hover .rateCard:nth-child(3) {
+  transform: rotate(-4deg) translate(12px, 6px);
+}
+.rateLime {
+  background: var(--ill-lime);
+  color: var(--text-primary);
+}
+.rateBlue {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.rateInk {
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+}
+.rateHead {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.rateHead img {
+  border-radius: 50%;
+}
+.rateFig {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.rateUnit {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
+.rateNote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 18px;
   background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
   box-shadow: var(--shadow-card);
+}
+.rateNoteRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rateBar {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+.rateBar span {
+  display: block;
+  width: 62%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rateCard {
+    transition: none;
+  }
 }
 .list {
   width: 100%;

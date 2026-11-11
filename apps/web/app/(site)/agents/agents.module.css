@@ -83,23 +83,21 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: var(--radius-control);
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: var(--radius-pill);
   background: var(--bg-elevated);
   border: 1px solid var(--border-primary);
   font-size: 13px;
+  font-weight: 500;
   color: var(--text-primary);
-  transition:
-    background-color var(--dur-hover) var(--ease-link),
-    transform 0.4s var(--spring-pop);
+  transition: background-color 0.3s var(--ease-out);
 }
 .chip svg {
   color: var(--text-secondary);
 }
 .chip:hover {
-  background: var(--bg-tertiary);
-  transform: translateY(-2px);
+  background: var(--bg-secondary);
 }
 .actions {
   display: flex;
@@ -257,25 +255,6 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.callRows {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-left: 34px;
-}
-.callRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius-control);
-  background: var(--bg-secondary);
-}
-.mono {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--positive);
-}
 .sources {
   display: flex;
   flex-direction: column;
@@ -396,9 +375,6 @@
   }
   .results {
     grid-template-columns: 1fr;
-  }
-  .callRows {
-    margin-left: 0;
   }
   .card {
     max-width: 100%;

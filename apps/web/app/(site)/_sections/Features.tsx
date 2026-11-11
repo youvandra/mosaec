@@ -1,4 +1,10 @@
-import { PlusIcon, SquaresFourIcon, StampIcon, TicketIcon } from '@phosphor-icons/react/dist/ssr';
+import {
+  ArrowsLeftRightIcon,
+  PlusIcon,
+  SquaresFourIcon,
+  StampIcon,
+  TicketIcon,
+} from '@phosphor-icons/react/dist/ssr';
 
 import { NftCard, Reveal, Section, StatusPill, cx } from '@mosaec/ui';
 
@@ -43,7 +49,9 @@ const CARDS: readonly { eyebrow: string; title: string; visual: ReactNode }[] = 
       <div className={styles.mini}>
         <span className="t-caption">Owner of pack #0</span>
         <span className="t-h4">{E.collateral} ZEC</span>
-        <StatusPill tone="positive">Transferable</StatusPill>
+        <StatusPill tone="accent" icon={ArrowsLeftRightIcon}>
+          Transferable
+        </StatusPill>
       </div>
     ),
   },
@@ -113,7 +121,7 @@ export function Features() {
           />
         }
         title={['Four Parts, One Pawn']}
-        lead="A sealed pack, two NFTs that split it and a date that settles it. Every loan on Mosaec is built from these four pieces."
+        lead="Every loan on Mosaec is built from these four pieces."
       />
       <div className={styles.grid}>
         {CARDS.map((card, index) => (

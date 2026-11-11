@@ -267,37 +267,6 @@
   color: var(--text-inverse-secondary);
   padding-bottom: 8px;
 }
-.endings {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0 32px;
-  border-top: 1px solid var(--border-inverse);
-}
-.ending {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px 0;
-  border-bottom: 1px solid var(--border-inverse);
-}
-.ending p {
-  color: var(--text-inverse-secondary);
-}
-.endingHead {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.endingCode {
-  margin-left: auto;
-  color: var(--text-inverse-secondary);
-}
-.dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
 .statusRow {
   display: flex;
   flex-wrap: wrap;
@@ -358,8 +327,5 @@
     grid-template-columns: 1fr;
     gap: 20px;
     margin-bottom: 32px;
-  }
-  .endings {
-    grid-template-columns: 1fr;
   }
 }

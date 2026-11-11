@@ -1,25 +1,20 @@
-import {
-  CheckIcon,
-  CubeIcon,
-  RobotIcon,
-  StampIcon,
-  TicketIcon,
-} from '@phosphor-icons/react/dist/ssr';
+import { CheckIcon, CubeIcon, RobotIcon } from '@phosphor-icons/react/dist/ssr';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import { ASSETS } from '@mosaec/config/assets';
-import { AppIcon, NftCard, ProgressBar, Section, StatusPill, cx } from '@mosaec/ui';
+import { AppIcon, Section, StatusPill, cx } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, TICKER_MARKS } from '../../../lib/asset-marks';
 import { formatUnits } from '../../../lib/format';
+import { SUGGESTED_MONTHLY_RATE_BPS } from '../../../lib/rates';
 import { Bento, BentoTile, Eyebrow, SectionIntro } from '../_blocks';
 import { EXAMPLE_PAWN as E } from '../_content/facts';
 
 import styles from './Suite.module.css';
 
 import type { AssetSymbol } from '@mosaec/config/assets';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 const RULES: readonly string[] = [
   'Zero oracle',
@@ -55,7 +50,7 @@ function BorrowVisual() {
         <div className={styles.chipRow}>
           {[...RULES, ...RULES].map((rule, i) => (
             <Chip key={i}>
-              <AppIcon color="green" size={22}>
+              <AppIcon color="green" size={32}>
                 <CheckIcon weight="bold" />
               </AppIcon>
               {rule}
@@ -63,10 +58,12 @@ function BorrowVisual() {
           ))}
         </div>
         <div className={cx(styles.chipRow, styles.reverse)}>
-          {[...SYMBOLS, ...SYMBOLS, ...SYMBOLS].map((symbol, i) => (
+          {[...TICKER_MARKS, ...TICKER_MARKS].map((mark, i) => (
             <Chip key={i}>
-              <Image src={ASSET_MARK[symbol]} alt="" width={22} height={22} />
-              {symbol}
+              <AppIcon color="light" size={32} mark>
+                <Image src={mark.src} alt="" width={20} height={20} />
+              </AppIcon>
+              {mark.symbol}
             </Chip>
           ))}
         </div>
@@ -75,44 +72,35 @@ function BorrowVisual() {
   );
 }
 
-function TicketVisual() {
+const RATE_ASSETS: readonly AssetSymbol[] = ['ZEC', 'BTC', 'SOL'];
+
+/** Rate cards stacked like the source's Cards tile, with one worked repayment underneath. */
+function RatesVisual() {
+  const tones = [styles.rateLime, styles.rateBlue, styles.rateInk];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div className={styles.cardStack} aria-hidden="true">
-        <div className={styles.f1} style={{ '--r': '-6deg' } as CSSProperties}>
-          <NftCard
-            kind="ticket"
-            tone="lime"
-            tokenLabel="#2"
-            value={`${E.repayment} USDC`}
-            notch="var(--bg-secondary)"
-            icon={<TicketIcon size={20} weight="fill" />}
-          />
-        </div>
-        <div className={styles.f2} style={{ '--r': '4deg' } as CSSProperties}>
-          <NftCard
-            kind="ticket"
-            tokenLabel="#1"
-            value={`${E.repayment} USDC`}
-            notch="var(--bg-secondary)"
-            icon={<TicketIcon size={20} weight="fill" />}
-          />
-        </div>
-        <div className={styles.f3} style={{ '--r': '-3deg' } as CSSProperties}>
-          <NftCard
-            kind="title"
-            tokenLabel="#0"
-            value={`${E.collateral} ZEC`}
-            icon={<StampIcon size={20} weight="fill" />}
-          />
-        </div>
+    <div className={styles.rates}>
+      <div className={styles.rateStack}>
+        {RATE_ASSETS.map((symbol, index) => (
+          <div key={symbol} className={cx(styles.rateCard, tones[index])}>
+            <span className={styles.rateHead}>
+              <Image src={ASSET_MARK[symbol]} alt="" width={22} height={22} />
+              {symbol}
+            </span>
+            <span className={styles.rateFig}>
+              {((SUGGESTED_MONTHLY_RATE_BPS[symbol] ?? 0) / 100).toString()}%
+              <span className={styles.rateUnit}>a month</span>
+            </span>
+          </div>
+        ))}
       </div>
-      <div className={styles.limit}>
-        <ProgressBar
-          label="Term elapsed"
-          valueText={`31 of ${E.termDays.toString()} days`}
-          ratio={31 / E.termDays}
-        />
+      <div className={styles.rateNote}>
+        <span className={styles.rateNoteRow}>
+          <span className="t-caption">500 USDC, 90 days</span>
+          <span className="t-label">Repay 537.50</span>
+        </span>
+        <span className={styles.rateBar} aria-hidden="true">
+          <span />
+        </span>
       </div>
     </div>
   );
@@ -139,7 +127,7 @@ function VerifyVisual() {
     <div className={styles.list}>
       {['Zero access keys', 'Published code hash', 'Unlocked at the verifier'].map((check) => (
         <div key={check} className={styles.listRow}>
-          <StatusPill tone="positive" dot>
+          <StatusPill tone="positive" icon={CheckIcon}>
             Pass
           </StatusPill>
           <span>{check}</span>
@@ -214,11 +202,11 @@ const TILES: readonly {
     visual: <BorrowVisual />,
   },
   {
-    href: '/borrow#ticket',
-    title: 'Tickets',
-    body: 'Your right to buy the coins back, tradable like any NFT.',
+    href: '/rates',
+    title: 'Rates',
+    body: 'Priced from every 90-day window on record.',
     size: 'tall',
-    visual: <TicketVisual />,
+    visual: <RatesVisual />,
   },
   {
     href: '/lend',
@@ -260,7 +248,7 @@ export function Suite() {
           />
         }
         title={['A full pawn desk,', 'built on one contract.']}
-        lead="Borrowers, lenders, Ticket traders and agents all meet the same sealed pack. Start with one side and add the rest when you need it."
+        lead="Borrowers, lenders and agents meet the same sealed pack. Start with one side and add the rest when you need it."
       />
       <Bento>
         {TILES.map((tile) => (

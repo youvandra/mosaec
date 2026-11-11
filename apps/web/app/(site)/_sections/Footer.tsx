@@ -10,9 +10,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { NETWORKS, explorerAccountUrl } from '@mosaec/config/networks';
-import { AppIcon, ButtonLink, Logo, Tag, cx } from '@mosaec/ui';
+import { AppIcon, ButtonLink, Logo, Mark, Tag, cx } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, NEAR_MARK } from '../../../lib/asset-marks';
 import { SITE } from '../../../lib/site';
 
 import styles from './Footer.module.css';
@@ -68,7 +68,7 @@ function Orbit() {
       <span className={cx(styles.ring, styles.r2)} />
       <span className={cx(styles.ring, styles.r3)} />
       <span className={styles.core}>
-        <Image src="/brand/mark-white.png" alt="" width={68} height={50} />
+        <Mark />
       </span>
       <span className={cx(styles.group, styles.g1)}>
         <Holders tiles={INNER} />
@@ -89,6 +89,7 @@ const COLUMNS = [
       { label: 'Borrow', href: '/borrow' },
       { label: 'Lend', href: '/lend' },
       { label: 'Agents', href: '/agents' },
+      { label: 'Market', href: '/market' },
       { label: 'Rates', href: '/rates' },
       { label: 'Open App', href: SITE.appUrl },
     ],
@@ -97,17 +98,20 @@ const COLUMNS = [
     title: 'Trust',
     links: [
       { label: 'Verify a Pack', href: '/verify' },
+      { label: 'Docs', href: '/docs' },
       { label: 'Safety Rules', href: '/verify#rules' },
       { label: 'Registry on NearBlocks', href: registryUrl },
+      { label: 'Risks', href: '/risks' },
       { label: 'Security Contact', href: `mailto:${SITE.securityEmail}` },
     ],
   },
   {
-    title: 'Developers',
+    title: 'Resources',
     links: [
-      { label: 'Overview', href: '/developers' },
-      { label: 'SDK', href: '/developers#sdk' },
-      { label: 'API', href: '/developers#api' },
+      { label: 'Bring Your Agent', href: '/agents' },
+      { label: 'About Mosaec', href: '/about' },
+      { label: 'How a Pawn Works', href: '/#how' },
+      { label: 'Questions', href: '/#faq' },
       { label: 'GitHub', href: SITE.sourceUrl },
       { label: 'Support', href: `mailto:${SITE.supportEmail}` },
     ],
@@ -166,9 +170,7 @@ export function Footer() {
       <div className={styles.columns}>
         <div className={styles.brand}>
           <Logo interactive />
-          <p className="t-body-sm">
-            The pawn ticket for native assets: a sealed pack, a Title and a Ticket, settled on NEAR.
-          </p>
+          <p className="t-body-sm">The pawn ticket for native assets, settled on NEAR.</p>
         </div>
         {COLUMNS.map((column) => (
           <nav key={column.title} className={styles.col} aria-label={column.title}>
@@ -181,8 +183,20 @@ export function Footer() {
       </div>
       <div className={styles.divider} />
       <div className={styles.bottom}>
-        <span className="t-caption">© 2026 Mosaec. Source under the MIT licence.</span>
+        <span className={styles.bottomLeft}>
+          <span className="t-caption">© 2026 Mosaec. Source under the MIT licence.</span>
+          <Link href="/terms" className={styles.legal}>
+            Terms
+          </Link>
+          <Link href="/privacy" className={styles.legal}>
+            Privacy
+          </Link>
+        </span>
         <span className={styles.bottomRight}>
+          <a href="https://near.org" className={styles.chain} target="_blank" rel="noreferrer">
+            <Image src={NEAR_MARK.src} alt="" width={18} height={18} />
+            Built on NEAR
+          </a>
           <span className="t-caption">Design by Viyako</span>
           <a href={SITE.sourceUrl} className={styles.social} aria-label="Mosaec on GitHub">
             <GithubLogoIcon size={20} weight="fill" />

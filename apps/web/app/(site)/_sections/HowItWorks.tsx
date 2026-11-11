@@ -61,7 +61,7 @@ const STEPS: readonly Step[] = [
     icon: <CalendarCheckIcon weight="fill" />,
     visual: <RedeemVisual />,
     lead: 'Buy your coins back.',
-    body: 'Pay the repayment before the date and the pack releases the ZEC to you. Price moves in between change nothing. Short of cash, sell the Ticket to someone who will redeem it.',
+    body: 'Pay the repayment on any day before the date and the pack releases the ZEC to you.',
   },
   {
     id: 'step-exit',
@@ -79,7 +79,7 @@ export function HowItWorks() {
     <Section id="how" label="How it works">
       <SectionHeader className={styles.header}>
         <Reveal>
-          <Tag badge="4" shape={<PathIcon weight="bold" size={16} color="var(--ill-orange)" />}>
+          <Tag badge="3" shape={<PathIcon weight="bold" size={16} color="var(--ill-orange)" />}>
             How It Works
           </Tag>
         </Reveal>

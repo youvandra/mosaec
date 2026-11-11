@@ -4,7 +4,7 @@ import { CheckIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { ButtonLink, FilterPill, Reveal, StatusPill, cx } from '@mosaec/ui';
+import { ButtonLink, Reveal, Segmented, StatusPill, cx } from '@mosaec/ui';
 
 import styles from './rates.module.css';
 
@@ -36,21 +36,17 @@ export function RatePlans({
   const current = assets.find((asset) => asset.symbol === symbol) ?? assets[0];
   return (
     <>
-      <div className={styles.toggle} role="group" aria-label="Collateral asset">
-        {assets.map((asset) => (
-          <FilterPill
-            key={asset.symbol}
-            active={asset.symbol === symbol}
-            onClick={() => {
-              setSymbol(asset.symbol);
-            }}
-          >
-            {asset.symbol}
-          </FilterPill>
-        ))}
+      <div className={styles.toggle}>
+        <Segmented
+          label="Collateral asset"
+          tone="ink"
+          value={symbol}
+          onChange={setSymbol}
+          options={assets.map((asset) => ({ id: asset.symbol, label: asset.symbol }))}
+        />
         <span className={styles.ltvChip}>At 50% LTV</span>
       </div>
-      <div className={styles.plans}>
+      <div key={symbol} className={styles.plans}>
         {current?.terms.map((term, index) => (
           <Reveal
             key={term.days}
