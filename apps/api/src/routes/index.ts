@@ -15,6 +15,7 @@ export function routes(
     .get('/health', health.live)
     .get('/ready', health.ready)
     .get('/packs', packs.list)
+    .get('/packs/details', packs.details)
     .get('/packs/:id', packs.get)
     .get('/accounts/:id/positions', packs.positions)
     .get('/offers', packs.offers)

@@ -1,7 +1,7 @@
 import { ASSETS } from '@mosaec/config/assets';
 import { DEFAULT_NETWORK } from '@mosaec/config/networks';
 
-import { getPack, listOffers, listPacks } from './api';
+import { getPackDetails, listOffers, listPacks } from './api';
 import { dealOf, liveDealOf } from './deal';
 import { SUGGESTED_MONTHLY_RATE_BPS, TERM_OPTIONS, suggestedRepayment } from './rates';
 
@@ -32,18 +32,17 @@ export async function loadMarket(): Promise<MarketData | null> {
     const recent = [...all]
       .sort((a, b) => Number(BigInt(b.index) - BigInt(a.index)))
       .slice(0, HISTORY_DEPTH);
-    const details = await Promise.all(
-      recent.map((pack) => getPack(DEFAULT_NETWORK, pack.id).catch(() => null)),
-    );
-    const activity = recent.map((pack, i) => {
-      const detail = details[i];
+    const details = await getPackDetails(
+      DEFAULT_NETWORK,
+      recent.map((pack) => pack.id),
+    ).catch(() => []);
+    const byId = new Map(details.map((detail) => [detail.id, detail]));
+    const activity = recent.map((pack) => {
+      const detail = byId.get(pack.id);
       return {
         packId: pack.id,
         index: pack.index,
-        deal:
-          detail === null || detail === undefined
-            ? liveDealOf(pack)
-            : dealOf(DEFAULT_NETWORK, detail),
+        deal: detail === undefined ? liveDealOf(pack) : dealOf(DEFAULT_NETWORK, detail),
       };
     });
     return { offers, activity };

@@ -1,4 +1,10 @@
-import { accountIdSchema, listPacksQuery, networkQuery, offersQuery } from './schemas';
+import {
+  accountIdSchema,
+  detailsQuery,
+  listPacksQuery,
+  networkQuery,
+  offersQuery,
+} from './schemas';
 
 import type { PackService } from '../services/pack-service';
 import type { Context } from 'hono';
@@ -24,6 +30,11 @@ export class PackController {
     const { network } = networkQuery.parse(c.req.query());
     const packId = accountIdSchema.parse(c.req.param('id'));
     return c.json(await this.packs.get(network, packId));
+  };
+
+  details = async (c: Context): Promise<Response> => {
+    const q = detailsQuery.parse(c.req.query());
+    return c.json({ items: await this.packs.details(q.network, q.ids) });
   };
 
   positions = async (c: Context): Promise<Response> => {

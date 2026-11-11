@@ -190,6 +190,18 @@ describe('API', () => {
     expect(missing).toMatchObject({ status: 404, body: { error: { code: 'NOT_FOUND' } } });
   });
 
+  it('returns several packs with history in one call, skipping unknown ids', async () => {
+    const res = (await json(`/packs/details?ids=0.${REGISTRY},99.${REGISTRY},4.${REGISTRY}`)) as {
+      status: number;
+      body: { items: { id: string; history: unknown[] }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((item) => item.id)).toEqual([`0.${REGISTRY}`, `4.${REGISTRY}`]);
+    expect(res.body.items[0]?.history).toEqual([]);
+    const tooMany = Array.from({ length: 26 }, (_, i) => `${i.toString()}.${REGISTRY}`).join(',');
+    expect((await app.request(`/packs/details?ids=${tooMany}`)).status).toBe(400);
+  });
+
   it('refuses a malformed account with VALIDATION', async () => {
     const res = (await json('/packs?owner=Not%20An%20Account')) as {
       status: number;
@@ -252,6 +264,20 @@ describe('API', () => {
     expect(
       (await app.request('/health', { headers: { 'x-forwarded-for': '198.51.100.1' } })).status,
     ).toBe(200);
+  });
+
+  it('does not hold the local web server to one client budget', async () => {
+    app = build({ readsPerMinute: 1 });
+    const local = { incoming: { socket: { remoteAddress: '127.0.0.1' } } };
+    for (let i = 0; i < 3; i += 1) {
+      expect((await app.request('/health', {}, local)).status).toBe(200);
+    }
+    const proxied = { 'x-forwarded-for': '203.0.113.9' };
+    await app.request('/health', { headers: proxied }, local);
+    expect((await app.request('/health', { headers: proxied }, local)).status).toBe(429);
+    const remote = { incoming: { socket: { remoteAddress: '198.51.100.7' } } };
+    await app.request('/health', {}, remote);
+    expect((await app.request('/health', {}, remote)).status).toBe(429);
   });
 
   it('allows the app origin only', async () => {
