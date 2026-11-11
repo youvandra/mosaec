@@ -1,0 +1,182 @@
+import { ASSETS, assetByTokenId } from '@mosaec/config/assets';
+import { isDeskAsset } from '@mosaec/config/desk';
+import { aprBps } from '@mosaec/sdk';
+
+import type { NetworkId } from '@mosaec/config/assets';
+import type { DeskPolicy } from '@mosaec/config/desk';
+import type { ErrorCode } from '@mosaec/domain';
+
+const BPS = 10_000n;
+const USD_SCALE = 1_000_000n;
+
+/** An open offer as the chain reports it at decision time. */
+export interface OfferInput {
+  readonly pack: string;
+  readonly makerId: string;
+  readonly payToken: string;
+  readonly price: bigint;
+  readonly kToken: string;
+  readonly kAmount: bigint;
+  readonly termNs: bigint;
+  readonly openUntilNs: bigint;
+  readonly contents: readonly { readonly tokenId: string; readonly amount: bigint }[];
+  readonly contentsHash: string;
+}
+
+/** What the desk already holds and has done, read fresh before every verdict. */
+export interface DeskContext {
+  readonly network: NetworkId;
+  readonly policy: DeskPolicy;
+  readonly nowNs: bigint;
+  /** USD per whole coin, from the reference source; absent when the source failed. */
+  readonly pricesUsd: Readonly<Partial<Record<'ZEC' | 'BTC' | 'SOL', number>>>;
+  readonly deskBalanceUsdc: bigint;
+  /** Principal of every running desk pawn. */
+  readonly exposureUsdc: bigint;
+  /** Principal lent since 00:00 UTC. */
+  readonly lentTodayUsdc: bigint;
+  readonly fillsLastHour: number;
+}
+
+export interface Quote {
+  readonly pack: string;
+  readonly collateral: { readonly symbol: string; readonly amount: string };
+  readonly collateralUsd: string;
+  readonly principal: string;
+  readonly repayment: string;
+  readonly interest: string;
+  readonly termNs: string;
+  readonly aprBps: number;
+  readonly ltvBps: number;
+}
+
+export type Verdict =
+  | { readonly ok: true; readonly quote: Quote }
+  | {
+      readonly ok: false;
+      readonly code: Extract<ErrorCode, `DESK_${string}`>;
+      readonly reason: string;
+      readonly quote: Quote | null;
+    };
+
+function usdc(amount: bigint): string {
+  const whole = amount / USD_SCALE;
+  const cents = (amount % USD_SCALE) / 10_000n;
+  return `${whole.toString()}.${cents.toString().padStart(2, '0')} USDC`;
+}
+
+function pct(bps: bigint | number): string {
+  return `${(Number(bps) / 100).toFixed(1)}%`;
+}
+
+/** USDC value (smallest unit) of `amount` of a coin with `decimals`, at `usd` per coin. */
+export function collateralValueUsdc(amount: bigint, decimals: number, usd: number): bigint {
+  const usdMicro = BigInt(Math.round(usd * 1_000_000));
+  return (amount * usdMicro) / 10n ** BigInt(decimals);
+}
+
+/**
+ * Checks one offer against the desk policy and the desk's current book. Pure: the same inputs
+ * always give the same verdict, so the agent, the MCP tools and the tests share one rule set.
+ */
+export function evaluate(offer: OfferInput, ctx: DeskContext): Verdict {
+  const { policy } = ctx;
+  const usdcId = ASSETS.USDC.tokenIds[ctx.network];
+  const refuse = (
+    code: Extract<ErrorCode, `DESK_${string}`>,
+    reason: string,
+    quote: Quote | null = null,
+  ): Verdict => ({ ok: false, code, reason, quote });
+
+  if (policy.paused) return refuse('DESK_PAUSED', 'The desk is paused by the team.');
+  if (offer.makerId === policy.deskAccountId) {
+    return refuse('DESK_POLICY', 'The desk never fills its own offer.');
+  }
+  if (offer.payToken !== usdcId || offer.kToken !== usdcId) {
+    return refuse('DESK_POLICY', 'The desk lends and collects in USDC only.');
+  }
+  if (offer.contents.length !== 1) {
+    return refuse('DESK_POLICY', 'The desk takes packs holding exactly one coin.');
+  }
+  const line = offer.contents[0];
+  const asset = line === undefined ? undefined : assetByTokenId(ctx.network, line.tokenId);
+  if (line === undefined || asset === undefined || !isDeskAsset(asset.symbol)) {
+    return refuse('DESK_POLICY', 'The pack holds a coin the desk does not take.');
+  }
+  if (!policy.assets.includes(asset.symbol)) {
+    return refuse('DESK_POLICY', `${asset.symbol} is outside the desk policy.`);
+  }
+
+  const usd = ctx.pricesUsd[asset.symbol];
+  const collateralUsd =
+    usd === undefined ? 0n : collateralValueUsdc(line.amount, asset.decimals, usd);
+  const apr =
+    offer.price > 0n && offer.kAmount >= offer.price && offer.termNs > 0n
+      ? aprBps(offer.price, offer.kAmount, offer.termNs)
+      : 0n;
+  const ltv = collateralUsd === 0n ? BPS * 100n : (offer.price * BPS) / collateralUsd;
+  const quote: Quote = {
+    pack: offer.pack,
+    collateral: { symbol: asset.symbol, amount: line.amount.toString() },
+    collateralUsd: collateralUsd.toString(),
+    principal: offer.price.toString(),
+    repayment: offer.kAmount.toString(),
+    interest: (offer.kAmount - offer.price).toString(),
+    termNs: offer.termNs.toString(),
+    aprBps: Number(apr),
+    ltvBps: Number(ltv),
+  };
+
+  if (offer.openUntilNs <= ctx.nowNs) return refuse('DESK_POLICY', 'The offer has closed.', quote);
+  if (offer.termNs < policy.minTermNs || offer.termNs > policy.maxTermNs) {
+    return refuse('DESK_POLICY', 'The term sits outside the desk range.', quote);
+  }
+  if (offer.kAmount <= offer.price) {
+    return refuse('DESK_POLICY', 'The repayment pays no interest.', quote);
+  }
+  if (apr < BigInt(policy.minAprBps)) {
+    return refuse(
+      'DESK_POLICY',
+      `The rate is ${pct(apr)} a year; the desk asks at least ${pct(policy.minAprBps)}.`,
+      quote,
+    );
+  }
+  if (usd === undefined) {
+    return refuse('DESK_POLICY', `No reference price for ${asset.symbol} right now.`, quote);
+  }
+  if (ltv > BigInt(policy.maxLtvBps)) {
+    return refuse(
+      'DESK_POLICY',
+      `The loan is ${pct(ltv)} of the coins' value; the desk lends at most ${pct(policy.maxLtvBps)}.`,
+      quote,
+    );
+  }
+  if (offer.price > policy.maxFillUsdc) {
+    return refuse(
+      'DESK_POLICY',
+      `The desk lends at most ${usdc(policy.maxFillUsdc)} per pawn.`,
+      quote,
+    );
+  }
+  if (offer.price > ctx.deskBalanceUsdc) {
+    return refuse('DESK_BUDGET', 'The desk balance is below this loan.', quote);
+  }
+  if (ctx.lentTodayUsdc + offer.price > policy.dailyBudgetUsdc) {
+    return refuse(
+      'DESK_BUDGET',
+      `Today's budget of ${usdc(policy.dailyBudgetUsdc)} is spent.`,
+      quote,
+    );
+  }
+  if (ctx.fillsLastHour >= policy.maxFillsPerHour) {
+    return refuse('DESK_BUDGET', 'The desk has made its fills for this hour.', quote);
+  }
+  if (ctx.exposureUsdc + offer.price > policy.maxExposureUsdc) {
+    return refuse(
+      'DESK_EXPOSURE',
+      `This loan would take the desk past ${usdc(policy.maxExposureUsdc)} out at once.`,
+      quote,
+    );
+  }
+  return { ok: true, quote };
+}
