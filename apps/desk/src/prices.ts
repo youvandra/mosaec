@@ -29,6 +29,11 @@ export class ReferencePrices {
   constructor(
     private readonly fetchImpl: typeof fetch = fetch,
     private readonly now: () => number = Date.now,
+    /**
+     * Called with every fresh read from the source, whoever asked. Quotes and the loop share the
+     * cache, so the heartbeat cannot depend on which caller happened to refresh it.
+     */
+    private readonly onFresh: (prices: PriceMap) => Promise<void> = () => Promise.resolve(),
   ) {}
 
   async current(): Promise<PriceMap> {
@@ -51,6 +56,7 @@ export class ReferencePrices {
       }
       this.cache = { at: this.now(), prices };
       this.fresh = true;
+      await this.onFresh(prices).catch(() => undefined);
       return prices;
     } catch {
       return this.fallback();

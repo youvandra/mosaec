@@ -39,4 +39,23 @@ describe('ReferencePrices', () => {
     );
     expect(await prices.current()).toEqual({});
   });
+
+  it('reports every fresh read, whichever caller made it, and never a cached one', async () => {
+    let now = 0;
+    const beats: number[] = [];
+    const prices = new ReferencePrices(
+      ok,
+      () => now,
+      (observed) => {
+        beats.push(observed.ZEC ?? 0);
+        return Promise.resolve();
+      },
+    );
+    await prices.current();
+    now = 60_000;
+    await prices.current();
+    now = 6 * 60_000;
+    await prices.current();
+    expect(beats).toEqual([1_000, 1_000]);
+  });
 });

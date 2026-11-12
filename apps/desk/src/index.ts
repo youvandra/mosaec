@@ -29,7 +29,10 @@ async function main(): Promise<void> {
 
   const network = env.MOSAEC_NETWORK;
   const repository = new DeskRepository(db);
-  const prices = new ReferencePrices();
+  /* Each fresh read is the desk's heartbeat; a cached or stale answer must not look live. */
+  const prices = new ReferencePrices(fetch, Date.now, (observed) =>
+    repository.savePrices(observed, 'coingecko'),
+  );
   const chain = new NearDeskChain(
     network,
     DESK_ACCOUNTS[network],
@@ -56,9 +59,7 @@ async function main(): Promise<void> {
     if (running || env.DESK_SECRET_KEY === undefined) return;
     running = true;
     try {
-      const observed = await prices.current();
-      /* Only a fresh read is a heartbeat; a cached or stale answer must not look live. */
-      if (prices.fresh) await repository.savePrices(observed, 'coingecko');
+      await prices.current();
       const summary = await runDesk(service, model, log);
       log('desk run', { ...summary });
       for (const item of await service.collect()) {
