@@ -28,7 +28,7 @@ export function MarketSummary({ data }: { readonly data: MarketData }) {
   const settled = filled.filter((item) => item.deal.outcome !== 'running');
   const repaid = settled.filter((item) => item.deal.outcome === 'redeemed').length;
   const totals = [
-    { value: `${cash(lent)} USDC`, label: 'lent' },
+    ...(lent === 0n ? [] : [{ value: `${cash(lent)} USDC`, label: 'lent' }]),
     ...(settled.length === 0
       ? []
       : [{ value: `${repaid.toString()} of ${settled.length.toString()}`, label: 'repaid' }]),
