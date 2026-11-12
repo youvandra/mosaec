@@ -254,10 +254,14 @@ const deskDecisionSchema = z.object({
 export type DeskOverview = z.output<typeof deskOverviewSchema>;
 export type DeskDecision = z.output<typeof deskDecisionSchema>;
 
-/** The house desk's holdings, results and policy. */
-export async function getDesk(network: NetworkId): Promise<DeskOverview> {
+/**
+ * The house desk's holdings, results and policy. `fresh` skips the 15 s cache: the loop's status
+ * is read from the newest heartbeat, and a cached copy served after a quiet spell would show a
+ * running desk as offline.
+ */
+export async function getDesk(network: NetworkId, fresh = false): Promise<DeskOverview> {
   checkNetwork(network);
-  return getJson(`/desk?network=${network}`, deskOverviewSchema);
+  return getJson(`/desk?network=${network}`, deskOverviewSchema, fresh);
 }
 
 /** The desk's latest decisions, newest first. */
