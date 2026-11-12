@@ -13,6 +13,25 @@ import type { NetworkId } from '@mosaec/config/assets';
 import type { ContractCall, Outcome } from '@mosaec/sdk';
 import type { KeyPairString } from '@near-js/crypto';
 
+/** Reads of a sent transaction's outcome before the desk gives up, doubling the gap each time. */
+const CONFIRM_READS = 3;
+const CONFIRM_FIRST_GAP_MS = 1_000;
+
+/**
+ * The transaction left the desk but its outcome could not be read. It may have settled, so the
+ * hash travels with the error and the loop reads it again later.
+ */
+export class UnconfirmedSendError extends Error {
+  override readonly name = 'UnconfirmedSendError';
+
+  constructor(
+    readonly hash: string,
+    cause: unknown,
+  ) {
+    super(`transaction ${hash} was sent but its outcome could not be read`, { cause });
+  }
+}
+
 export interface SentCall {
   readonly hash: string;
   readonly outcome: Outcome;
@@ -29,6 +48,8 @@ export interface DeskChain {
    */
   collectable(pack: string): Promise<readonly { tokenId: string; amount: bigint }[] | null>;
   send(call: ContractCall): Promise<SentCall>;
+  /** The outcome of a transaction the desk sent earlier. */
+  outcomeOf(hash: string): Promise<Outcome>;
 }
 
 /** The RPC refused a transaction because another one from the same key took its nonce. */
@@ -126,7 +147,23 @@ export class NearDeskChain implements DeskChain {
       throwOnFailure: false,
     })) as { readonly transaction: { readonly hash: string } };
     const hash = result.transaction.hash;
-    const raw = await this.rpc.tx(hash, this.accountId);
-    return { hash, outcome: parseOutcome(raw) };
+    return { hash, outcome: await this.confirm(hash) };
+  }
+
+  async outcomeOf(hash: string): Promise<Outcome> {
+    return parseOutcome(await this.rpc.tx(hash, this.accountId));
+  }
+
+  /** Reads the outcome of a broadcast transaction, again after a failed read. */
+  private async confirm(hash: string): Promise<Outcome> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.outcomeOf(hash);
+      } catch (cause) {
+        if (attempt >= CONFIRM_READS) throw new UnconfirmedSendError(hash, cause);
+        const gap = CONFIRM_FIRST_GAP_MS * 2 ** (attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, gap));
+      }
+    }
   }
 }

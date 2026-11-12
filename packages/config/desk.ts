@@ -35,12 +35,14 @@ export const deskPolicySchema = z.object({
   maxFillUsdc: bigintString,
   /** Largest principal out at once across every running desk pawn. */
   maxExposureUsdc: bigintString,
-  /** Largest principal lent in one UTC day. */
+  /** Largest principal lent in one UTC day, net of loans lent and repaid that same day. */
   dailyBudgetUsdc: bigintString,
   /** Fills the agent loop and the MCP tool may make per hour. */
   maxFillsPerHour: z.number().int().min(0),
   /** Instant desk loans per hour, a quota of their own so the loop cannot block them. */
   maxInstantFillsPerHour: z.number().int().min(0),
+  /** Instant desk loans one borrower may take per UTC day, so one account cannot loop the desk. */
+  maxInstantFillsPerMakerPerDay: z.number().int().min(0),
   /** A paused desk quotes and refuses every fill with `DESK_PAUSED`. */
   paused: z.boolean(),
 });
@@ -89,6 +91,7 @@ export const DESK_POLICIES: Readonly<Record<NetworkId, DeskPolicyInput>> = {
     dailyBudgetUsdc: (5_000n * USDC_UNIT).toString(),
     maxFillsPerHour: 4,
     maxInstantFillsPerHour: 20,
+    maxInstantFillsPerMakerPerDay: 3,
     paused: false,
   },
   mainnet: {
@@ -106,6 +109,7 @@ export const DESK_POLICIES: Readonly<Record<NetworkId, DeskPolicyInput>> = {
     dailyBudgetUsdc: (100n * USDC_UNIT).toString(),
     maxFillsPerHour: 2,
     maxInstantFillsPerHour: 4,
+    maxInstantFillsPerMakerPerDay: 1,
     paused: true,
   },
 };

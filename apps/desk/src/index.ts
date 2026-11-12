@@ -69,6 +69,8 @@ async function main(): Promise<void> {
     running = true;
     try {
       await prices.current();
+      const reconciled = await service.reconcile();
+      if (reconciled > 0) log('desk reconcile', { settled: reconciled });
       const summary = await runDesk(service, model, log);
       log('desk run', { ...summary });
       for (const item of await service.collect()) {
