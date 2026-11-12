@@ -240,7 +240,7 @@ function Fees() {
             label="Fees"
           />
         }
-        title={['Every cost, on one card.']}
+        title={['Every fee,', 'zero fine print.']}
         lead="Mosaec keeps nothing from a pawn. What you pay goes to the network, the bridge or the other side of the loan."
       />
       <Reveal className={styles.fees}>

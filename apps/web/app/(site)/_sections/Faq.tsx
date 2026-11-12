@@ -46,7 +46,7 @@ export function Faq() {
               FAQ
             </Tag>
           </Reveal>
-          <WordReveal className="t-h1" lines={['Questions,', 'answered.']} />
+          <WordReveal className="t-h1" lines={['Good questions,', 'straight answers.']} />
           <Reveal as="p" className="t-body-lg">
             What happens when prices dip, dates pass or rights change hands.
           </Reveal>

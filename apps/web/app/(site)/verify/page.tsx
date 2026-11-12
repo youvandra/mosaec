@@ -432,7 +432,7 @@ function Review() {
             label="Review"
           />
         }
-        title={['What we have checked,', 'and what comes next.']}
+        title={['Where security stands', 'right now.']}
         lead="Where security work stands today, and the step that comes before mainnet."
       />
       <div className={styles.review}>

@@ -202,7 +202,7 @@ function Yield() {
             label="Fixed Return"
           />
         }
-        title={['Yield without', 'the oracle.']}
+        title={['Yield with', 'zero oracle drama.']}
       />
       <div className={styles.bento}>
         <Reveal className={cx(styles.tile, styles.tileWide)}>
@@ -304,7 +304,7 @@ function Numbers() {
             label="The Numbers"
           />
         }
-        title={['What a fill does.']}
+        title={['One call,', 'everything settles.']}
         lead="One call pays the borrower, checks the terms against the pack and hands you the Title. Any mismatch refunds you in full with a typed reason."
       />
       <Reveal className={styles.numbers}>
