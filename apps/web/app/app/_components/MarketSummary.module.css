@@ -1,24 +1,117 @@
-.totals {
+/* Design source: Stat Grid (grey tiles, large figure, caption, blue dot matrix). */
+.frame {
+  container-type: inline-size;
+}
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+.stats {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+}
+.solo .stats {
+  grid-template-rows: none;
+  grid-template-columns: 1fr 1fr;
+}
+.stat {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 28px 24px;
+  border-radius: 28px;
+  background: var(--bg-secondary);
+}
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.value {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px 16px;
-  margin: 0;
-}
-.totals div {
-  display: flex;
-  flex-direction: row-reverse;
   align-items: baseline;
-  gap: 6px;
-}
-.totals dt {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-.totals dd {
-  margin: 0;
-  font-size: 14px;
+  column-gap: 8px;
+  font-size: 44px;
   font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
+}
+.unit {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+}
+.label {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.dots {
+  display: grid;
+  grid-template-columns: repeat(5, 18px);
+  gap: 7px;
+  flex: none;
+}
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+.strong {
+  background: var(--accent);
+}
+.soft {
+  background: var(--accent-secondary);
+}
+.faint {
+  background: var(--accent-subtle);
+}
+.recent {
+  min-width: 0;
+}
+.recent > section {
+  height: 100%;
+}
+@container (max-width: 980px) {
+  .dots {
+    grid-template-columns: repeat(5, 12px);
+    gap: 5px;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+  }
+}
+@container (max-width: 760px) {
+  .overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stats {
+    grid-template-rows: none;
+    grid-template-columns: 1fr 1fr;
+  }
+  .value {
+    font-size: 32px;
+  }
+}
+@container (max-width: 520px) {
+  .stats,
+  .solo .stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stat {
+    padding: 22px 22px 20px;
+  }
 }
