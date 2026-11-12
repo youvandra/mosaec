@@ -69,6 +69,22 @@ const OUTCOME_LINE: Readonly<Record<DealOutcome, string>> = {
   empty: 'No pawn yet.',
 };
 
+/** A cancelled offer leaves the coins in the pack until the owner withdraws them. */
+function outcomeLine(pack: PackDetail, deal: Deal): string {
+  if (deal.outcome !== 'cancelled') return OUTCOME_LINE[deal.outcome];
+  return pack.contents.length > 0
+    ? 'Closed before anyone filled it. The coins are still in the pack.'
+    : 'Closed before anyone filled it. The coins went back to the owner.';
+}
+
+function sealedCaption(pack: PackDetail, deal: Deal): string {
+  if (deal.outcome === 'listed' || deal.outcome === 'running') return 'Sealed in a keyless pack';
+  if (deal.outcome === 'cancelled') {
+    return pack.contents.length > 0 ? 'Still sealed in this pack' : 'Offered, then withdrawn';
+  }
+  return 'Was sealed in this pack';
+}
+
 /* History in plain words. */
 
 interface Line {
@@ -297,6 +313,8 @@ function Track({ deal }: { readonly deal: Deal }) {
               <Countdown untilNs={step.at} />
             ) : step.at !== null ? (
               formatDateNs(step.at)
+            ) : deal.outcome === 'cancelled' ? (
+              'Skipped'
             ) : (
               'Pending'
             )}
@@ -338,7 +356,6 @@ function DealHero({ pack, deal }: { readonly pack: PackDetail; readonly deal: De
   const lead = deal.collateral[0];
   const apr = dealApr(deal);
   const interest = dealInterest(deal);
-  const live = deal.outcome === 'listed' || deal.outcome === 'running';
   const terms = [apr === null ? null : `${apr.toFixed(1)}% APR`, termText(deal.termNs)]
     .filter((part) => part !== null)
     .join(' over ');
@@ -353,13 +370,11 @@ function DealHero({ pack, deal }: { readonly pack: PackDetail; readonly deal: De
                 ? 'Empty'
                 : deal.collateral.map((line) => amountText(line)).join(' + ')}
             </span>
-            <span className="t-caption">
-              {live ? 'Sealed in a keyless pack' : 'Was sealed in this pack'}
-            </span>
+            <span className="t-caption">{sealedCaption(pack, deal)}</span>
           </div>
         </div>
         <div className={styles.outcome}>
-          <span className="t-label">{OUTCOME_LINE[deal.outcome]}</span>
+          <span className="t-label">{outcomeLine(pack, deal)}</span>
           <span className="t-caption">
             <NextMoment pack={pack} deal={deal} />
           </span>
@@ -437,10 +452,12 @@ function Holder({
 }
 
 function Rights({ pack, deal }: { readonly pack: PackDetail; readonly deal: Deal }) {
-  const contents =
-    deal.collateral.length === 0
-      ? 'Empty'
-      : deal.collateral.map((line) => amountText(line)).join(' + ');
+  /* The Title owns the pack, so it shows what the pack holds now; a free pack can be empty. */
+  const held = pack.state === 'free' ? pack.contents : deal.collateral;
+  const contents = held.length === 0 ? 'Empty' : held.map((line) => amountText(line)).join(' + ');
+  /* No lender filled a cancelled offer, so its Ticket never existed. */
+  const ticketNever =
+    deal.outcome === 'listed' || deal.outcome === 'empty' || deal.outcome === 'cancelled';
   return (
     <section className={styles.panel} aria-label="Rights">
       <div className={styles.panelHead}>
@@ -463,13 +480,20 @@ function Rights({ pack, deal }: { readonly pack: PackDetail; readonly deal: Deal
           <NftCard
             kind="ticket"
             tone="lime"
-            tokenLabel={
-              pack.ticket?.id ??
-              (deal.outcome === 'listed' || deal.outcome === 'empty' ? 'Not issued' : 'Retired')
+            tokenLabel={pack.ticket?.id ?? (ticketNever ? 'Not issued' : 'Retired')}
+            value={
+              deal.outcome === 'cancelled'
+                ? 'None'
+                : deal.repayment === null
+                  ? 'Issued at fill'
+                  : cashText(deal.repayment)
             }
-            value={deal.repayment === null ? 'Issued at fill' : cashText(deal.repayment)}
             meta={
-              deal.dueNs === null ? 'Buys the coins back' : `Before ${formatDateNs(deal.dueNs)}`
+              deal.outcome === 'cancelled'
+                ? 'No lender filled the offer'
+                : deal.dueNs === null
+                  ? 'Buys the coins back'
+                  : `Before ${formatDateNs(deal.dueNs)}`
             }
             icon={<TicketIcon size={22} weight="fill" />}
             notch="var(--bg-secondary)"
@@ -477,7 +501,13 @@ function Rights({ pack, deal }: { readonly pack: PackDetail; readonly deal: Deal
           <Holder
             label="Ticket holder"
             accountId={pack.ticket?.owner ?? null}
-            empty={deal.outcome === 'listed' ? 'Issued to the borrower at fill' : 'Retired'}
+            empty={
+              deal.outcome === 'listed'
+                ? 'Issued to the borrower at fill'
+                : deal.outcome === 'cancelled'
+                  ? 'Never issued'
+                  : 'Retired'
+            }
           />
         </div>
       </div>
