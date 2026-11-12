@@ -23,9 +23,18 @@ export interface ToolSpec {
   };
 }
 
+export interface CompleteOptions {
+  /** Ask the endpoint for a JSON object reply (`response_format: json_object`). */
+  readonly json?: boolean;
+}
+
 export interface ChatModel {
   readonly id: string;
-  complete(messages: readonly ChatMessage[], tools: readonly ToolSpec[]): Promise<ChatMessage>;
+  complete(
+    messages: readonly ChatMessage[],
+    tools: readonly ToolSpec[],
+    options?: CompleteOptions,
+  ): Promise<ChatMessage>;
 }
 
 /**
@@ -43,6 +52,7 @@ export class OpenAiCompatibleModel implements ChatModel {
   async complete(
     messages: readonly ChatMessage[],
     tools: readonly ToolSpec[],
+    options: CompleteOptions = {},
   ): Promise<ChatMessage> {
     const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
@@ -54,6 +64,7 @@ export class OpenAiCompatibleModel implements ChatModel {
         model: this.id,
         messages,
         ...(tools.length === 0 ? {} : { tools, tool_choice: 'auto' }),
+        ...(options.json === true ? { response_format: { type: 'json_object' } } : {}),
         temperature: 0,
       }),
       signal: AbortSignal.timeout(this.timeoutMs),
