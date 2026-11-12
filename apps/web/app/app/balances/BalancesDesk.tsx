@@ -19,6 +19,7 @@ import { AppIcon, Button, Dialog, ErrorState, Skeleton, Tooltip, cx } from '@mos
 
 import { NEAR_MARK, markFill } from '../../../lib/asset-marks';
 import { formatCompact, formatUnits } from '../../../lib/format';
+import { useChainVersion } from '../../../lib/near/chain-change';
 import { useNetwork } from '../../../lib/near/network';
 import { useTransaction } from '../../../lib/near/useTransaction';
 import { useWallet } from '../../../lib/near/wallet';
@@ -56,6 +57,7 @@ function useHoldings(version: number): Load {
   const { network } = useNetwork();
   const { accountId } = useWallet();
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
+  const chainVersion = useChainVersion();
 
   useEffect(() => {
     if (accountId === null) return;
@@ -90,7 +92,7 @@ function useHoldings(version: number): Load {
     return () => {
       live = false;
     };
-  }, [network, accountId, version]);
+  }, [network, accountId, version, chainVersion]);
 
   return load;
 }
@@ -337,7 +339,10 @@ export function BalancesView({
           onClose={() => {
             setMove(null);
           }}
-          onDone={onDone}
+          onDone={() => {
+            setMove(null);
+            onDone();
+          }}
         />
       )}
     </>

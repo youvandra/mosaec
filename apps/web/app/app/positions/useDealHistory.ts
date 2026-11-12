@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { getPackDetails, listPacks } from '../../../lib/api';
 import { dealOf } from '../../../lib/deal';
+import { useChainVersion } from '../../../lib/near/chain-change';
 import { useNetwork } from '../../../lib/near/network';
 
 import type { Deal } from '../../../lib/deal';
@@ -29,10 +30,14 @@ export type HistoryState =
 export function useDealHistory(accountId: string): HistoryState {
   const { network } = useNetwork();
   const [state, setState] = useState<HistoryState>({ kind: 'loading' });
+  const chainVersion = useChainVersion();
+
+  useEffect(() => {
+    setState({ kind: 'loading' });
+  }, [network, accountId]);
 
   useEffect(() => {
     let live = true;
-    setState({ kind: 'loading' });
     (async () => {
       const packs = await listPacks(network, SCAN);
       const details = await getPackDetails(
@@ -61,7 +66,7 @@ export function useDealHistory(accountId: string): HistoryState {
     return () => {
       live = false;
     };
-  }, [network, accountId]);
+  }, [network, accountId, chainVersion]);
 
   return state;
 }

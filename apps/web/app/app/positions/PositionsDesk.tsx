@@ -19,6 +19,7 @@ import { payoutOf } from '../../../lib/collect';
 import { liveDealOf } from '../../../lib/deal';
 import { PAWN_STATUS } from '../../../lib/deal-status';
 import { formatDateNs, formatUnits, padCents } from '../../../lib/format';
+import { useChainVersion } from '../../../lib/near/chain-change';
 import { useNetwork } from '../../../lib/near/network';
 import { useWallet } from '../../../lib/near/wallet';
 import { amountText, cashText, termText } from '../../../lib/pack-view';
@@ -362,11 +363,16 @@ export function PositionsDesk() {
   const { network } = useNetwork();
   const { accountId } = useWallet();
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const chainVersion = useChainVersion();
 
+  useEffect(() => {
+    setState({ kind: 'loading' });
+  }, [network, accountId]);
+
+  /* Re-read after every chain change, keeping what is on screen until the answer lands. */
   useEffect(() => {
     if (accountId === null) return;
     let live = true;
-    setState({ kind: 'loading' });
     getPositions(network, accountId)
       .then((positions) => {
         if (live) setState({ kind: 'done', positions });
@@ -377,7 +383,7 @@ export function PositionsDesk() {
     return () => {
       live = false;
     };
-  }, [network, accountId]);
+  }, [network, accountId, chainVersion]);
 
   const positions = useMemo(
     () => (accountId !== null && state.kind === 'done' ? state.positions : null),

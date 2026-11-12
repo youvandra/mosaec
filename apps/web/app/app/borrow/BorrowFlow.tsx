@@ -22,6 +22,7 @@ import { ApiError, getPositions, requestInstantFill } from '../../../lib/api';
 import { ASSET_MARK } from '../../../lib/asset-marks';
 import { formatUnits, padCents } from '../../../lib/format';
 import { SIGN_FOOTNOTE } from '../../../lib/legal';
+import { useChainVersion } from '../../../lib/near/chain-change';
 import { useNetwork } from '../../../lib/near/network';
 import { useTransaction } from '../../../lib/near/useTransaction';
 import { useWallet } from '../../../lib/near/wallet';
@@ -273,6 +274,7 @@ export function BorrowFlow() {
   const refresh = useCallback(() => {
     setRefreshKey((key) => key + 1);
   }, []);
+  const chainVersion = useChainVersion();
 
   useEffect(() => {
     if (accountId === null) return;
@@ -295,12 +297,16 @@ export function BorrowFlow() {
     return () => {
       live = false;
     };
-  }, [accountId, network, tokenId, views, refreshKey]);
+  }, [accountId, network, tokenId, views, refreshKey, chainVersion]);
 
   useEffect(() => {
     setPackBalance(null);
     setOffered(false);
     setFunded(false);
+  }, [packId, tokenId]);
+
+  /* Re-read the pack after every chain change; what is on screen stays until the answer lands. */
+  useEffect(() => {
     if (packId === null) return;
     let live = true;
     Promise.all([views.balanceOf(packId, tokenId), views.positionOf(packId)])
@@ -309,8 +315,9 @@ export function BorrowFlow() {
         setPackBalance(balance);
         /* A filled pack is past this flow too: the desk or a lender already wrote it. */
         const state = position?.position.stage.state;
-        setOffered(state === 'offered' || state === 'written');
-        setFunded(state === 'written');
+        /* A read can land before the last transaction is final: never step back on one pack. */
+        setOffered((before) => before || state === 'offered' || state === 'written');
+        setFunded((before) => before || state === 'written');
         /* Resuming a pack: start from what it already holds unless the person typed an amount. */
         if (balance > 0n && !lockEdited) setLockText(plain(balance, collateral.decimals));
       })
@@ -320,7 +327,7 @@ export function BorrowFlow() {
     return () => {
       live = false;
     };
-  }, [packId, tokenId, views, refreshKey]);
+  }, [packId, tokenId, views, refreshKey, chainVersion]);
 
   const terms = TERM_OPTIONS.filter(
     (option) => option.testnetOnly !== true || network === 'testnet',
