@@ -1,7 +1,7 @@
 'use client';
 
 import { SortAscendingIcon } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Segmented, SelectMenu } from '@mosaec/ui';
 
@@ -9,6 +9,7 @@ import { dealApr } from '../../../lib/deal';
 
 import styles from './OfferBook.module.css';
 import { OfferCard } from './OfferCard';
+import { Pagination } from './Pagination';
 
 import type { Deal } from '../../../lib/deal';
 import type { ReactNode } from 'react';
@@ -21,6 +22,9 @@ export interface BookEntry {
 }
 
 type Filter = 'all' | 'ZEC' | 'BTC' | 'SOL';
+
+/** Three rows of three cards on a wide screen. */
+export const OFFERS_PER_PAGE = 9;
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -68,27 +72,48 @@ export function OfferBook({
 }) {
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('newest');
-  const shown = entries
+  const [page, setPage] = useState(1);
+  const top = useRef<HTMLElement>(null);
+  const matching = entries
     .filter(
       (entry) => filter === 'all' || entry.deal.collateral.some((line) => line.symbol === filter),
     )
     .sort((a, b) => compare(sort, a, b));
+  const pages = Math.max(1, Math.ceil(matching.length / OFFERS_PER_PAGE));
+  /* A refresh can shrink the book under the reader; stay on the last page that exists. */
+  const current = Math.min(page, pages);
+  const shown = matching.slice((current - 1) * OFFERS_PER_PAGE, current * OFFERS_PER_PAGE);
+  const goTo = (next: number) => {
+    setPage(next);
+    top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   return (
-    <section className={styles.book}>
+    <section className={styles.book} ref={top}>
       <div className={styles.head}>
         {title}
         <div className={styles.controls}>
-          <Segmented label="Collateral" options={FILTERS} value={filter} onChange={setFilter} />
+          <Segmented
+            label="Collateral"
+            options={FILTERS}
+            value={filter}
+            onChange={(next) => {
+              setFilter(next);
+              setPage(1);
+            }}
+          />
           <SelectMenu
             label="Sort"
             options={SORTS}
             value={sort}
-            onChange={setSort}
+            onChange={(next) => {
+              setSort(next);
+              setPage(1);
+            }}
             icon={<SortAscendingIcon size={16} />}
           />
         </div>
       </div>
-      <div key={`${filter}-${sort}`} className={styles.body}>
+      <div key={`${filter}-${sort}-${current.toString()}`} className={styles.body}>
         {shown.length === 0 ? (
           empty
         ) : (
@@ -105,6 +130,14 @@ export function OfferBook({
           </div>
         )}
       </div>
+      {matching.length > OFFERS_PER_PAGE && (
+        <div className={styles.foot}>
+          <span className="t-caption">
+            {`${((current - 1) * OFFERS_PER_PAGE + 1).toString()} to ${Math.min(current * OFFERS_PER_PAGE, matching.length).toString()} of ${matching.length.toString()} offers`}
+          </span>
+          <Pagination page={current} pages={pages} onPage={goTo} label="Open offers" />
+        </div>
+      )}
     </section>
   );
 }

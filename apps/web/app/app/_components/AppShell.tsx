@@ -47,6 +47,11 @@ const ICONS: Readonly<Record<AppRoute['icon'], Icon>> = {
 export function AppShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const active = activeRoute(pathname);
+  const onFaucet = pathname.startsWith(appPath('/faucet'));
+  /* The breadcrumb names the sidebar group, as a folder: it is a label, not a link. */
+  const group = onFaucet
+    ? 'Testnet'
+    : (ROUTE_GROUPS.find((item) => item.routes.some((route) => route === active))?.title ?? 'Home');
   const desk = useDeskStatus();
   const due = useDueSoon();
 
@@ -110,15 +115,13 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
             <Logo variant="mark" />
           </Link>
           <nav aria-label="Breadcrumb" className={styles.title}>
-            <Link href="/" className={styles.crumbHome}>
-              Home
-            </Link>
+            <span className={styles.crumbGroup}>{group}</span>
             <span className={styles.crumbSep} aria-hidden="true">
               /
             </span>
             <span aria-current="page">
               {active?.label ??
-                (pathname.startsWith(appPath('/faucet'))
+                (onFaucet
                   ? 'Test Tokens'
                   : pathname.startsWith(appPath('/packs/'))
                     ? 'Pack'

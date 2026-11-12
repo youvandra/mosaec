@@ -11,7 +11,7 @@ import Link from 'next/link';
 
 import { AppIcon, ButtonLink, Reveal, Tag, WordReveal, cx } from '@mosaec/ui';
 
-import { ASSET_MARK, NEAR_MARK } from '../../../lib/asset-marks';
+import { ASSET_FILL, ASSET_MARK, NEAR_MARK } from '../../../lib/asset-marks';
 import { PHOTOS } from '../../../lib/photos';
 import { SITE } from '../../../lib/site';
 import { Lanyard } from '../_components/Lanyard';
@@ -26,6 +26,8 @@ interface Tile {
   readonly label: string;
   readonly color: AppIconColor;
   readonly mark?: boolean;
+  /** Token colour the tile takes, so the round mark sits on its own colour. */
+  readonly fill?: string;
   readonly content: ReactNode;
   readonly side: 'left' | 'right';
   readonly offset: number;
@@ -48,10 +50,9 @@ const TILES: readonly Tile[] = [
     top: 108,
   },
   {
-    label: 'NEAR',
-    color: 'light',
-    mark: true,
-    content: mark(NEAR_MARK.src),
+    label: 'House desk',
+    color: 'violet',
+    content: <RobotIcon weight="fill" />,
     side: 'right',
     offset: 238,
     top: 112,
@@ -60,6 +61,7 @@ const TILES: readonly Tile[] = [
     label: 'Bitcoin',
     color: 'light',
     mark: true,
+    fill: ASSET_FILL.BTC,
     content: mark(ASSET_MARK.BTC),
     side: 'left',
     offset: 104,
@@ -70,6 +72,7 @@ const TILES: readonly Tile[] = [
     label: 'USD Coin',
     color: 'light',
     mark: true,
+    fill: ASSET_FILL.USDC,
     content: mark(ASSET_MARK.USDC),
     side: 'right',
     offset: 104,
@@ -88,6 +91,7 @@ const TILES: readonly Tile[] = [
     label: 'Solana',
     color: 'light',
     mark: true,
+    fill: ASSET_FILL.SOL,
     content: mark(ASSET_MARK.SOL),
     side: 'right',
     offset: 204,
@@ -102,7 +106,7 @@ export function Hero() {
       <div className={styles.content}>
         <div className={styles.orbitSlot}>
           <Lanyard className={cx(styles.tile, styles.center)} label="Zcash">
-            <AppIcon color="light" size={60} mark>
+            <AppIcon color="light" size={60} mark fill={ASSET_FILL.ZEC}>
               {mark(ASSET_MARK.ZEC)}
             </AppIcon>
           </Lanyard>
@@ -119,14 +123,24 @@ export function Hero() {
               } as CSSProperties
             }
           >
-            <AppIcon color={tile.color} size={60} mark={tile.mark ?? false}>
+            <AppIcon color={tile.color} size={60} mark={tile.mark ?? false} fill={tile.fill}>
               {tile.content}
             </AppIcon>
           </Lanyard>
         ))}
         <Reveal trigger="load" delay={0.1}>
           <Tag badge="New" shape={<SparkleIcon weight="fill" color="var(--ill-lime)" size={18} />}>
-            Live on NEAR Testnet
+            <span className={styles.liveOn}>
+              Live on
+              <Image
+                src={NEAR_MARK.src}
+                alt=""
+                width={16}
+                height={16}
+                className={styles.nearMark}
+              />
+              NEAR Testnet
+            </span>
           </Tag>
         </Reveal>
         <WordReveal
@@ -137,8 +151,8 @@ export function Hero() {
           lines={['Pawn Your Coins,', { text: 'Keep the Upside', className: 't-accent' }]}
         />
         <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
-          Borrow USDC against ZEC for a fixed repayment and a fixed date. The coins wait in a sealed
-          account until you pay.
+          Borrow USDC against ZEC, BTC or SOL for a fixed repayment by a fixed date. The House Desk
+          answers in a minute, and the coins wait in a sealed account until you pay.
         </Reveal>
         <Reveal trigger="load" delay={0.8} className={styles.actions}>
           <ButtonLink href={`${SITE.appUrl}/borrow`} as={Link}>
@@ -178,8 +192,8 @@ const FOLDERS = [
     href: '/lend',
   },
   {
-    title: 'Agents',
-    caption: 'Every rule is machine-readable',
+    title: 'House Desk',
+    caption: 'USDC in a minute, no liquidation',
     dot: 'var(--ill-orange)',
     icon: <RobotIcon weight="bold" color="var(--ill-orange)" />,
     photos: PHOTOS.agents,

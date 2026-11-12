@@ -58,7 +58,7 @@ function BorrowVisual() {
           ))}
         </div>
         <div className={cx(styles.chipRow, styles.reverse)}>
-          {[...TICKER_MARKS, ...TICKER_MARKS].map((mark, i) => (
+          {[...TICKER_MARKS, ...TICKER_MARKS, ...TICKER_MARKS, ...TICKER_MARKS].map((mark, i) => (
             <Chip key={i}>
               <AppIcon color="light" size={32} mark>
                 <Image src={mark.src} alt="" width={20} height={20} />
@@ -227,8 +227,8 @@ const TILES: readonly {
     visual: <VerifyVisual />,
   },
   {
-    href: '/agents',
-    title: 'Agents',
+    href: '/agents/connect',
+    title: 'Your Agent',
     body: 'Rules simple enough for software to price.',
     size: 'wide',
     visual: <AgentVisual />,

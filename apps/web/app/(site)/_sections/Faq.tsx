@@ -20,6 +20,10 @@ const QUESTIONS = [
     a: 'A lender gets a fixed repayment on a fixed date, backed by coins worth about twice the loan, with no oracle to manipulate and no liquidation race to win. The Title can be sold before the date.',
   },
   {
+    q: 'How fast does the USDC arrive?',
+    a: 'Take the House Desk quote and the USDC lands within a minute of signing. Set your own terms and it lands when a lender fills, at any point in the three days the offer stays open.',
+  },
+  {
     q: 'What does it cost?',
     a: 'The protocol fee is zero in this release. You pay NEAR gas, which is a fraction of a cent, plus the bridge fee when you withdraw coins to their home chain.',
   },

@@ -120,7 +120,17 @@ export function dealOf(network: NetworkId, pack: PackDetail): Deal {
   };
 }
 
-/** A deal for a list row, where history is absent: live fields only. */
+/** How a free pack's last round ended, from the status the read model keeps. */
+function closedOutcome(pack: Pack): DealOutcome {
+  if (pack.status === 'Redeemed') return 'redeemed';
+  if (pack.status === 'Forfeited') return 'forfeited';
+  return 'empty';
+}
+
+/**
+ * A deal for a list row, where history is absent: live fields only. A free pack still says how
+ * its last round ended, so a list degrades to fewer numbers rather than to "empty".
+ */
 export function liveDealOf(pack: Pack): Deal {
   return {
     collateral: pack.contents,
@@ -133,7 +143,12 @@ export function liveDealOf(pack: Pack): Deal {
     settledAtNs: null,
     borrower: pack.offer?.maker ?? null,
     lender: null,
-    outcome: pack.state === 'offered' ? 'listed' : pack.state === 'written' ? 'running' : 'empty',
+    outcome:
+      pack.state === 'offered'
+        ? 'listed'
+        : pack.state === 'written'
+          ? 'running'
+          : closedOutcome(pack),
   };
 }
 

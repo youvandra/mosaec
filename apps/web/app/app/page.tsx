@@ -1,8 +1,4 @@
-import {
-  CalendarCheckIcon,
-  StorefrontIcon,
-  WarningCircleIcon,
-} from '@phosphor-icons/react/dist/ssr';
+import { StorefrontIcon, WarningCircleIcon } from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 
 import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
@@ -10,11 +6,10 @@ import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
 import { liveDealOf } from '../../lib/deal';
 import { exampleDeal, loadMarket } from '../../lib/market';
 
-import { Activity } from './_components/Activity';
-import { MarketStats } from './_components/MarketStats';
+import { MarketStrip, RecentPawns, marketFigures } from './_components/MarketSummary';
 import { OfferBook } from './_components/OfferBook';
 import { OfferCard } from './_components/OfferCard';
-import { PageHeader, PageSection, SectionTitle } from './_components/PageHeader';
+import { PageHeader, SectionTitle } from './_components/PageHeader';
 import { appPath } from './_components/routes';
 import styles from './market.module.css';
 
@@ -50,6 +45,7 @@ function EmptyBook() {
 
 export default async function MarketPage() {
   const data = await loadMarket();
+  const figures = data === null ? null : marketFigures(data);
 
   return (
     <>
@@ -63,7 +59,7 @@ export default async function MarketPage() {
           </ButtonLink>
         }
       />
-      {data === null ? (
+      {data === null || figures === null ? (
         <ErrorState
           title="The market is unavailable right now"
           icon={<WarningCircleIcon size={22} />}
@@ -73,17 +69,16 @@ export default async function MarketPage() {
         </ErrorState>
       ) : (
         <>
-          <MarketStats data={data} />
+          <MarketStrip figures={figures} />
           <OfferBook
             title={
               <SectionTitle
-                title="Open offers"
                 tag={
                   <Tag
                     badge="1"
                     shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
                   >
-                    Lend
+                    Open Offers
                   </Tag>
                 }
               />
@@ -96,22 +91,7 @@ export default async function MarketPage() {
               offerEndsNs: pack.offer?.expiresAtNs ?? null,
             }))}
           />
-          {data.activity.length > 0 && (
-            <PageSection
-              title="Recent pawns"
-              tag={
-                <Tag
-                  badge="2"
-                  shape={<CalendarCheckIcon weight="fill" size={16} color="var(--ill-lime)" />}
-                >
-                  On chain
-                </Tag>
-              }
-              lead="Every pawn so far, read from chain."
-            >
-              <Activity items={data.activity} />
-            </PageSection>
-          )}
+          <RecentPawns figures={figures} />
         </>
       )}
     </>

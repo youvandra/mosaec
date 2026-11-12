@@ -52,3 +52,8 @@
   width: 62%;
   height: 62%;
 }
+/* The disc matches the tile, so the mark can grow until its glyph reads at tile scale. */
+.filled.mark > img {
+  width: 92%;
+  height: 92%;
+}
