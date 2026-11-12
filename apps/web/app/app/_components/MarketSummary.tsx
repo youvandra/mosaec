@@ -1,7 +1,12 @@
-import { CoinsIcon, SealCheckIcon, StorefrontIcon } from '@phosphor-icons/react/dist/ssr';
+import {
+  CalendarCheckIcon,
+  CoinsIcon,
+  SealCheckIcon,
+  StorefrontIcon,
+} from '@phosphor-icons/react/dist/ssr';
 
 import { ASSETS } from '@mosaec/config/assets';
-import { AppIcon } from '@mosaec/ui';
+import { AppIcon, Tag } from '@mosaec/ui';
 
 import { formatCompact, formatUnits, padCents } from '../../../lib/format';
 
@@ -9,6 +14,7 @@ import { Activity } from './Activity';
 import { SoftPill } from './ListCard';
 import { LiveList } from './LiveList';
 import styles from './MarketSummary.module.css';
+import { PageSection } from './PageHeader';
 
 import type { ActivityItem } from './Activity';
 import type { DealOutcome } from '../../../lib/deal';
@@ -17,7 +23,7 @@ import type { AppIconColor } from '@mosaec/ui';
 import type { ReactNode } from 'react';
 
 const USDC = ASSETS.USDC;
-/** Pawns in the rail; the open book stays the page's main list. */
+/** Pawns listed under the book; the open offers stay the page's main list. */
 const RECENT = 6;
 /** Pawns a lender filled. Open offers are in the book; empty or cancelled packs say nothing. */
 const FILLED: readonly DealOutcome[] = ['running', 'redeemed', 'forfeited'];
@@ -109,18 +115,27 @@ export function MarketStrip({ figures }: { readonly figures: MarketFigures }) {
   );
 }
 
-/** The latest filled pawns as a live feed beside the book; new or changed rows glow once. */
-export function RecentRail({ figures }: { readonly figures: MarketFigures }) {
+/** The latest filled pawns under the book, live; new or changed rows glow once. */
+export function RecentPawns({ figures }: { readonly figures: MarketFigures }) {
   if (figures.recent.length === 0) return null;
   return (
-    <aside className={styles.rail} aria-label="Recent pawns">
+    <PageSection
+      title="How the latest pawns ended"
+      tag={
+        <Tag
+          badge="2"
+          shape={<CalendarCheckIcon weight="fill" size={16} color="var(--ill-lime)" />}
+        >
+          Recent Pawns
+        </Tag>
+      }
+    >
       <LiveList keys={figures.recent.map((item) => `${item.packId}:${item.deal.outcome}`)} />
       <Activity
         items={figures.recent}
-        title="Recent pawns"
+        title={`Latest ${figures.recent.length.toString()}`}
         aside={<SoftPill tone="accent">Live</SoftPill>}
-        compact
       />
-    </aside>
+    </PageSection>
   );
 }

@@ -40,18 +40,3 @@
     border-radius: var(--radius-panel);
   }
 }
-
-/* Offers take the wide column; the recent pawns feed rides beside them. */
-.stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 24px;
-  align-items: start;
-  margin-top: 40px;
-}
-@media (max-width: 1099.98px) {
-  .stage {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
-  }
-}

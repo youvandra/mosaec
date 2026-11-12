@@ -42,17 +42,6 @@
   letter-spacing: 0;
   color: var(--text-secondary);
 }
-/* The feed stays in view while the book scrolls. */
-.rail {
-  position: sticky;
-  top: 88px;
-  min-width: 0;
-}
-@media (max-width: 1099.98px) {
-  .rail {
-    position: static;
-  }
-}
 @media (max-width: 639.98px) {
   .strip {
     gap: 8px;

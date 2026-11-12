@@ -6,7 +6,7 @@ import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
 import { liveDealOf } from '../../lib/deal';
 import { exampleDeal, loadMarket } from '../../lib/market';
 
-import { MarketStrip, RecentRail, marketFigures } from './_components/MarketSummary';
+import { MarketStrip, RecentPawns, marketFigures } from './_components/MarketSummary';
 import { OfferBook } from './_components/OfferBook';
 import { OfferCard } from './_components/OfferCard';
 import { PageHeader, SectionTitle } from './_components/PageHeader';
@@ -70,31 +70,33 @@ export default async function MarketPage() {
       ) : (
         <>
           <MarketStrip figures={figures} />
-          <div className={styles.stage}>
-            <OfferBook
-              title={
-                <SectionTitle
-                  title="Open offers"
-                  tag={
-                    <Tag
-                      badge="1"
-                      shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
-                    >
-                      Lend
-                    </Tag>
-                  }
-                />
-              }
-              empty={<EmptyBook />}
-              entries={data.offers.map((pack) => ({
-                packId: pack.id,
-                index: pack.index,
-                deal: liveDealOf(pack),
-                offerEndsNs: pack.offer?.expiresAtNs ?? null,
-              }))}
-            />
-            <RecentRail figures={figures} />
-          </div>
+          <OfferBook
+            title={
+              <SectionTitle
+                title={
+                  data.offers.length === 0
+                    ? 'Nothing waits for a lender'
+                    : `${data.offers.length.toString()} ${data.offers.length === 1 ? 'pawn waits' : 'pawns wait'} for a lender`
+                }
+                tag={
+                  <Tag
+                    badge="1"
+                    shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
+                  >
+                    Open Offers
+                  </Tag>
+                }
+              />
+            }
+            empty={<EmptyBook />}
+            entries={data.offers.map((pack) => ({
+              packId: pack.id,
+              index: pack.index,
+              deal: liveDealOf(pack),
+              offerEndsNs: pack.offer?.expiresAtNs ?? null,
+            }))}
+          />
+          <RecentPawns figures={figures} />
         </>
       )}
     </>

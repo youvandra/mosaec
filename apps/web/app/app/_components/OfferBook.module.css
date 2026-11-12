@@ -3,7 +3,9 @@
   flex-direction: column;
   gap: 20px;
   min-width: 0;
+  margin-top: 48px;
   container-type: inline-size;
+  scroll-margin-top: 96px;
 }
 .head {
   display: flex;
@@ -17,6 +19,14 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  padding-top: 8px;
 }
 .body {
   animation: book-in 0.45s var(--ease-out) both;
@@ -48,6 +58,14 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+  }
   .body {
     animation: none;
   }
