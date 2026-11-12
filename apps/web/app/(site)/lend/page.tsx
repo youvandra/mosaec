@@ -30,7 +30,7 @@ import {
 } from '@mosaec/ui';
 
 import { listOffers } from '../../../lib/api';
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { formatUnits } from '../../../lib/format';
 import { SITE } from '../../../lib/site';
 import { Eyebrow, FaqBlock, SectionIntro } from '../_blocks';
@@ -418,7 +418,7 @@ function OfferRow({ pack }: { readonly pack: Pack }) {
   const days = termNs === null || termNs === undefined ? null : BigInt(termNs) / NS_PER_DAY;
   return (
     <li className={styles.offer}>
-      <AppIcon color="light" size={40} mark>
+      <AppIcon color="light" size={40} mark fill={markFill(mark)}>
         <Image src={mark} alt="" width={24} height={24} />
       </AppIcon>
       <div className={styles.offerMain}>

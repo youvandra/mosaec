@@ -1,11 +1,8 @@
 'use client';
 
 import { CalendarCheckIcon, LockKeyIcon, TicketIcon } from '@phosphor-icons/react';
-import Image from 'next/image';
 
-import { AppIcon, cx, useInViewMotion } from '@mosaec/ui';
-
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { AppIcon, Mark, cx, useInViewMotion } from '@mosaec/ui';
 
 import styles from './Statement.module.css';
 
@@ -13,7 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 const ICON_SIZE = 60;
 
-function tile(color: 'light' | 'ink' | 'orange' | 'green', node: ReactNode, mark = false) {
+function tile(color: 'blue' | 'ink' | 'orange' | 'green', node: ReactNode, mark = false) {
   return (
     <span className={styles.icon}>
       <AppIcon color={color} size={ICON_SIZE} mark={mark}>
@@ -25,7 +22,7 @@ function tile(color: 'light' | 'ink' | 'orange' | 'green', node: ReactNode, mark
 
 const PIECES: readonly (string | ReactNode)[] = [
   'Mosaec',
-  tile('light', <Image src={ASSET_MARK.ZEC} alt="" width={36} height={36} />, true),
+  tile('blue', <Mark className={styles.brand} />),
   'keeps your coins in a sealed account,',
   tile('ink', <LockKeyIcon weight="fill" />),
   'hands you a Ticket',

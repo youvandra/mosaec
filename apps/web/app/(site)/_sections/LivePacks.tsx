@@ -6,7 +6,7 @@ import { DEFAULT_NETWORK } from '@mosaec/config/networks';
 import { AppIcon, ButtonLink, Reveal, Section, StatusPill, Tag, WordReveal, cx } from '@mosaec/ui';
 
 import { listPacks } from '../../../lib/api';
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { PAWN_STATUS } from '../../../lib/deal-status';
 import { formatUnits } from '../../../lib/format';
 import { SITE } from '../../../lib/site';
@@ -38,7 +38,12 @@ function PackRow({ pack }: { readonly pack: Pack }) {
   const symbol = first?.symbol ?? null;
   return (
     <li className={styles.row}>
-      <AppIcon color="light" size={40} mark>
+      <AppIcon
+        color="light"
+        size={40}
+        mark
+        fill={markFill(ASSET_MARK[isAssetSymbol(symbol) ? symbol : 'ZEC'])}
+      >
         <Image
           src={ASSET_MARK[isAssetSymbol(symbol) ? symbol : 'ZEC']}
           alt=""
