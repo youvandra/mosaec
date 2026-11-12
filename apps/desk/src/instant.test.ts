@@ -77,7 +77,7 @@ function build() {
   };
   const volatility = { of: () => Promise.resolve(null) } as unknown as RealisedVolatility;
   const cards = new RateCards(desk, repository, volatility, model);
-  return new InstantDesk(desk, repository, cards, new QuoteSigner('s'.repeat(64)), () => clock);
+  return new InstantDesk(desk, repository, cards, new QuoteSigner('s'.repeat(64)), () => clock, 1);
 }
 
 async function quoted(instant: InstantDesk): Promise<InstantQuote> {
@@ -192,6 +192,13 @@ describe('InstantDesk.fill', () => {
     offer = offerFrom(quote);
     balance = 1_000_000n;
     expect(await instant.fill(fillOf(quote))).toMatchObject({ code: 'DESK_BUDGET' });
+  });
+
+  it('refuses when the pack never shows the offer', async () => {
+    const instant = build();
+    const quote = await quoted(instant);
+    expect(await instant.fill(fillOf(quote))).toMatchObject({ code: 'DESK_POLICY' });
+    expect(sent).toHaveLength(0);
   });
 
   it('fills once when the same quote is sent twice at the same time', async () => {

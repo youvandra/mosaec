@@ -6,6 +6,7 @@ export type FunnelEvent =
   | 'wallet_connected'
   | 'borrow_started'
   | 'offer_signed'
+  | 'instant_filled'
   | 'fill_started'
   | 'fill_settled'
   | 'redeem_settled'

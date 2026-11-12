@@ -7,6 +7,7 @@ import { MosaecViews, NearRpc } from '@mosaec/sdk';
 
 import { createApp } from './app';
 import { loadApiEnv } from './env';
+import { HttpInstantDesk } from './lib/desk-client';
 import { NearFaucetSender } from './lib/faucet-sender';
 
 import type { DeskBalanceProbe } from './services/desk-service';
@@ -43,6 +44,7 @@ serve({
       env.FAUCET_SECRET_KEY === undefined
         ? undefined
         : new NearFaucetSender('faucet.mosaec.testnet', env.FAUCET_SECRET_KEY),
+    instantDesk: new HttpInstantDesk(env.DESK_URL),
   }).fetch,
   port: env.API_PORT,
 });

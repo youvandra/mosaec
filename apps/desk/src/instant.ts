@@ -17,6 +17,9 @@ import type { ErrorCode } from '@mosaec/domain';
 /** How long the desk honours a quote, loan to value included. */
 export const QUOTE_TTL_MS = 10 * 60_000;
 const CLOCK_SLACK_MS = 60_000;
+/** Reads of a missing offer before the fill gives up, one gap apart. */
+const OFFER_READS = 8;
+const OFFER_READ_GAP_MS = 1_000;
 const BPS = 10_000n;
 const USDC_WHOLE = 1_000_000n;
 const NS_PER_MS = 1_000_000n;
@@ -61,6 +64,7 @@ export class InstantDesk {
     private readonly cards: RateCards,
     private readonly signer: QuoteSigner,
     private readonly now: () => number = Date.now,
+    private readonly offerReads: number = OFFER_READS,
   ) {}
 
   async quote(request: QuoteRequest): Promise<QuoteAnswer> {
@@ -162,7 +166,7 @@ export class InstantDesk {
       if (earlier !== null && sameTerms(earlier.quote, request)) {
         return { status: 'filled', txHash: earlier.txHash, quote: earlier.quote };
       }
-      const offer = await this.desk.liveOffer(request.pack);
+      const offer = await this.offerOf(request.pack);
       if (offer === null) return refuse('DESK_POLICY', 'The pack is not offered.');
       const mismatch = this.mismatch(offer, request);
       if (mismatch !== null) return refuse('DESK_QUOTE_MISMATCH', mismatch);
@@ -181,6 +185,18 @@ export class InstantDesk {
         `Instant loan at card ${request.cardId}.`,
       );
     });
+  }
+
+  /**
+   * The live offer on `pack`. The app asks for the fill the moment the borrower's offer settles,
+   * and final-state reads trail that by a few blocks, so a missing offer is read again briefly.
+   */
+  private async offerOf(pack: string): Promise<OfferInput | null> {
+    for (let attempt = 1; ; attempt += 1) {
+      const offer = await this.desk.liveOffer(pack);
+      if (offer !== null || attempt >= this.offerReads) return offer;
+      await new Promise((resolve) => setTimeout(resolve, OFFER_READ_GAP_MS));
+    }
   }
 
   /** Why the live offer differs from the quote, or null when every term matches. */
