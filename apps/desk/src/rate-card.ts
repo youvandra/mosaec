@@ -18,10 +18,8 @@ export const MIN_CARD_LTV_BPS = 2_000;
 const MAX_REASON = 280;
 const BPS = 10_000n;
 
-const SYSTEM = `You set the monthly rate card of the Mosaec house lending desk on NEAR. The desk lends USDC against sealed coins with no liquidation: if the borrower misses the date, the desk keeps the coins. Price each coin so the desk is paid for the risk of keeping coins that fell in value.
-For each asset you get its fair monthly rate, the band you must stay inside, 30-day realised volatility, how much of the desk's limit is lent out, repaid and forfeited pawn counts, and the previous card.
-Raise the rate when volatility, utilisation or forfeits rise; lower it toward the floor when the book is idle and calm. Tighten max_ltv_bps when volatility is high.
-Reply with JSON only, no prose: {"cards":[{"asset":"ZEC","monthly_bps":275,"max_ltv_bps":5000,"reason":"one sentence grounded in the inputs"}]}`;
+/* Kept short: a small model on a CPU host reads every token of it each hour. */
+const SYSTEM = `You set the monthly rate card of a USDC lending desk that lends against sealed coins with no liquidation; on a missed date it keeps the coins. Raise the rate when volatility, utilisation or forfeits rise; lower it toward the floor when calm. Tighten max_ltv_bps when volatility is high. Stay inside min and max. Reply with JSON only: {"cards":[{"asset":"ZEC","monthly_bps":275,"max_ltv_bps":5000,"reason":"one short sentence"}]}`;
 
 const proposalSchema = z.object({
   cards: z.array(
@@ -190,9 +188,10 @@ export class RateCards {
       const reply = await this.model.complete(
         [
           { role: 'system', content: SYSTEM },
-          { role: 'user', content: `Inputs:\n${JSON.stringify(inputs, null, 2)}` },
+          { role: 'user', content: `Inputs: ${JSON.stringify(inputs)}` },
         ],
         [],
+        { json: true },
       );
       return parseProposals(reply.role === 'assistant' ? reply.content : null);
     } catch {

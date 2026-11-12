@@ -89,7 +89,8 @@ async function main(): Promise<void> {
       );
     }
   };
-  await setCards();
+  /* A model on the desk's CPU takes minutes per card; the loop does not wait for it. */
+  void setCards();
   setInterval(() => void setCards(), CARD_INTERVAL_MS);
 
   await tick();
