@@ -5,7 +5,8 @@
   gap: calc(var(--logo-size) * 0.23);
   color: var(--text-primary);
 }
-/* The brand box keeps the old badge footprint so layouts stay put; the mark spans most of it. */
+/* The brand box keeps the old badge footprint so layouts stay put; the mark sits inside it with
+   room on each side, so it clears a rounded bar edge. */
 .box {
   display: inline-flex;
   align-items: center;
@@ -15,7 +16,7 @@
   height: var(--logo-size);
 }
 .mark {
-  width: 92%;
+  width: 76%;
   height: auto;
 }
 .word {
