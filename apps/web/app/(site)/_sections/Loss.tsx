@@ -73,7 +73,8 @@ export function Loss({ badge = '1' }: { readonly badge?: string }) {
             </div>
           </Reveal>
           <Reveal as="p" className={cx('t-caption', styles.source)}>
-            Every 90-day start date from {R.span}, hourly prices; Rhea events to {L.measuredOn}.
+            Every 90-day start date from {R.span}, hourly prices, pawn at {R.pawnMonthlyRate} a
+            month; Rhea events to {L.measuredOn}.
           </Reveal>
         </div>
       </div>
