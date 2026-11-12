@@ -10,7 +10,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ASSETS } from '@mosaec/config/assets';
 import { NETWORKS, explorerTxUrl } from '@mosaec/config/networks';
@@ -25,6 +25,11 @@ import { SIGN_FOOTNOTE } from '../../../lib/legal';
 import { useNetwork } from '../../../lib/near/network';
 import { useTransaction } from '../../../lib/near/useTransaction';
 import { useWallet } from '../../../lib/near/wallet';
+import {
+  clearPendingInstant,
+  loadPendingInstant,
+  savePendingInstant,
+} from '../../../lib/pending-instant';
 import { usdText, useUsdPrices } from '../../../lib/prices';
 import {
   SUGGESTED_LTV,
@@ -251,6 +256,7 @@ export function BorrowFlow() {
   const [assetMenu, setAssetMenu] = useState(false);
   const [route, setRoute] = useState<LoanRoute>('instant');
   const [instantFilling, setInstantFilling] = useState(false);
+  const resumed = useRef(false);
   const toast = useToast();
 
   const confirm = useConfirm();
@@ -478,6 +484,24 @@ export function BorrowFlow() {
     }
   };
 
+  /* Back from a redirect wallet: the offer was signed elsewhere, so ask for the fill now. */
+  useEffect(() => {
+    if (accountId === null || resumed.current) return;
+    const pending = loadPendingInstant(network, Date.now());
+    if (pending === null) return;
+    resumed.current = true;
+    clearPendingInstant();
+    views
+      .positionOf(pending.pack)
+      .then((position) => {
+        const stage = position?.position.stage;
+        if (stage?.state !== 'offered' || stage.maker_id !== accountId) return;
+        setPackId(pending.pack);
+        void fillInstantly(pending.pack, pending.quote);
+      })
+      .catch(() => undefined);
+  }, [accountId, network, views]);
+
   const sendInstant = async () => {
     if (packId === null) return;
     const current = await instantQuote.fresh();
@@ -507,6 +531,7 @@ export function BorrowFlow() {
       confirmLabel: 'Sign And Get USDC',
     });
     if (!ok) return;
+    savePendingInstant({ network, pack: packId, quote });
     const sent = await offerTx.run(
       [
         calls.offer({
@@ -520,7 +545,9 @@ export function BorrowFlow() {
       ],
       { pending: 'Signing the offer', success: 'Offer signed' },
     );
+    /* Null after a redirect too: the stored quote resumes the fill when the borrower is back. */
     if (sent === null) return;
+    clearPendingInstant();
     setOffered(true);
     track('offer_signed');
     await fillInstantly(packId, quote);
