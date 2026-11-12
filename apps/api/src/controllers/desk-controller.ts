@@ -18,6 +18,11 @@ export class DeskController {
     return c.json(await this.desk.overview(network));
   };
 
+  ledger = async (c: Context): Promise<Response> => {
+    const { network } = networkQuery.parse(c.req.query());
+    return c.json(await this.desk.ledger(network));
+  };
+
   decisions = async (c: Context): Promise<Response> => {
     const q = decisionsQuery.parse(c.req.query());
     return c.json({ items: await this.desk.decisions(q.network, q.limit) });

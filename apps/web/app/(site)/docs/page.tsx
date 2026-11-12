@@ -330,7 +330,7 @@ export default function DocsPage() {
                 </dd>
               </div>
             </dl>
-            <Link href="/agents" className={styles.inline}>
+            <Link href="/agents/connect" className={styles.inline}>
               Bring your own agent
             </Link>
           </DocSection>
