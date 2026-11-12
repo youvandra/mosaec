@@ -5,11 +5,14 @@ import { formatCompact, formatUnits, padCents } from '../../../lib/format';
 import { Activity } from './Activity';
 import styles from './MarketSummary.module.css';
 
+import type { DealOutcome } from '../../../lib/deal';
 import type { MarketData } from '../../../lib/market';
 
 const USDC = ASSETS.USDC;
-/** Pawns shown beside the totals; the book below stays the page's main list. */
+/** Pawns shown above the book; the open offers below stay the page's main list. */
 const RECENT = 4;
+/** Pawns a lender filled. Open offers are listed below, and empty or cancelled packs say nothing. */
+const FILLED: readonly DealOutcome[] = ['running', 'redeemed', 'forfeited'];
 
 /** Totals stay exact to the cent until 10,000, then read as `12.5K` or `1M`. */
 function cash(amount: bigint): string {
@@ -17,53 +20,33 @@ function cash(amount: bigint): string {
   return padCents(formatUnits(amount, USDC.decimals, 2));
 }
 
-function totals(data: MarketData) {
-  const lent = data.activity
-    .filter((item) => item.deal.filledAtNs !== null)
-    .reduce((sum, item) => sum + BigInt(item.deal.principal?.amount ?? '0'), 0n);
-  const settled = data.activity.filter(
-    (item) => item.deal.outcome === 'redeemed' || item.deal.outcome === 'forfeited',
-  );
-  const repaid = settled.filter((item) => item.deal.outcome === 'redeemed').length;
-  return { open: data.offers.length, lent, settled: settled.length, repaid };
-}
-
-/** One compact card of totals beside the latest pawns, above the open book. */
+/** The latest filled pawns in one card, with the book's totals in its header. */
 export function MarketSummary({ data }: { readonly data: MarketData }) {
-  const t = totals(data);
+  const filled = data.activity.filter((item) => FILLED.includes(item.deal.outcome));
+  if (filled.length === 0) return null;
+  const lent = filled.reduce((sum, item) => sum + BigInt(item.deal.principal?.amount ?? '0'), 0n);
+  const settled = filled.filter((item) => item.deal.outcome !== 'running');
+  const repaid = settled.filter((item) => item.deal.outcome === 'redeemed').length;
+  const totals = [
+    { value: `${cash(lent)} USDC`, label: 'lent' },
+    ...(settled.length === 0
+      ? []
+      : [{ value: `${repaid.toString()} of ${settled.length.toString()}`, label: 'repaid' }]),
+  ];
   return (
-    <div className={styles.overview}>
-      <section className={styles.totals} aria-label="Market totals">
-        <div className={styles.metric}>
-          <span className={styles.label}>Open offers</span>
-          <span className={styles.value}>{t.open.toString()}</span>
-        </div>
-        <div className={styles.metric}>
-          <span className={styles.label}>Lent so far</span>
-          <span className={styles.value}>
-            {cash(t.lent)}
-            <span className={styles.unit}>USDC</span>
-          </span>
-        </div>
-        <div className={styles.metric}>
-          <span className={styles.label}>Repaid on time</span>
-          <span className={styles.value}>
-            {t.settled === 0 ? '–' : `${t.repaid.toString()} of ${t.settled.toString()}`}
-          </span>
-          <span className={styles.bar} aria-hidden="true">
-            <span
-              style={{
-                width: `${(t.settled === 0 ? 0 : (t.repaid / t.settled) * 100).toFixed(1)}%`,
-              }}
-            />
-          </span>
-        </div>
-      </section>
-      {data.activity.length > 0 && (
-        <div className={styles.recent}>
-          <Activity items={data.activity.slice(0, RECENT)} title="Recent pawns" />
-        </div>
-      )}
-    </div>
+    <Activity
+      items={filled.slice(0, RECENT)}
+      title="Recent pawns"
+      aside={
+        <dl className={styles.totals}>
+          {totals.map((item) => (
+            <div key={item.label}>
+              <dt>{item.label}</dt>
+              <dd>{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      }
+    />
   );
 }

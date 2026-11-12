@@ -9,6 +9,7 @@ import { ListCard, ListRow, SoftPill } from './ListCard';
 import { packPath } from './routes';
 
 import type { Deal } from '../../../lib/deal';
+import type { ReactNode } from 'react';
 
 export interface ActivityItem {
   readonly packId: string;
@@ -25,10 +26,13 @@ function when(deal: Deal): string {
 export function Activity({
   items,
   title,
+  aside,
 }: {
   readonly items: readonly ActivityItem[];
   /** Card title; defaults to the pawn count. */
   readonly title?: string;
+  /** Header content beside the title; defaults to the repaid count. */
+  readonly aside?: ReactNode;
 }) {
   const settled = items.filter(
     (item) => item.deal.outcome === 'redeemed' || item.deal.outcome === 'forfeited',
@@ -38,9 +42,10 @@ export function Activity({
     <ListCard
       title={title ?? `${items.length.toString()} pawns`}
       pill={
-        settled.length > 0 ? (
+        aside ??
+        (settled.length > 0 ? (
           <SoftPill>{`${repaid.toString()} of ${settled.length.toString()} repaid`}</SoftPill>
-        ) : undefined
+        ) : undefined)
       }
     >
       {items.map(({ packId, index, deal }) => {
