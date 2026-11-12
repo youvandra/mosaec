@@ -388,7 +388,7 @@ export async function claimFaucet(accountId: string): Promise<FaucetGrant> {
   return { accountId: body.accountId ?? accountId, txHash: body.txHash };
 }
 
-const instantQuoteSchema = z.object({
+export const instantQuoteSchema = z.object({
   network: z.string(),
   asset: z.enum(['ZEC', 'BTC', 'SOL']),
   amount: z.string(),
