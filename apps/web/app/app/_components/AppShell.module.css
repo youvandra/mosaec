@@ -145,12 +145,8 @@
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
-.crumbHome {
+.crumbGroup {
   color: var(--text-tertiary);
-  transition: color var(--dur-hover) var(--ease-link);
-}
-.crumbHome:hover {
-  color: var(--text-primary);
 }
 .crumbSep {
   color: var(--text-tertiary);

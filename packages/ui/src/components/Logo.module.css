@@ -17,7 +17,7 @@
   border-radius: 50%;
   background: var(--logo-badge);
   color: var(--logo-ink);
-  transition: transform 0.6s var(--spring-pop);
+  transition: transform 0.7s var(--ease-out);
 }
 /* 60% of the badge, nudged 2% down so the rising lobes sit on the optical centre. */
 .mark {
@@ -41,6 +41,6 @@
   .interactive:hover .badge,
   a:hover > .logo .badge,
   a:focus-visible > .logo .badge {
-    transform: rotate(90deg) scale(1.06);
+    transform: rotate(180deg) scale(1.06);
   }
 }

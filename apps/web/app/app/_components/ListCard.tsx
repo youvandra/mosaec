@@ -10,17 +10,21 @@ import type { ReactNode } from 'react';
 export function ListCard({
   title,
   pill,
+  top,
   children,
   className,
 }: {
   readonly title: ReactNode;
   readonly pill?: ReactNode;
+  /** A band above the header, such as a row of totals. */
+  readonly top?: ReactNode;
   readonly children: ReactNode;
   readonly className?: string;
 }) {
   return (
     <section className={cx(styles.card, className)}>
-      <header className={styles.header}>
+      {top}
+      <header className={cx(styles.header, top !== undefined && styles.headerRuled)}>
         <span className="t-h5">{title}</span>
         {pill}
       </header>
@@ -53,7 +57,10 @@ export function ListRow({
   valueNote,
   href,
   trailing,
+  rowKey,
 }: {
+  /** Identity of the row's content, so a live list can mark rows that changed. */
+  readonly rowKey?: string;
   readonly icon: ReactNode;
   readonly title: ReactNode;
   readonly meta?: ReactNode;
@@ -79,7 +86,7 @@ export function ListRow({
     </>
   );
   return (
-    <li className={styles.item}>
+    <li className={styles.item} data-row={rowKey}>
       {href === undefined ? (
         <div className={styles.row}>{body}</div>
       ) : (

@@ -27,12 +27,15 @@ export function Activity({
   items,
   title,
   aside,
+  top,
 }: {
   readonly items: readonly ActivityItem[];
   /** Card title; defaults to the pawn count. */
   readonly title?: string;
   /** Header content beside the title; defaults to the repaid count. */
   readonly aside?: ReactNode;
+  /** A band above the header, such as totals. */
+  readonly top?: ReactNode;
 }) {
   const settled = items.filter(
     (item) => item.deal.outcome === 'redeemed' || item.deal.outcome === 'forfeited',
@@ -41,6 +44,7 @@ export function Activity({
   return (
     <ListCard
       title={title ?? `${items.length.toString()} pawns`}
+      top={top}
       pill={
         aside ??
         (settled.length > 0 ? (
@@ -54,6 +58,7 @@ export function Activity({
         return (
           <ListRow
             key={packId}
+            rowKey={`${packId}:${deal.outcome}`}
             href={packPath(packId)}
             icon={<CoinTile symbol={lead?.symbol ?? null} />}
             title={`Pack #${index} · ${lead === undefined ? 'empty' : amountText(lead)}`}
