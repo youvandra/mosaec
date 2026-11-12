@@ -49,7 +49,10 @@ export function Loss({ badge = '1' }: { readonly badge?: string }) {
               The Loss
             </Tag>
           </Reveal>
-          <WordReveal className="t-h1" lines={['A liquidation sells', 'at the low.']} />
+          <WordReveal
+            className="t-h1"
+            lines={['A liquidation dumps', 'your coins at the bottom.']}
+          />
           <Reveal as="p" className="t-body-lg">
             A price-triggered loan closes at the worst hour and sells your coins to settle it. On{' '}
             {L.venue}, {L.accounts} accounts lost {L.seizedZec} ZEC this way in a year, and most of

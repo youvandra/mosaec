@@ -221,7 +221,7 @@ function Cost() {
             label="Real Cost of a Loan"
           />
         }
-        title={['What a liquidation', 'really costs.']}
+        title={['The real price', 'of getting liquidated.']}
         lead={`The same loan held ${R.termDays.toString()} days at ${R.ltv} loan-to-value, started at every hour on record. Each bar is the share of start dates on which the borrower lost the coins.`}
       />
       <CompareBars
@@ -277,7 +277,7 @@ function Steps() {
             label="Journey"
           />
         }
-        title={['From pack to cash', 'in one sitting.']}
+        title={['Pack to cash', 'before your coffee cools.']}
         lead="Three calls on day zero put USDC in your wallet. One more, any day before the date, brings the coins back."
       />
       <Journey steps={STEPS} />
