@@ -4,10 +4,11 @@ import { schema } from '@mosaec/db';
 
 import type { BlockRecords, EventRecord } from './extract';
 import type { Db } from '@mosaec/db';
+import type { PackRow } from '@mosaec/db/pack-row';
 
 const { checkpoints, events, holdersHistory, offers, packs, tokens } = schema;
 
-export type PackRow = typeof packs.$inferInsert;
+export type { PackRow };
 
 export interface Checkpoint {
   readonly lastHeight: bigint;

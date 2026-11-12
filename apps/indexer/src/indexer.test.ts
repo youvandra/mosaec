@@ -15,8 +15,8 @@ import { IndexerRepository } from './repository';
 
 import type { FetchLike } from './fastnear';
 import type { ChainSource, Logger } from './indexer';
-import type { PackReader } from './refresh';
 import type { Db } from '@mosaec/db';
+import type { PackReader } from '@mosaec/db/pack-row';
 
 const SCOPE = { registry: 'v0.mosaec.testnet', verifier: 'intents.mosaec.testnet' };
 const PACK = '0.v0.mosaec.testnet';

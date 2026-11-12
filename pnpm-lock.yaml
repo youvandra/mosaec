@@ -289,6 +289,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@mosaec/domain':
+        specifier: workspace:*
+        version: link:../domain
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@electric-sql/pglite@0.5.12)(@opentelemetry/api@1.10.0)(postgres@3.4.9)
