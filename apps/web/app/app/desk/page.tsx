@@ -22,7 +22,7 @@ export const revalidate = 15;
 async function load() {
   try {
     const [desk, ledger, decisions] = await Promise.all([
-      getDesk(DEFAULT_NETWORK),
+      getDesk(DEFAULT_NETWORK, true),
       getDeskLedger(DEFAULT_NETWORK),
       getDeskDecisions(DEFAULT_NETWORK, 40),
     ]);
