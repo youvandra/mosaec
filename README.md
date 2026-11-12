@@ -85,7 +85,7 @@ Prerequisites: Node 22 or later, pnpm 10 (`corepack enable`), rustup (toolchain 
 $ git clone --recurse-submodules https://github.com/youvandra/mosaec.git && cd mosaec
 $ pnpm install                               # also points git hooks at .githooks
 $ pnpm test
- Tasks:    7 successful, 7 total            # 295 TypeScript tests
+ Tasks:    7 successful, 7 total            # 310 TypeScript tests
 
 $ cd contracts && cargo test --workspace
 test result: ok. 34 passed   (pack)
