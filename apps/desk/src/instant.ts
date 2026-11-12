@@ -4,7 +4,7 @@ import { ASSETS } from '@mosaec/config/assets';
 import { repaymentFor } from '@mosaec/config/rates';
 
 import { collateralValueUsdc, evaluate, pauseReason } from './policy';
-import { INSTANT_ACTOR } from './repository';
+import { INSTANT_ACTOR, utcMidnight } from './repository';
 
 import type { DeskService, FillResult } from './desk-service';
 import type { OfferInput, Quote } from './policy';
@@ -20,6 +20,8 @@ const CLOCK_SLACK_MS = 60_000;
 /** Reads of a missing offer before the fill gives up, one gap apart. */
 const OFFER_READS = 8;
 const OFFER_READ_GAP_MS = 1_000;
+/** Fill tasks allowed to wait for the lock before an instant fill is turned away as busy. */
+export const MAX_QUEUED_FILLS = 10;
 const BPS = 10_000n;
 const USDC_WHOLE = 1_000_000n;
 const NS_PER_MS = 1_000_000n;
@@ -58,13 +60,18 @@ export interface FillRequest extends QuoteTerms {
  * the desk fills an offer carrying exactly those terms, with no model in the path.
  */
 export class InstantDesk {
+  private readonly inFlight = new Map<string, Promise<FillResult>>();
+
   constructor(
     private readonly desk: DeskService,
     private readonly repository: DeskRepository,
     private readonly cards: RateCards,
     private readonly signer: QuoteSigner,
     private readonly now: () => number = Date.now,
-    private readonly offerReads: number = OFFER_READS,
+    private readonly offerPoll: { readonly reads: number; readonly gapMs: number } = {
+      reads: OFFER_READS,
+      gapMs: OFFER_READ_GAP_MS,
+    },
   ) {}
 
   async quote(request: QuoteRequest): Promise<QuoteAnswer> {
@@ -88,14 +95,9 @@ export class InstantDesk {
     if (usd === undefined) {
       return unavailable('DESK_PRICE', `No fresh reference price for ${request.asset} right now.`);
     }
-    if (
-      request.borrower !== undefined &&
-      (await this.repository.hasOpenInstantLoan(network, policy.deskAccountId, request.borrower))
-    ) {
-      return unavailable(
-        'DESK_OPEN_LOAN',
-        'This account already has an instant desk loan running.',
-      );
+    if (request.borrower !== undefined) {
+      const limit = await this.makerLimit(request.borrower);
+      if (limit !== null) return unavailable(limit.code, limit.reason);
     }
 
     const card = await this.cards.current(request.asset);
@@ -140,8 +142,9 @@ export class InstantDesk {
 
   /**
    * Fills `request.pack` when its live offer carries exactly the quoted terms. Verifies the quote
-   * id and expiry first, then under the desk-wide fill lock re-runs the policy, honouring the
-   * quoted loan to value. A repeated call for a filled quote returns the first result.
+   * id and expiry first, waits for the offer to show, then under the desk-wide fill lock re-runs
+   * the policy, honouring the quoted loan to value. A repeated call for a filled quote returns the
+   * first result.
    */
   async fill(request: FillRequest): Promise<FillResult> {
     const refuse = (code: DeskCode, reason: string): FillResult => ({
@@ -155,28 +158,41 @@ export class InstantDesk {
     if (request.expiresAtMs <= this.now()) {
       return refuse('DESK_QUOTE_EXPIRED', 'The quote has expired; ask for a new one.');
     }
+    /* A repeat for a pack already being filled joins that call: one fill per pack at a time. */
+    const running = this.inFlight.get(request.pack);
+    if (running !== undefined) return running;
+    const task = this.fillOnce(request).finally(() => this.inFlight.delete(request.pack));
+    this.inFlight.set(request.pack, task);
+    return task;
+  }
+
+  private async fillOnce(request: FillRequest): Promise<FillResult> {
+    const refuse = (code: DeskCode, reason: string): FillResult => ({
+      status: 'refused',
+      code,
+      reason,
+    });
+    const earlier = await this.earlierFill(request);
+    if (earlier !== null) return earlier;
+    /* Wait for the offer outside the lock, so a pack that is never offered holds up no one. */
+    if ((await this.offerOf(request.pack)) === null) {
+      return (await this.earlierFill(request)) ?? refuse('DESK_POLICY', 'The pack is not offered.');
+    }
+    if (this.desk.fillsQueued >= MAX_QUEUED_FILLS) {
+      return refuse('DESK_BUSY', 'The desk is working through other fills; try again shortly.');
+    }
     return this.desk.exclusive(async () => {
-      /* A minute of slack covers clock skew between the desk and the database. */
-      const issuedAt = new Date(request.expiresAtMs - QUOTE_TTL_MS - CLOCK_SLACK_MS);
-      const earlier = await this.repository.instantFillSince(
-        this.desk.network,
-        request.pack,
-        issuedAt,
-      );
-      if (earlier !== null && sameTerms(earlier.quote, request)) {
-        return { status: 'filled', txHash: earlier.txHash, quote: earlier.quote };
-      }
-      const offer = await this.offerOf(request.pack);
+      const filled = await this.earlierFill(request);
+      if (filled !== null) return filled;
+      const offer = await this.desk.liveOffer(request.pack);
       if (offer === null) return refuse('DESK_POLICY', 'The pack is not offered.');
       const mismatch = this.mismatch(offer, request);
       if (mismatch !== null) return refuse('DESK_QUOTE_MISMATCH', mismatch);
       if (offer.titleOwner !== offer.makerId) {
         return refuse('DESK_POLICY', 'The offer maker no longer holds the Title.');
       }
-      const { network, policy } = this.desk;
-      if (await this.repository.hasOpenInstantLoan(network, policy.deskAccountId, offer.makerId)) {
-        return refuse('DESK_OPEN_LOAN', 'This account already has an instant desk loan running.');
-      }
+      const limit = await this.makerLimit(offer.makerId);
+      if (limit !== null) return refuse(limit.code, limit.reason);
       return this.desk.fillChecked(
         offer,
         { lane: 'instant', honourQuotedLtv: true },
@@ -187,6 +203,41 @@ export class InstantDesk {
     });
   }
 
+  /** Why `makerId` may not take another instant loan now, or null when it may. */
+  private async makerLimit(
+    makerId: string,
+  ): Promise<{ readonly code: DeskCode; readonly reason: string } | null> {
+    const { network, policy } = this.desk;
+    if (await this.repository.hasOpenInstantLoan(network, policy.deskAccountId, makerId)) {
+      return {
+        code: 'DESK_OPEN_LOAN',
+        reason: 'This account already has an instant desk loan running.',
+      };
+    }
+    const today = utcMidnight(new Date(this.now()));
+    const taken = await this.repository.instantFillsByMakerSince(network, makerId, today);
+    if (taken >= policy.maxInstantFillsPerMakerPerDay) {
+      return {
+        code: 'DESK_MAKER_LIMIT',
+        reason: `This account took its ${policy.maxInstantFillsPerMakerPerDay.toString()} instant desk loans for today.`,
+      };
+    }
+    return null;
+  }
+
+  /** The desk's earlier fill of this pack on these exact terms since the quote was issued. */
+  private async earlierFill(request: FillRequest): Promise<FillResult | null> {
+    /* A minute of slack covers clock skew between the desk and the database. */
+    const issuedAt = new Date(request.expiresAtMs - QUOTE_TTL_MS - CLOCK_SLACK_MS);
+    const earlier = await this.repository.instantFillSince(
+      this.desk.network,
+      request.pack,
+      issuedAt,
+    );
+    if (earlier === null || !sameTerms(earlier.quote, request)) return null;
+    return { status: 'filled', txHash: earlier.txHash, quote: earlier.quote };
+  }
+
   /**
    * The live offer on `pack`. The app asks for the fill the moment the borrower's offer settles,
    * and final-state reads trail that by a few blocks, so a missing offer is read again briefly.
@@ -194,8 +245,8 @@ export class InstantDesk {
   private async offerOf(pack: string): Promise<OfferInput | null> {
     for (let attempt = 1; ; attempt += 1) {
       const offer = await this.desk.liveOffer(pack);
-      if (offer !== null || attempt >= this.offerReads) return offer;
-      await new Promise((resolve) => setTimeout(resolve, OFFER_READ_GAP_MS));
+      if (offer !== null || attempt >= this.offerPoll.reads) return offer;
+      await new Promise((resolve) => setTimeout(resolve, this.offerPoll.gapMs));
     }
   }
 

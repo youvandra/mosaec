@@ -25,6 +25,7 @@ function service(
     balanceUsdc: () => Promise.resolve(0n),
     liveOffer: () => Promise.resolve(null),
     collectable: (pack) => Promise.resolve(collectable[pack] ?? null),
+    outcomeOf: () => Promise.reject(new Error('unused')),
     send: (call): Promise<SentCall> => {
       sent.push(call);
       return Promise.resolve({

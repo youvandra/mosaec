@@ -1,6 +1,7 @@
 import { assetByTokenId } from '@mosaec/config/assets';
 import { mosaecCalls } from '@mosaec/sdk';
 
+import { UnconfirmedSendError } from './chain';
 import { evaluate, offerKey, pauseReason } from './policy';
 import { COINGECKO_IDS } from './prices';
 import { utcMidnight } from './repository';
@@ -17,6 +18,8 @@ import type { ContractCall } from '@mosaec/sdk';
 
 const NS_PER_MS = 1_000_000n;
 const HOUR_MS = 3_600_000;
+/** How far back the loop re-reads fills whose outcome was unknown when they were sent. */
+const RECONCILE_WINDOW_MS = 24 * HOUR_MS;
 /** The loop leaves an offer this long to the instant path before it looks at it. */
 export const INSTANT_HEAD_START_MS = 2 * 60_000;
 
@@ -80,7 +83,7 @@ export class DeskService {
     ] = await Promise.all([
       this.prices.current(),
       this.chain.balanceUsdc(),
-      this.repository.exposure(this.network, this.policy.deskAccountId),
+      this.repository.exposure(this.network, this.policy.deskAccountId, now),
       this.repository.lentSince(this.network, utcMidnight(now)),
       this.repository.fillsSince(this.network, hourAgo, 'loop'),
       this.repository.fillsSince(this.network, hourAgo, 'instant'),
@@ -144,6 +147,11 @@ export class DeskService {
   /** Runs `task` while no other fill can start. */
   exclusive<T>(task: () => Promise<T>): Promise<T> {
     return this.fills.run(task);
+  }
+
+  /** Fill tasks running or waiting for the lock. */
+  get fillsQueued(): number {
+    return this.fills.pending;
   }
 
   /** Fills `pack` from the desk account when the policy allows it now; records the verdict. */
@@ -232,16 +240,43 @@ export class DeskService {
           };
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : 'The fill could not be sent.';
+      /* A send with a hash may have settled: the row keeps it and counts as lent until reconciled. */
+      const txHash = cause instanceof UnconfirmedSendError ? cause.hash : null;
       await this.repository.record({
         ...base,
         verdict: 'error',
         code: 'UPSTREAM_RPC',
         reason,
         quote: verdict.quote,
-        txHash: null,
+        txHash,
       });
-      return { status: 'error', code: 'UPSTREAM_RPC', reason };
+      return {
+        status: 'error',
+        code: 'UPSTREAM_RPC',
+        reason,
+        ...(txHash === null ? {} : { txHash }),
+      };
     }
+  }
+
+  /**
+   * Settles fills whose outcome could not be read when they were sent: a settled one becomes a
+   * `fill`, a declined one keeps its contract code. Returns how many rows it settled.
+   */
+  async reconcile(): Promise<number> {
+    const since = new Date(this.now().getTime() - RECONCILE_WINDOW_MS);
+    let settled = 0;
+    for (const row of await this.repository.unconfirmedFills(this.network, since)) {
+      const outcome = await this.chain.outcomeOf(row.txHash).catch(() => null);
+      if (outcome === null) continue;
+      if (outcome.status === 'settled') {
+        await this.repository.confirmFill(row.id, 'Settled on chain; confirmed on a later read.');
+      } else {
+        await this.repository.declineFill(row.id, outcome.code ?? 'E_STATE');
+      }
+      settled += 1;
+    }
+    return settled;
   }
 
   /**

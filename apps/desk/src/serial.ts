@@ -4,9 +4,19 @@
  */
 export class Serial {
   private tail: Promise<unknown> = Promise.resolve();
+  private queued = 0;
+
+  /** Tasks started or waiting to start. */
+  get pending(): number {
+    return this.queued;
+  }
 
   run<T>(task: () => Promise<T>): Promise<T> {
-    const result = this.tail.then(task, task);
+    this.queued += 1;
+    const settle = () => {
+      this.queued -= 1;
+    };
+    const result = this.tail.then(task, task).finally(settle);
     this.tail = result.catch(() => undefined);
     return result;
   }
