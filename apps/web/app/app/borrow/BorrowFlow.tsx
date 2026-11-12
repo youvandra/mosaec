@@ -232,6 +232,7 @@ export function BorrowFlow() {
   const [walletBalance, setWalletBalance] = useState<bigint | null>(null);
   const [packBalance, setPackBalance] = useState<bigint | null>(null);
   const [offered, setOffered] = useState(false);
+  const [funded, setFunded] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [lockText, setLockText] = useState('1');
@@ -289,13 +290,17 @@ export function BorrowFlow() {
   useEffect(() => {
     setPackBalance(null);
     setOffered(false);
+    setFunded(false);
     if (packId === null) return;
     let live = true;
     Promise.all([views.balanceOf(packId, tokenId), views.positionOf(packId)])
       .then(([balance, position]) => {
         if (!live) return;
         setPackBalance(balance);
-        setOffered(position?.position.stage.state === 'offered');
+        /* A filled pack is past this flow too: the desk or a lender already wrote it. */
+        const state = position?.position.stage.state;
+        setOffered(state === 'offered' || state === 'written');
+        setFunded(state === 'written');
         /* Resuming a pack: start from what it already holds unless the person typed an amount. */
         if (balance > 0n && !lockEdited) setLockText(plain(balance, collateral.decimals));
       })
@@ -442,6 +447,7 @@ export function BorrowFlow() {
       const result = await requestInstantFill(network, pack, quote);
       if (result.status === 'filled') {
         track('instant_filled');
+        setFunded(true);
         toast.update(id, {
           tone: 'success',
           title: 'USDC sent to your account',
@@ -851,7 +857,7 @@ export function BorrowFlow() {
           title="Three signatures"
           pill={
             stage === 'done' ? (
-              <SoftPill>Offer open</SoftPill>
+              <SoftPill>{funded ? 'Loan funded' : 'Offer open'}</SoftPill>
             ) : stage === 'connect' ? (
               <SoftPill tone="neutral">Wallet needed</SoftPill>
             ) : (
