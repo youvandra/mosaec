@@ -22,7 +22,7 @@ import type { DeskBalanceProbe } from './services/desk-service';
 import type { FaucetSender } from './services/faucet-service';
 import type { ChainProbe } from './services/health-service';
 import type { InstantDeskClient } from './services/instant-service';
-import type { Clock } from './services/pack-service';
+import type { Clock, LivePacks } from './services/pack-service';
 import type { Db } from '@mosaec/db';
 
 export interface AppDeps {
@@ -35,6 +35,8 @@ export interface AppDeps {
   /** Absent: instant desk routes answer `DESK_UNAVAILABLE`. */
   readonly instantDesk?: InstantDeskClient | undefined;
   readonly clock?: Clock;
+  /** Absent: pack pages read the read model only. */
+  readonly livePacks?: LivePacks | undefined;
   readonly log?: (fields: Record<string, unknown>) => void;
 }
 
@@ -46,7 +48,9 @@ export const INSTANT_FILLS_PER_MINUTE = 5;
 /** Wires repositories, services and controllers into one Hono app. */
 export function createApp(deps: AppDeps): Hono {
   const packRepository = new PackRepository(deps.db);
-  const packs = new PackController(new PackService(packRepository, deps.clock ?? systemClock));
+  const packs = new PackController(
+    new PackService(packRepository, deps.clock ?? systemClock, deps.livePacks ?? null),
+  );
   const health = new HealthController(new HealthService(packRepository, deps.chain));
   const desk = new DeskController(new DeskService(new DeskRepository(deps.db), deps.chain));
   const faucet = new FaucetController(
