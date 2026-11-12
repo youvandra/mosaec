@@ -1,8 +1,4 @@
-import {
-  CalendarCheckIcon,
-  StorefrontIcon,
-  WarningCircleIcon,
-} from '@phosphor-icons/react/dist/ssr';
+import { StorefrontIcon, WarningCircleIcon } from '@phosphor-icons/react/dist/ssr';
 import Link from 'next/link';
 
 import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
@@ -10,11 +6,10 @@ import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
 import { liveDealOf } from '../../lib/deal';
 import { exampleDeal, loadMarket } from '../../lib/market';
 
-import { Activity } from './_components/Activity';
-import { MarketStats } from './_components/MarketStats';
+import { MarketSummary } from './_components/MarketSummary';
 import { OfferBook } from './_components/OfferBook';
 import { OfferCard } from './_components/OfferCard';
-import { PageHeader, PageSection, SectionTitle } from './_components/PageHeader';
+import { PageHeader, SectionTitle } from './_components/PageHeader';
 import { appPath } from './_components/routes';
 import styles from './market.module.css';
 
@@ -73,7 +68,7 @@ export default async function MarketPage() {
         </ErrorState>
       ) : (
         <>
-          <MarketStats data={data} />
+          <MarketSummary data={data} />
           <OfferBook
             title={
               <SectionTitle
@@ -96,22 +91,6 @@ export default async function MarketPage() {
               offerEndsNs: pack.offer?.expiresAtNs ?? null,
             }))}
           />
-          {data.activity.length > 0 && (
-            <PageSection
-              title="Recent pawns"
-              tag={
-                <Tag
-                  badge="2"
-                  shape={<CalendarCheckIcon weight="fill" size={16} color="var(--ill-lime)" />}
-                >
-                  On chain
-                </Tag>
-              }
-              lead="Every pawn so far, read from chain."
-            >
-              <Activity items={data.activity} />
-            </PageSection>
-          )}
         </>
       )}
     </>

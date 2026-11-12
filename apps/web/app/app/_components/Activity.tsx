@@ -22,14 +22,21 @@ function when(deal: Deal): string {
 }
 
 /** Pawns as the source's batch list: coins, how it ended, and the money that moved. */
-export function Activity({ items }: { readonly items: readonly ActivityItem[] }) {
+export function Activity({
+  items,
+  title,
+}: {
+  readonly items: readonly ActivityItem[];
+  /** Card title; defaults to the pawn count. */
+  readonly title?: string;
+}) {
   const settled = items.filter(
     (item) => item.deal.outcome === 'redeemed' || item.deal.outcome === 'forfeited',
   );
   const repaid = settled.filter((item) => item.deal.outcome === 'redeemed').length;
   return (
     <ListCard
-      title={`${items.length.toString()} pawns`}
+      title={title ?? `${items.length.toString()} pawns`}
       pill={
         settled.length > 0 ? (
           <SoftPill>{`${repaid.toString()} of ${settled.length.toString()} repaid`}</SoftPill>
