@@ -109,8 +109,8 @@ export function LivePacks() {
           </Reveal>
           <WordReveal className="t-h1" lines={['Every pack,', 'in plain sight.']} />
           <Reveal as="p" className="t-body-lg">
-            An indexer follows the registry and every pack it created. What it shows, your browser
-            can confirm against the chain.
+            Mosaec indexes every pack the registry creates, and your browser can double-check any of
+            them against the chain.
           </Reveal>
           <Reveal as="ul" className={styles.checks}>
             {CHECKS.map((check) => (

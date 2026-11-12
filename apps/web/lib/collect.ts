@@ -32,6 +32,6 @@ export function payoutOf(status: string | null | undefined, contentsText: string
     kind: 'own',
     title: 'Withdraw the contents',
     label: 'Withdraw to My Balance',
-    note: `Moves ${contentsText} to your verifier balance.`,
+    note: `Moves ${contentsText} to your Mosaec balance.`,
   };
 }

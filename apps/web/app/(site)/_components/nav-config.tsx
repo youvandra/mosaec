@@ -23,7 +23,7 @@ export const NAV_MENUS: readonly NavMenu[] = [
       items: [
         {
           title: 'Borrow',
-          caption: 'USDC against ZEC, no liquidation',
+          caption: 'USDC for your coins, zero liquidation',
           href: '/borrow',
           icon: (
             <AppIcon color="blue" size={TILE}>
@@ -43,7 +43,7 @@ export const NAV_MENUS: readonly NavMenu[] = [
         },
         {
           title: 'Rates',
-          caption: 'Plans per asset and term',
+          caption: 'Suggested rates per coin and term',
           href: '/rates',
           icon: (
             <AppIcon color="orange" size={TILE}>

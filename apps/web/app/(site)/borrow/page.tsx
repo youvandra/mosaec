@@ -32,7 +32,7 @@ import type { ReactNode } from 'react';
 export const metadata: Metadata = {
   title: 'Borrow',
   description:
-    'Borrow USDC against ZEC on NEAR with a fixed repayment, a fixed date and zero liquidation. Miss the date and the pack is the whole debt.',
+    'Borrow USDC against ZEC, BTC or SOL on NEAR with a fixed repayment, a fixed date and zero liquidation. Miss the date and the pack is the whole debt.',
 };
 
 const APP_BORROW = '/app/borrow';
@@ -116,7 +116,10 @@ function Hero() {
             as="h1"
             trigger="load"
             className={cx('t-display', styles.title)}
-            lines={['Borrow on ZEC.', { text: 'Never liquidated.', className: styles.lime ?? '' }]}
+            lines={[
+              'Borrow on your coins.',
+              { text: 'Never liquidated.', className: styles.lime ?? '' },
+            ]}
           />
           <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
             USDC today against ZEC, BTC or SOL for 30, 60 or 90 days. Take the House Desk quote in a
@@ -143,7 +146,7 @@ function Hero() {
             </span>
             <span>
               <CoinsIcon weight="fill" size={16} />
-              Protocol Fee 0
+              Zero Protocol Fee
             </span>
           </Reveal>
         </div>
@@ -235,7 +238,7 @@ const STEPS: readonly JourneyStep[] = [
   {
     stamp: 'Day 0',
     title: 'Pack',
-    body: 'Mint a pack and deposit your ZEC. The pack is a NEAR account with zero access keys.',
+    body: 'Mint a pack and drop your ZEC in. The pack is a NEAR account nobody holds a key to, the Mosaec team included.',
     icon: <LockKeyIcon weight="fill" />,
     color: 'ink',
   },

@@ -35,7 +35,7 @@ import type { ReactNode } from 'react';
 export const metadata: Metadata = {
   title: 'Verify',
   description:
-    'Check any Mosaec pack yourself: zero keys, one published code hash, strike-only release and a pause-only guardian.',
+    'Check any Mosaec pack yourself: zero keys, one published code hash, coins that leave only on repayment or the date, and a guardian that can only pause.',
 };
 
 const TESTNET = NETWORKS.testnet;

@@ -154,7 +154,8 @@ export function Footer() {
             and a fair price.
           </h2>
           <p className="t-body">
-            Seal up to 1 ZEC on testnet and walk a full loan, from pack to redemption, in minutes.
+            Grab free test coins, seal them and run a full loan, from pack to payback, in a few
+            minutes.
           </p>
           <div className={styles.ctaActions}>
             <ButtonLink href={SITE.appUrl} as={Link}>
