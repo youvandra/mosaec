@@ -96,6 +96,7 @@ function Well({
   onChange,
   pill,
   aside,
+  readOnly = false,
 }: {
   readonly id: string;
   readonly label: string;
@@ -103,6 +104,8 @@ function Well({
   readonly onChange: (value: string) => void;
   readonly pill: ReactNode;
   readonly aside?: ReactNode;
+  /** Shows a price someone else set (the desk quote) instead of the person's own terms. */
+  readonly readOnly?: boolean;
 }) {
   return (
     <div className={styles.well}>
@@ -119,6 +122,7 @@ function Well({
           inputMode="decimal"
           autoComplete="off"
           placeholder="0.00"
+          readOnly={readOnly}
           value={value}
           onChange={(event) => {
             onChange(event.target.value.replace(',', '.'));
@@ -373,7 +377,6 @@ export function BorrowFlow() {
     repayment >= principal
       ? Number(aprBps(principal, repayment, term.termNs)) / 100
       : null;
-  const interest = principal !== null && repayment !== null ? repayment - principal : null;
 
   const mint = async () => {
     track('borrow_started');
@@ -567,6 +570,18 @@ export function BorrowFlow() {
   );
   /* A desk that cannot quote leaves the open market as the only way. */
   const loanRoute: LoanRoute = instantQuote.state.status === 'ready' ? route : 'market';
+  /* With Instant chosen, every figure on the page is the desk's price, so the ticket matches what is signed. */
+  const deskQuote =
+    stage === 'offer' && loanRoute === 'instant' && instantQuote.state.status === 'ready'
+      ? instantQuote.state.quote
+      : null;
+  const shownPrincipal = deskQuote === null ? principal : BigInt(deskQuote.principal);
+  const shownRepayment = deskQuote === null ? repayment : BigInt(deskQuote.repayment);
+  const shownMonthlyBps = deskQuote === null ? rateBps : deskQuote.monthlyBps;
+  const shownApr =
+    deskQuote === null ? apr : term?.testnetOnly === true ? null : deskQuote.aprBps / 100;
+  const shownInterest =
+    shownPrincipal !== null && shownRepayment !== null ? shownRepayment - shownPrincipal : null;
 
   const pending = (state: TxState) => state.phase === 'pending';
   const lockLabel =
@@ -730,7 +745,9 @@ export function BorrowFlow() {
             />
           </Row>
           <Row k="Rate">
-            {term?.testnetOnly === true ? 'Rehearsal' : `${(rateBps / 100).toFixed(2)}% a month`}
+            {term?.testnetOnly === true
+              ? 'Rehearsal'
+              : `${(shownMonthlyBps / 100).toFixed(2)}% a month`}
           </Row>
           <Row k="Sealed in">
             {overCap ? (
@@ -745,13 +762,18 @@ export function BorrowFlow() {
         <Well
           id="principal"
           label="You receive now"
-          value={principalText}
+          value={
+            deskQuote === null
+              ? principalText
+              : plain(BigInt(deskQuote.principal), SETTLEMENT.decimals)
+          }
+          readOnly={deskQuote !== null}
           onChange={(value) => {
             setPrincipalEdited(true);
             setPrincipalText(value);
           }}
           aside={
-            principalEdited && suggestedLoan !== null ? (
+            deskQuote === null && principalEdited && suggestedLoan !== null ? (
               <button
                 type="button"
                 className={styles.max}
@@ -777,21 +799,26 @@ export function BorrowFlow() {
             )}
           </Row>
           <Row k="Cost of the loan">
-            {interest === null || interest < 0n ? '0.00' : cash(interest)} USDC
+            {shownInterest === null || shownInterest < 0n ? '0.00' : cash(shownInterest)} USDC
           </Row>
-          <Row k="Yearly rate">{apr === null ? '–' : `${apr.toFixed(1)}% APR`}</Row>
+          <Row k="Yearly rate">{shownApr === null ? '–' : `${shownApr.toFixed(1)}% APR`}</Row>
           <Row k="Due if filled now">{term === undefined ? '' : dueDate(term.termNs)}</Row>
         </Rows>
         <Well
           id="repayment"
           label="You repay by the date"
-          value={repaymentText}
+          value={
+            deskQuote === null
+              ? repaymentText
+              : padCents(plain(BigInt(deskQuote.repayment), SETTLEMENT.decimals))
+          }
+          readOnly={deskQuote !== null}
           onChange={(value) => {
             setRepaymentEdited(true);
             setRepaymentText(value);
           }}
           aside={
-            repaymentEdited ? (
+            deskQuote === null && repaymentEdited ? (
               <button
                 type="button"
                 className={styles.max}
@@ -806,9 +833,11 @@ export function BorrowFlow() {
           pill={<TokenPill symbol="USDC" />}
         />
         <p className={cx('t-caption', styles.hint, repaymentTooLow && styles.bad)}>
-          {repaymentTooLow
-            ? 'The repayment must be at least the loan.'
-            : 'The repayment is your price. Nothing moves it.'}
+          {deskQuote !== null
+            ? 'The House Desk price. Set Your Own Terms to change it.'
+            : repaymentTooLow
+              ? 'The repayment must be at least the loan.'
+              : 'The repayment is your price. Nothing moves it.'}
         </p>
       </section>
 
@@ -830,15 +859,15 @@ export function BorrowFlow() {
           </div>
           <div className={styles.slot}>
             <span className={styles.mono}>You receive now</span>
-            <span className={styles.slotValue}>{cash(principal)} USDC</span>
+            <span className={styles.slotValue}>{cash(shownPrincipal)} USDC</span>
           </div>
           <div className={styles.slot}>
             <span className={styles.mono}>
               You repay by {term === undefined ? 'the date' : dueDate(term.termNs)}
             </span>
             <span className={styles.slotValue}>
-              {cash(repayment)} USDC
-              {apr !== null && <span className={styles.apr}>{apr.toFixed(1)}% APR</span>}
+              {cash(shownRepayment)} USDC
+              {shownApr !== null && <span className={styles.apr}>{shownApr.toFixed(1)}% APR</span>}
             </span>
           </div>
           <div className={styles.rights}>
@@ -848,7 +877,9 @@ export function BorrowFlow() {
             </span>
             <span className={styles.right}>
               <StampIcon size={16} weight="fill" />
-              Miss it, the lender keeps the coins.
+              {deskQuote === null
+                ? 'Miss it, the lender keeps the coins.'
+                : 'Miss it, the House Desk keeps the coins.'}
             </span>
           </div>
         </div>
