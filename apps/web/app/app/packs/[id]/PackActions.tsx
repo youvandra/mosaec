@@ -10,6 +10,7 @@ import { Button, ButtonLink, Callout, useConfirm } from '@mosaec/ui';
 import { payoutOf } from '../../../../lib/collect';
 import { formatDateTimeNs } from '../../../../lib/format';
 import { SIGN_FOOTNOTE } from '../../../../lib/legal';
+import { useChainVersion } from '../../../../lib/near/chain-change';
 import { useNetwork } from '../../../../lib/near/network';
 import { useTransaction } from '../../../../lib/near/useTransaction';
 import { useWallet } from '../../../../lib/near/wallet';
@@ -48,8 +49,11 @@ function useBalance(tokenId: string | undefined): bigint | null {
   const { network } = useNetwork();
   const { accountId } = useWallet();
   const [balance, setBalance] = useState<bigint | null>(null);
+  const chainVersion = useChainVersion();
   useEffect(() => {
     setBalance(null);
+  }, [network, accountId, tokenId]);
+  useEffect(() => {
     if (accountId === null || tokenId === undefined) return;
     let live = true;
     new MosaecViews(network)
@@ -63,7 +67,7 @@ function useBalance(tokenId: string | undefined): bigint | null {
     return () => {
       live = false;
     };
-  }, [network, accountId, tokenId]);
+  }, [network, accountId, tokenId, chainVersion]);
   return balance;
 }
 

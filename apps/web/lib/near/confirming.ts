@@ -61,6 +61,14 @@ export function confirmingOf(pack: string): Confirming | null {
   return entry;
 }
 
+/** Packs with a transaction the read model may not show yet. */
+export function confirmingPacks(): string[] {
+  const now = Date.now();
+  return Object.entries(read())
+    .filter(([, entry]) => now - entry.at <= CONFIRM_TIMEOUT_MS)
+    .map(([pack]) => pack);
+}
+
 export function clearConfirming(pack: string): void {
   const store = read();
   if (!(pack in store)) return;

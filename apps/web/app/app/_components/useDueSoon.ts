@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { getPositions } from '../../../lib/api';
+import { useChainVersion } from '../../../lib/near/chain-change';
 import { useNetwork } from '../../../lib/near/network';
 import { useWallet } from '../../../lib/near/wallet';
 
@@ -22,9 +23,13 @@ export function useDueSoon(): DueSoon {
   const { network } = useNetwork();
   const { accountId } = useWallet();
   const [due, setDue] = useState<DueSoon>({ count: 0, firstNs: null });
+  const chainVersion = useChainVersion();
 
   useEffect(() => {
     setDue({ count: 0, firstNs: null });
+  }, [network, accountId, chainVersion]);
+
+  useEffect(() => {
     if (accountId === null) return;
     let live = true;
     const check = () => {

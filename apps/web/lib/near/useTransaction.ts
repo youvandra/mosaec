@@ -9,6 +9,7 @@ import { useToast } from '@mosaec/ui';
 
 import { reportError, reportWarning } from '../report';
 
+import { announceChainChange } from './chain-change';
 import { markConfirming, packsOf } from './confirming';
 import { useNetwork } from './network';
 import { useWallet } from './wallet';
@@ -35,7 +36,7 @@ function failureMessage(tx: SentTransaction): string {
 }
 
 /* The indexer trails the chain by 10 to 45 s (finality plus the transactions API). */
-const REFRESH_AFTER_MS = [3_000, 8_000, 15_000, 30_000, 45_000, 60_000] as const;
+const REFRESH_AFTER_MS = [3_000, 8_000, 15_000, 30_000, 45_000, 60_000, 90_000] as const;
 
 export interface TxMessages {
   /** Toast title while the wallet signs, such as "Filling pawn #4". */
@@ -102,13 +103,17 @@ export function useTransaction(messages: TxMessages = {}) {
           title: override.success ?? success,
           action: link(result.transactions.at(-1)?.hash),
         });
-        /* Refresh now and again as the indexer catches up; the timers follow the person to the next page. */
+        /*
+         * Refresh now and again as the indexer catches up; the timers follow the person to the next
+         * page. Server pages refresh through the router, client views through the chain signal.
+         */
+        const beat = () => {
+          router.refresh();
+          announceChainChange();
+        };
+        /* Chain views read final state, which trails the wallet's answer by a few blocks. */
         router.refresh();
-        for (const ms of REFRESH_AFTER_MS) {
-          window.setTimeout(() => {
-            router.refresh();
-          }, ms);
-        }
+        for (const ms of REFRESH_AFTER_MS) window.setTimeout(beat, ms);
         return result.transactions;
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : 'The wallet did not sign.';

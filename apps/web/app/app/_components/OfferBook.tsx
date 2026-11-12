@@ -10,6 +10,7 @@ import { dealApr } from '../../../lib/deal';
 import styles from './OfferBook.module.css';
 import { OfferCard } from './OfferCard';
 import { Pagination } from './Pagination';
+import { useFreshBook } from './useFreshBook';
 
 import type { Deal } from '../../../lib/deal';
 import type { ReactNode } from 'react';
@@ -74,7 +75,8 @@ export function OfferBook({
   const [sort, setSort] = useState<Sort>('newest');
   const [page, setPage] = useState(1);
   const top = useRef<HTMLElement>(null);
-  const matching = entries
+  const book = useFreshBook(entries);
+  const matching = book
     .filter(
       (entry) => filter === 'all' || entry.deal.collateral.some((line) => line.symbol === filter),
     )
