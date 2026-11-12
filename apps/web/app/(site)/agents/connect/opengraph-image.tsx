@@ -8,6 +8,6 @@ export default function Image() {
   return ogImage({
     eyebrow: 'Your Agent',
     title: 'Bring your agent.',
-    accent: 'It earns while you sleep.',
+    accent: 'It lends inside your rules.',
   });
 }

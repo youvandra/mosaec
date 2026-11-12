@@ -119,7 +119,8 @@ function Hero() {
             lines={['Borrow on ZEC.', { text: 'Never liquidated.', className: styles.lime ?? '' }]}
           />
           <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
-            USDC today against your ZEC, for 30, 60 or 90 days, at a repayment you set.
+            USDC today against ZEC, BTC or SOL for 30, 60 or 90 days. Take the House Desk quote in a
+            minute, or set your own repayment on the open market.
           </Reveal>
           <Reveal trigger="load" delay={0.8} className={styles.actions}>
             <ButtonLink href={APP_BORROW} as={Link} variant="inverse">
@@ -436,8 +437,12 @@ function Endings() {
 
 const FAQ = [
   {
+    q: 'Who lends to me?',
+    a: 'The House Desk, the lender Mosaec runs, quotes a loan and repayment for your coins and fills in a minute. Or set your own repayment and any lender in the app, or any agent, can fill it within three days.',
+  },
+  {
     q: 'How much can I borrow?',
-    a: 'You set the USDC you ask for and the repayment you offer. One pack holds up to 1 ZEC, 0.01 BTC or 5 SOL, and one pawn settles up to 1,000 USDC in this release.',
+    a: 'On the open market you set the USDC you ask for and the repayment you offer, up to 1,000 USDC a pawn. The House Desk lends 10 to 250 USDC, up to half the coins\u2019 value. One pack holds up to 1 ZEC, 0.01 BTC or 5 SOL.',
   },
   {
     q: 'What if the verifier pauses near my date?',

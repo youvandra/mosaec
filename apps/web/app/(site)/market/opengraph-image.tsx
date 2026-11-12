@@ -7,7 +7,7 @@ export const contentType = 'image/png';
 export default function Image() {
   return ogImage({
     eyebrow: 'Market',
-    title: 'Every open pawn,',
-    accent: 'on one page.',
+    title: 'One book of pawns,',
+    accent: 'two ways to fill it.',
   });
 }

@@ -50,38 +50,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-.ticker {
-  overflow: hidden;
-  margin: 0 calc(var(--gutter) * -1) 56px;
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-}
-.tickerRow {
-  display: flex;
-  gap: 56px;
-  width: max-content;
-  animation: assets-ticker 40s linear infinite;
-}
-.tickerItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 40px;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-}
-@keyframes assets-ticker {
-  to {
-    transform: translateX(-50%);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .tickerRow {
-    animation: none;
-  }
-}
-@media (max-width: 809.98px) {
-  .tickerItem {
-    font-size: 28px;
-  }
-}
