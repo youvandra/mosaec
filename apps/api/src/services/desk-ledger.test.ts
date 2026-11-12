@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { deskPolicy } from '@mosaec/config/desk';
 
+import { settleFill } from '../repositories/desk-repository';
+
 import { buildLedger } from './desk-ledger';
 
 import type { LedgerInput } from './desk-ledger';
@@ -18,9 +20,7 @@ const fill = (patch: Partial<DeskFillRow>): DeskFillRow => ({
   principal: '200000000',
   interest: '5500000',
   collateral: { symbol: 'ZEC', amount: '50000000' },
-  state: 'written',
-  titleOwner: DESK,
-  lastOutcome: null,
+  outcome: 'running',
   ...patch,
 });
 
@@ -47,8 +47,8 @@ const input = (patch: Partial<LedgerInput> = {}): LedgerInput => ({
   ],
   fills: [
     fill({ packId: '1.v0.mosaec.testnet', decidedAt: new Date('2026-11-12T09:00:00Z') }),
-    fill({ packId: '2.v0.mosaec.testnet', state: 'free', lastOutcome: 'Redeemed' }),
-    fill({ packId: '3.v0.mosaec.testnet', state: 'free', lastOutcome: 'Forfeited' }),
+    fill({ packId: '2.v0.mosaec.testnet', outcome: 'Redeemed' }),
+    fill({ packId: '3.v0.mosaec.testnet', outcome: 'Forfeited' }),
   ],
   collects: [],
   cards: [
@@ -143,5 +143,54 @@ describe('buildLedger', () => {
 
   it('is live with no switch row and an active policy', () => {
     expect(buildLedger(input()).status).toMatchObject({ state: 'live', by: null, reason: null });
+  });
+});
+
+describe('settleFill', () => {
+  const PACK = '1.v0.mosaec.testnet';
+  const ns = (iso: string) => BigInt(Date.parse(iso)) * 1_000_000n;
+  /* Round 1 repaid, round 2 running: the same pack, filled twice by the desk. */
+  const closings = [
+    { packId: PACK, atNs: ns('2026-11-11T12:00:00Z'), outcome: 'Redeemed' as const },
+  ];
+
+  it('settles each round of a reused pack by its own closing event', () => {
+    expect(settleFill(new Date('2026-11-11T10:00:00Z'), closings)).toBe('Redeemed');
+    expect(settleFill(new Date('2026-11-12T09:00:00Z'), closings)).toBe('running');
+  });
+
+  it('takes the first closing event after the fill', () => {
+    const later = [
+      ...closings,
+      { packId: PACK, atNs: ns('2026-11-13T12:00:00Z'), outcome: 'Forfeited' as const },
+    ];
+    expect(settleFill(new Date('2026-11-11T10:00:00Z'), later)).toBe('Redeemed');
+    expect(settleFill(new Date('2026-11-12T09:00:00Z'), later)).toBe('Forfeited');
+  });
+
+  it('keeps both rounds apart on the ledger', () => {
+    const { book } = buildLedger(
+      input({
+        fills: [
+          fill({ decidedAt: new Date('2026-11-11T10:00:00Z'), outcome: 'Redeemed' }),
+          fill({ decidedAt: new Date('2026-11-12T09:00:00Z'), outcome: 'running' }),
+        ],
+      }),
+    );
+    expect(book).toMatchObject({
+      running: 1,
+      lentNowUsdc: '200000000',
+      repaid: 1,
+      realisedInterestUsdc: '5500000',
+    });
+  });
+
+  it('gives back the budget of a loan lent and repaid today', () => {
+    const { book } = buildLedger(
+      input({
+        fills: [fill({ decidedAt: new Date('2026-11-12T09:00:00Z'), outcome: 'Redeemed' })],
+      }),
+    );
+    expect(book).toMatchObject({ lentTodayUsdc: '200000000', budgetLeftTodayUsdc: '5000000000' });
   });
 });

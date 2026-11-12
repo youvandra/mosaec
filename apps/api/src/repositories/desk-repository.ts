@@ -4,7 +4,19 @@ import { schema } from '@mosaec/db';
 
 import type { Db } from '@mosaec/db';
 
-const { deskControls, deskDecisions, deskRateCards, packs, prices } = schema;
+const { deskControls, deskDecisions, deskRateCards, events, prices } = schema;
+
+/** Events that close a pawn, with the outcome each gives the loan. */
+const CLOSING_EVENTS = { contents_released: 'Redeemed', expired: 'Forfeited' } as const;
+const NS_PER_MS = 1_000_000n;
+
+export type FillOutcome = 'running' | 'Redeemed' | 'Forfeited';
+
+export interface ClosingEvent {
+  readonly packId: string;
+  readonly atNs: bigint;
+  readonly outcome: Exclude<FillOutcome, 'running'>;
+}
 
 export type DecisionRecord = typeof deskDecisions.$inferSelect;
 export type PriceRecord = typeof prices.$inferSelect;
@@ -20,9 +32,21 @@ export interface DeskFillRow {
   readonly interest: string;
   /** The coins the fill lent against, as the quote recorded them. */
   readonly collateral: { readonly symbol: string; readonly amount: string } | null;
-  readonly state: 'free' | 'offered' | 'written' | null;
-  readonly titleOwner: string | null;
-  readonly lastOutcome: 'Redeemed' | 'Forfeited' | null;
+  /** How this fill's round ended: the first closing event on its pack after the fill. */
+  readonly outcome: FillOutcome;
+}
+
+/**
+ * The outcome of a fill made at `decidedAt` on a pack: the first closing event after it. A pack
+ * can be pawned again, so a later round never rewrites an earlier fill.
+ */
+export function settleFill(decidedAt: Date, closings: readonly ClosingEvent[]): FillOutcome {
+  const fromNs = BigInt(decidedAt.getTime()) * NS_PER_MS;
+  let first: ClosingEvent | null = null;
+  for (const event of closings) {
+    if (event.atNs > fromNs && (first === null || event.atNs < first.atNs)) first = event;
+  }
+  return first?.outcome ?? 'running';
 }
 
 /** Read-only access to the desk's decision log and the packs it lent on. */
@@ -39,27 +63,19 @@ export class DeskRepository {
       .limit(limit);
   }
 
-  /** Every desk fill with the current state of its pack. */
+  /** Every desk fill with the outcome of its own round. */
   async fills(network: string): Promise<DeskFillRow[]> {
     const rows = await this.db
       .select()
       .from(deskDecisions)
       .where(and(eq(deskDecisions.network, network), eq(deskDecisions.verdict, 'fill')));
-    const ids = rows.map((row) => row.packId).filter((id): id is string => id !== null);
-    const states =
-      ids.length === 0
-        ? []
-        : await this.db
-            .select()
-            .from(packs)
-            .where(and(eq(packs.network, network), inArray(packs.packId, ids)));
-    const byId = new Map(states.map((pack) => [pack.packId, pack]));
+    const ids = [...new Set(rows.flatMap((row) => (row.packId === null ? [] : [row.packId])))];
+    const closings = await this.closings(network, ids);
     return rows.map((row) => {
       const quote = (row.quote ?? {}) as {
         interest?: string;
         collateral?: { symbol: string; amount: string };
       };
-      const pack = row.packId === null ? undefined : byId.get(row.packId);
       return {
         packId: row.packId ?? '',
         decidedAt: row.decidedAt,
@@ -68,11 +84,40 @@ export class DeskRepository {
         collateral: quote.collateral ?? null,
         principal: row.principal ?? '0',
         interest: quote.interest ?? '0',
-        state: pack?.state ?? null,
-        titleOwner: pack?.titleOwner ?? null,
-        lastOutcome: pack?.lastOutcome ?? null,
+        outcome: settleFill(row.decidedAt, closings.get(row.packId ?? '') ?? []),
       };
     });
+  }
+
+  /** Closing events on `packIds`, grouped by pack. */
+  private async closings(
+    network: string,
+    packIds: readonly string[],
+  ): Promise<Map<string, ClosingEvent[]>> {
+    const grouped = new Map<string, ClosingEvent[]>();
+    if (packIds.length === 0) return grouped;
+    const rows = await this.db
+      .select({ packId: events.packId, atNs: events.blockTimestampNs, event: events.event })
+      .from(events)
+      .where(
+        and(
+          eq(events.network, network),
+          eq(events.standard, 'mosaec'),
+          inArray(events.packId, [...packIds]),
+          inArray(events.event, Object.keys(CLOSING_EVENTS)),
+        ),
+      );
+    for (const row of rows) {
+      if (row.packId === null) continue;
+      const list = grouped.get(row.packId) ?? [];
+      list.push({
+        packId: row.packId,
+        atNs: BigInt(row.atNs),
+        outcome: CLOSING_EVENTS[row.event as keyof typeof CLOSING_EVENTS],
+      });
+      grouped.set(row.packId, list);
+    }
+    return grouped;
   }
 
   /** Withdraws the desk made out of its packs since `since`. */

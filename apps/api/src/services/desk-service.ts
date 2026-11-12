@@ -75,9 +75,9 @@ export class DeskService {
       this.desk.control(network),
     ]);
     const sum = (values: readonly string[]) => values.reduce((total, v) => total + BigInt(v), 0n);
-    const running = fills.filter((f) => f.state === 'written' && f.titleOwner === accountId);
-    const repaid = fills.filter((f) => f.lastOutcome === 'Redeemed' && f.state !== 'written');
-    const kept = fills.filter((f) => f.lastOutcome === 'Forfeited' && f.state !== 'written');
+    const running = fills.filter((f) => f.outcome === 'running');
+    const repaid = fills.filter((f) => f.outcome === 'Redeemed');
+    const kept = fills.filter((f) => f.outcome === 'Forfeited');
     return {
       network,
       accountId,
