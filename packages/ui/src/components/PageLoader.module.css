@@ -16,19 +16,16 @@
 }
 .mark {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--surface-inverse);
-  animation: mosaec-loader-mark 0.9s var(--ease-out) 0.05s both;
+  width: 64px;
+  color: var(--surface-inverse);
 }
 .mark svg {
-  width: 60%;
+  width: 100%;
   height: auto;
-  color: var(--text-inverse);
-  transform: translateY(2%);
+}
+.mark [data-lobe] {
+  animation: lobe-in 0.55s var(--ease-out) both;
+  animation-delay: calc(0.05s + var(--lobe) * 110ms);
 }
 .track {
   width: 140px;
@@ -46,16 +43,6 @@
   background: var(--surface-inverse);
   transform: translateX(-100%);
   animation: mosaec-loader-fill 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards;
-}
-@keyframes mosaec-loader-mark {
-  from {
-    opacity: 0;
-    transform: scale(0.4) rotate(-120deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
 @keyframes mosaec-loader-track {
   from {
@@ -76,5 +63,11 @@
   to {
     opacity: 0;
     visibility: hidden;
+  }
+}
+@keyframes lobe-in {
+  from {
+    opacity: 0;
+    transform: translateY(14%) scale(0.55);
   }
 }

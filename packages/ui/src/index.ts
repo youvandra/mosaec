@@ -37,4 +37,5 @@ export { Callout } from './components/Callout';
 export type { CalloutProps, CalloutTone } from './components/Callout';
 export { SelectMenu } from './components/Menu';
 export type { MenuOption, SelectMenuProps } from './components/Menu';
+export { LobedMark } from './components/LobedMark';
 export { MARK_PATH, MARK_VIEWBOX, Mark } from './components/Mark';

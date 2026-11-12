@@ -1,4 +1,4 @@
-/* Same pieces as the first-load loader (44px mark, 140x3 track), timed for a page change:
+/* Same pieces as the first-load loader (64px mark, 140x3 track), timed for a page change:
    0.25s in, the track fills while the page loads, 0.4s out. Opacity and transform only. */
 .curtain {
   position: fixed;
@@ -18,19 +18,16 @@
 }
 .mark {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--surface-inverse);
-  animation: route-mark 0.6s var(--ease-out) both;
+  width: 64px;
+  color: var(--surface-inverse);
 }
 .mark svg {
-  width: 60%;
+  width: 100%;
   height: auto;
-  color: var(--text-inverse);
-  transform: translateY(2%);
+}
+.mark [data-lobe] {
+  animation: lobe-in 0.45s var(--ease-out) both;
+  animation-delay: calc(var(--lobe) * 80ms);
 }
 .track {
   width: 140px;
@@ -62,12 +59,6 @@
     opacity: 0;
   }
 }
-@keyframes route-mark {
-  from {
-    opacity: 0;
-    transform: scale(0.6) rotate(-60deg);
-  }
-}
 @keyframes route-fill {
   to {
     transform: translateX(-12%);
@@ -76,5 +67,11 @@
 @media (prefers-reduced-motion: reduce) {
   .curtain {
     display: none;
+  }
+}
+@keyframes lobe-in {
+  from {
+    opacity: 0;
+    transform: translateY(14%) scale(0.55);
   }
 }

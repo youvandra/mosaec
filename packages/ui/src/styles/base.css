@@ -271,6 +271,12 @@
   }
 }
 
+/* Each lobe of the mark grows from its own foot when a surface animates it. */
+[data-lobe] {
+  transform-box: view-box;
+  transform-origin: var(--lobe-x, 50%) 100%;
+}
+
 @keyframes mosaec-float {
   to {
     transform: translateY(-10px);

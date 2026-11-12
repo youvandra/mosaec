@@ -1,29 +1,22 @@
 .logo {
   --logo-size: 44px;
-  --logo-badge: var(--surface-inverse);
-  --logo-ink: var(--text-inverse);
   display: inline-flex;
   align-items: center;
   gap: calc(var(--logo-size) * 0.23);
   color: var(--text-primary);
 }
-.badge {
+/* The brand box keeps the old badge footprint so layouts stay put; the mark spans most of it. */
+.box {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
   width: var(--logo-size);
   height: var(--logo-size);
-  border-radius: 50%;
-  background: var(--logo-badge);
-  color: var(--logo-ink);
-  transition: transform 0.7s var(--ease-out);
 }
-/* 60% of the badge, nudged 2% down so the rising lobes sit on the optical centre. */
 .mark {
-  width: 60%;
+  width: 92%;
   height: auto;
-  transform: translateY(2%);
 }
 .word {
   font-size: calc(var(--logo-size) * 0.5);
@@ -31,16 +24,21 @@
   line-height: 1;
   letter-spacing: -0.04em;
 }
-/* On dark surfaces the badge inverts: white disc, ink mark, white wordmark. */
 .light {
-  --logo-badge: var(--text-inverse);
-  --logo-ink: var(--surface-inverse);
   color: var(--text-inverse);
 }
+/* Hover replays the build: the lobes rise one by one, smallest first. */
 @media (hover: hover) {
-  .interactive:hover .badge,
-  a:hover > .logo .badge,
-  a:focus-visible > .logo .badge {
-    transform: rotate(180deg) scale(1.06);
+  .interactive:hover .mark [data-lobe],
+  a:hover > .logo .mark [data-lobe],
+  a:focus-visible > .logo .mark [data-lobe] {
+    animation: lobe-in 0.5s var(--ease-out) both;
+    animation-delay: calc(var(--lobe) * 90ms);
+  }
+}
+@keyframes lobe-in {
+  from {
+    opacity: 0;
+    transform: translateY(14%) scale(0.55);
   }
 }
