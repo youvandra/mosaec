@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { packStatusSchema, parseContractJson, positionViewSchema } from '@mosaec/domain';
 
-import { packRow } from './refresh';
+import { packRow } from './pack-row';
 
 const FREE_VIEW = positionViewSchema.parse(
   parseContractJson(

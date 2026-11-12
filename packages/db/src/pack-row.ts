@@ -1,5 +1,8 @@
-import type { PackRow } from './repository';
+import type { packs } from './schema';
 import type { PackStatus, PositionView } from '@mosaec/domain';
+
+/** A `packs` row as the indexer writes it. */
+export type PackRow = typeof packs.$inferInsert;
 
 /** Reads the chain's current view of a pack. */
 export interface PackReader {

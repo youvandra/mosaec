@@ -1,10 +1,11 @@
+import { packRow } from '@mosaec/db/pack-row';
+
 import { extractBlock } from './extract';
-import { packRow } from './refresh';
 
 import type { BlockRecords, ChainBlock, Scope } from './extract';
 import type { AccountTx } from './fastnear';
-import type { PackReader } from './refresh';
 import type { IndexerRepository } from './repository';
+import type { PackReader } from '@mosaec/db/pack-row';
 
 /** Where the indexer reads chain data; `FastnearTxSource` plus RPC in production. */
 export interface ChainSource {
