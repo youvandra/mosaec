@@ -116,10 +116,7 @@ function Hero() {
             as="h1"
             trigger="load"
             className={cx('t-display', styles.title)}
-            lines={[
-              'Borrow on your coins.',
-              { text: 'Never liquidated.', className: styles.lime ?? '' },
-            ]}
+            lines={['Borrow USDC.', { text: 'Never liquidated.', className: styles.lime ?? '' }]}
           />
           <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
             USDC today against ZEC, BTC or SOL for 30, 60 or 90 days. Take the House Desk quote in a
@@ -277,7 +274,7 @@ function Steps() {
             label="Journey"
           />
         }
-        title={['Pack to cash', 'before your coffee cools.']}
+        title={['Pack to cash,', 'coffee still hot.']}
         lead="Three calls on day zero put USDC in your wallet. One more, any day before the date, brings the coins back."
       />
       <Journey steps={STEPS} />
