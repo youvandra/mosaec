@@ -42,3 +42,9 @@
     margin: 0 3px;
   }
 }
+
+/* The brand mark is wider than tall, so it takes the tile width and keeps its own height. */
+.icon .brand {
+  width: 62%;
+  height: auto;
+}

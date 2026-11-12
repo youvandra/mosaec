@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ASSETS } from '@mosaec/config/assets';
 import { AppIcon, Section, StatusPill, cx } from '@mosaec/ui';
 
-import { ASSET_MARK, TICKER_MARKS } from '../../../lib/asset-marks';
+import { ASSET_MARK, TICKER_MARKS, markFill } from '../../../lib/asset-marks';
 import { formatUnits } from '../../../lib/format';
 import { SUGGESTED_MONTHLY_RATE_BPS } from '../../../lib/rates';
 import { Bento, BentoTile, Eyebrow, SectionIntro } from '../_blocks';
@@ -35,7 +35,7 @@ function BorrowVisual() {
     <div className={styles.quote}>
       <div className={styles.offer}>
         <div className={styles.offerHead}>
-          <AppIcon color="light" size={32} mark>
+          <AppIcon color="light" size={32} mark fill={markFill(ASSET_MARK.ZEC)}>
             <Image src={ASSET_MARK.ZEC} alt="" width={20} height={20} />
           </AppIcon>
           <div>
@@ -60,7 +60,7 @@ function BorrowVisual() {
         <div className={cx(styles.chipRow, styles.reverse)}>
           {[...TICKER_MARKS, ...TICKER_MARKS, ...TICKER_MARKS, ...TICKER_MARKS].map((mark, i) => (
             <Chip key={i}>
-              <AppIcon color="light" size={32} mark>
+              <AppIcon color="light" size={32} mark fill={markFill(mark.src)}>
                 <Image src={mark.src} alt="" width={20} height={20} />
               </AppIcon>
               {mark.symbol}

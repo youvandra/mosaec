@@ -17,7 +17,7 @@ import { UnitsError, parseUnits } from '@mosaec/domain';
 import { MosaecViews, mosaecCalls } from '@mosaec/sdk';
 import { AppIcon, Button, Dialog, ErrorState, Skeleton, Tooltip, cx } from '@mosaec/ui';
 
-import { NEAR_MARK } from '../../../lib/asset-marks';
+import { NEAR_MARK, markFill } from '../../../lib/asset-marks';
 import { formatCompact, formatUnits } from '../../../lib/format';
 import { useNetwork } from '../../../lib/near/network';
 import { useTransaction } from '../../../lib/near/useTransaction';
@@ -101,7 +101,7 @@ function short(value: bigint, asset: Asset): string {
 
 function NearTile() {
   return (
-    <AppIcon color="light" size={52} mark>
+    <AppIcon color="light" size={52} mark fill={markFill(NEAR_MARK.src)}>
       <Image src={NEAR_MARK.src} alt="" width={32} height={32} />
     </AppIcon>
   );
@@ -144,7 +144,7 @@ export function BalancesDesk() {
             {ASSET_SYMBOLS.map((symbol) => (
               <CoinTile key={symbol} symbol={symbol} size={32} />
             ))}
-            <AppIcon color="light" size={32} mark>
+            <AppIcon color="light" size={32} mark fill={markFill(NEAR_MARK.src)}>
               <Image src={NEAR_MARK.src} alt="" width={20} height={20} />
             </AppIcon>
             <span className="t-caption">{ASSET_SYMBOLS.join(', ')} and NEAR</span>

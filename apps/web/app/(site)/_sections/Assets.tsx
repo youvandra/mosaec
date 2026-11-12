@@ -5,7 +5,7 @@ import { ASSETS } from '@mosaec/config/assets';
 import { NETWORKS } from '@mosaec/config/networks';
 import { AppIcon, Reveal, Section, SectionHeader, StatusPill, Tag, WordReveal } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { formatUnits } from '../../../lib/format';
 
 import styles from './Assets.module.css';
@@ -39,7 +39,7 @@ export function Assets() {
         {Object.values(ASSETS).map((asset) => (
           <Reveal key={asset.symbol} className={styles.card}>
             <div className={styles.top}>
-              <AppIcon color="light" size={56} mark>
+              <AppIcon color="light" size={56} mark fill={markFill(ASSET_MARK[asset.symbol])}>
                 <Image src={ASSET_MARK[asset.symbol]} alt="" width={36} height={36} />
               </AppIcon>
               {liveOnTestnet(asset.symbol) && (

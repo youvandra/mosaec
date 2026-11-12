@@ -20,7 +20,7 @@ import { ASSETS, ASSET_SYMBOLS } from '@mosaec/config/assets';
 import { NETWORKS } from '@mosaec/config/networks';
 import { AppIcon, ButtonLink, Reveal, Section, StatusPill, Tag, WordReveal, cx } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { CODE_HASHES } from '../../../lib/deployments';
 import { formatUnits } from '../../../lib/format';
 import { SITE } from '../../../lib/site';
@@ -231,7 +231,7 @@ function CapsVisual() {
     <div className={styles.caps}>
       {ASSET_SYMBOLS.map((symbol) => (
         <div key={symbol} className={styles.cap}>
-          <AppIcon color="light" size={28} mark>
+          <AppIcon color="light" size={28} mark fill={markFill(ASSET_MARK[symbol])}>
             <Image src={ASSET_MARK[symbol]} alt="" width={18} height={18} />
           </AppIcon>
           <span className="t-label">{ASSETS[symbol].name}</span>

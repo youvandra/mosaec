@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { ASSETS } from '@mosaec/config/assets';
 import { AppIcon, Reveal, Section, Tag, WordReveal, cx } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { formatUnits, padCents } from '../../../lib/format';
 import { SUGGESTED_MONTHLY_RATE_BPS, TERM_OPTIONS, suggestedRepayment } from '../../../lib/rates';
 import { Eyebrow, FaqBlock, SectionIntro } from '../_blocks';
@@ -317,7 +317,7 @@ function PerAsset() {
                 <tr key={symbol}>
                   <th scope="row">
                     <span className={styles.assetName}>
-                      <AppIcon color="light" size={36} mark>
+                      <AppIcon color="light" size={36} mark fill={markFill(ASSET_MARK[symbol])}>
                         <Image src={ASSET_MARK[symbol]} alt="" width={22} height={22} />
                       </AppIcon>
                       {symbol}

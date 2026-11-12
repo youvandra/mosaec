@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 import { AmountPair, AppIcon, NftCard, ProgressBar, StatusPill } from '@mosaec/ui';
 
-import { ASSET_MARK } from '../../../lib/asset-marks';
+import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { CODE_HASHES, shortHash } from '../../../lib/deployments';
 import { EXAMPLE_PAWN as E } from '../_content/facts';
 
@@ -43,7 +43,7 @@ export function PackVisual() {
     <div className={styles.list}>
       <Row
         icon={
-          <AppIcon color="light" size={40} mark>
+          <AppIcon color="light" size={40} mark fill={markFill(ASSET_MARK.ZEC)}>
             <Image src={ASSET_MARK.ZEC} alt="" width={24} height={24} />
           </AppIcon>
         }

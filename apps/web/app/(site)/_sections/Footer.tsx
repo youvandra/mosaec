@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { NETWORKS, explorerAccountUrl } from '@mosaec/config/networks';
 import { AppIcon, ButtonLink, Logo, Mark, Tag, cx } from '@mosaec/ui';
 
-import { ASSET_MARK, NEAR_MARK } from '../../../lib/asset-marks';
+import { ASSET_FILL, ASSET_MARK, NEAR_MARK } from '../../../lib/asset-marks';
 import { SITE } from '../../../lib/site';
 
 import styles from './Footer.module.css';
@@ -25,6 +25,7 @@ interface OrbitTile {
   readonly left: number;
   readonly color: AppIconColor;
   readonly mark?: boolean;
+  readonly fill?: string;
   readonly node: ReactNode;
 }
 
@@ -35,6 +36,7 @@ const INNER: readonly OrbitTile[] = [
     left: 174,
     color: 'light',
     mark: true,
+    fill: ASSET_FILL.ZEC,
     node: <Image src={ASSET_MARK.ZEC} alt="" width={26} height={26} />,
   },
   { top: 222, left: 44, color: 'green', node: <CalendarCheckIcon weight="fill" /> },
@@ -46,6 +48,7 @@ const OUTER: readonly OrbitTile[] = [
     left: 23,
     color: 'light',
     mark: true,
+    fill: ASSET_FILL.USDC,
     node: <Image src={ASSET_MARK.USDC} alt="" width={26} height={26} />,
   },
   { top: -18, left: 136, color: 'orange', node: <TicketIcon weight="fill" /> },
@@ -54,7 +57,7 @@ const OUTER: readonly OrbitTile[] = [
 function Holders({ tiles }: { readonly tiles: readonly OrbitTile[] }) {
   return tiles.map((tile, index) => (
     <span key={index} className={styles.holder} style={{ top: tile.top, left: tile.left }}>
-      <AppIcon color={tile.color} size={42} mark={tile.mark ?? false}>
+      <AppIcon color={tile.color} size={42} mark={tile.mark ?? false} fill={tile.fill}>
         {tile.node}
       </AppIcon>
     </span>
