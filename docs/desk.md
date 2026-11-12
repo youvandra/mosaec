@@ -17,9 +17,10 @@ the desk margin and the repayment formula live in `packages/config/rates.ts`, sh
 | Term                   | 10 minutes to 90 days            | 7 to 90 days                   |
 | Per pawn               | 10 to 250 USDC                   | 10 to 50 USDC                  |
 | Out at once            | up to 5,000 USDC                 | up to 200 USDC                 |
-| Per UTC day            | up to 5,000 USDC                 | up to 100 USDC                 |
+| Per UTC day            | up to 5,000 USDC, net of repaid  | up to 100 USDC, net of repaid  |
 | Fills per hour         | 4                                | 2                              |
 | Instant loans per hour | 20                               | 4                              |
+| Instant loans per day  | 3 per borrower                   | 1 per borrower                 |
 
 Fair monthly rates at 50% loan to value: ZEC 2.5%, BTC 1.0%, SOL 2.25%. Reference prices come
 from CoinGecko and are used only for the loan-to-value rule; the contracts never read a price. A
@@ -38,6 +39,11 @@ missing or stale price refuses the fill.
 Every fill path (the loop, the MCP tool and instant loans) runs under one lock, so two fills
 cannot both pass a budget check that only one of them fits. The loop leaves an offer to the
 instant path for its first two minutes.
+
+A loan lent and repaid the same UTC day gives its budget back. A fill counts as running from the
+moment it is decided, before the indexer shows the pack. When a fill is sent but its outcome
+cannot be read, the desk keeps the hash, counts the loan as lent and reads the outcome again on
+the next loop tick.
 
 ## Rate card
 
@@ -60,8 +66,11 @@ anything Caddy forwards.
   HMAC over the terms) and the expiry, reads the offer live from the registry, requires the exact
   quoted terms and a maker who holds the Title, re-runs the policy, and fills. The quoted loan to
   value stands while the quote is valid. A second call for the same quote returns the first fill.
+  The desk waits for the offer to appear before it takes the fill lock, and turns a fill away
+  with `DESK_BUSY` while ten others wait for it.
 
-One instant loan runs per borrower at a time.
+One instant loan runs per borrower at a time, and each borrower takes at most the daily count
+above (`DESK_MAKER_LIMIT`).
 
 The Mosaec API exposes both publicly, validated with zod and passed to the desk with a 20 s
 timeout: `GET /desk/quote?network&asset&amount&term[&principal][&borrower]` (30 a minute per
