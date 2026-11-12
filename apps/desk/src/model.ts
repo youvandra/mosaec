@@ -53,8 +53,7 @@ export class OpenAiCompatibleModel implements ChatModel {
       body: JSON.stringify({
         model: this.id,
         messages,
-        tools,
-        tool_choice: 'auto',
+        ...(tools.length === 0 ? {} : { tools, tool_choice: 'auto' }),
         temperature: 0,
       }),
       signal: AbortSignal.timeout(this.timeoutMs),

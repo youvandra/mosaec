@@ -1,22 +1,16 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
-import { createServer } from 'node:http';
 
 // The SDK publishes these subpaths through a wildcard export the import resolver cannot follow.
 // eslint-disable-next-line import-x/no-unresolved
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-// eslint-disable-next-line import-x/no-unresolved
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 
 import type { DeskService, OfferReview } from './desk-service';
-import type { IncomingMessage, Server } from 'node:http';
 
-/** Largest request body the endpoint reads; MCP calls here are a few hundred bytes. */
-export const MAX_BODY_BYTES = 64 * 1024;
 /** Requests per client address per minute, keyed by the address Caddy forwards. */
 export const MCP_REQUESTS_PER_MINUTE = 30;
 /** How long one read of every open offer serves `list_offers`. */
-const OFFERS_CACHE_MS = 5_000;
+export const OFFERS_CACHE_MS = 5_000;
 
 const PACK = z.string().min(3).max(64).describe('Pack account id, such as 3.v0.mosaec.testnet');
 
@@ -114,20 +108,6 @@ export function deskMcp(
   return server;
 }
 
-class BodyTooLarge extends Error {}
-
-async function body(req: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += (chunk as Buffer).length;
-    if (size > MAX_BODY_BYTES) throw new BodyTooLarge();
-    chunks.push(chunk as Buffer);
-  }
-  const raw = Buffer.concat(chunks).toString('utf8');
-  return raw === '' ? undefined : (JSON.parse(raw) as unknown);
-}
-
 /** Compares a bearer header with the desk token in constant time. */
 export function holdsToken(header: string | undefined, token: string | undefined): boolean {
   if (token === undefined || header === undefined) return false;
@@ -153,7 +133,7 @@ export function mcpLimiter(perMinute: number, now: () => number = Date.now) {
 }
 
 /** One live read of the offer book shared by every request inside `ms`. */
-function cached<T>(read: () => Promise<T>, ms: number): () => Promise<T> {
+export function cached<T>(read: () => Promise<T>, ms: number): () => Promise<T> {
   let entry: { at: number; value: Promise<T> } | null = null;
   return () => {
     const at = Date.now();
@@ -166,58 +146,4 @@ function cached<T>(read: () => Promise<T>, ms: number): () => Promise<T> {
     }
     return entry.value;
   };
-}
-
-/** Stateless Streamable HTTP endpoint at `/mcp`; one server per request. */
-export function serveMcp(
-  service: DeskService,
-  port: number,
-  deskToken: string | undefined,
-): Server {
-  const allow = mcpLimiter(MCP_REQUESTS_PER_MINUTE);
-  const listOffers = cached(() => service.reviewOffers(), OFFERS_CACHE_MS);
-  const http = createServer((req, res) => {
-    void (async () => {
-      if (req.url === '/health') {
-        res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
-        return;
-      }
-      if (!req.url?.startsWith('/mcp')) {
-        res.writeHead(404).end();
-        return;
-      }
-      if (req.method !== 'POST') {
-        res.writeHead(405, { allow: 'POST' }).end();
-        return;
-      }
-      const forwarded = req.headers['x-forwarded-for'];
-      const address =
-        (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ??
-        req.socket.remoteAddress ??
-        'direct';
-      if (!allow(address)) {
-        res.writeHead(429, { 'retry-after': '60' }).end();
-        return;
-      }
-      if (Number(req.headers['content-length'] ?? 0) > MAX_BODY_BYTES) {
-        res.writeHead(413).end();
-        return;
-      }
-      const canSpend = holdsToken(req.headers.authorization, deskToken);
-      const server = deskMcp(service, canSpend, listOffers);
-      const transport = new StreamableHTTPServerTransport({});
-      res.on('close', () => {
-        void transport.close();
-        void server.close();
-      });
-      try {
-        await server.connect(transport);
-        await transport.handleRequest(req, res, await body(req));
-      } catch (cause) {
-        if (!res.headersSent) res.writeHead(cause instanceof BodyTooLarge ? 413 : 400).end();
-      }
-    })();
-  });
-  http.listen(port, '127.0.0.1');
-  return http;
 }

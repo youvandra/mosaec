@@ -85,6 +85,13 @@ export const ERROR_CATALOG = {
   DESK_EXPOSURE: desk('The lending desk holds its limit for this asset.'),
   DESK_PAUSED: desk('The lending desk is paused.'),
   DESK_AGENT: desk('The lending desk agent did not answer; nothing was signed.'),
+  DESK_PRICE: desk('The lending desk has no fresh price for this coin right now.'),
+  DESK_OPEN_LOAN: desk('You already have an instant desk loan running. Repay it first.'),
+  DESK_QUOTE_INVALID: desk('This desk quote is not one the desk issued. Ask for a new quote.'),
+  DESK_QUOTE_EXPIRED: desk('This desk quote has expired. Ask for a new quote.'),
+  DESK_QUOTE_MISMATCH: desk(
+    'The offer terms differ from the desk quote, so the desk did not lend.',
+  ),
 } as const satisfies Record<string, CatalogEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CATALOG;
