@@ -90,6 +90,7 @@ export async function runDesk(
   const reviews = await service.reviewOffers();
   const fresh: OfferReview[] = [];
   for (const review of reviews) {
+    if (service.inHeadStart(review)) continue;
     if (!(await service.alreadyDecided(review.offer))) fresh.push(review);
   }
   let refused = 0;
@@ -99,7 +100,10 @@ export async function runDesk(
       allowed.push(review);
     } else {
       refused += 1;
-      await service.recordRefusal(review.offer, runId, review.verdict);
+      /* A paused desk would log the same refusal every pass; the pause itself is the record. */
+      if (review.verdict.code !== 'DESK_PAUSED') {
+        await service.recordRefusal(review.offer, runId, review.verdict);
+      }
     }
   }
   if (allowed.length === 0) {

@@ -1,17 +1,23 @@
 {
   "extends": "@mosaec/config/tsconfig/nextjs.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
+    ".next-alt/types/**/*.ts",
+    ".next/types/**/*.ts",
+    "app",
+    "instrumentation-client.ts",
+    "instrumentation.ts",
+    "lib",
+    "middleware.ts",
     "next-env.d.ts",
     "next.config.ts",
-    "middleware.ts",
-    "instrumentation.ts",
-    "instrumentation-client.ts",
-    "app",
-    "lib",
-    ".next/types/**/*.ts"
+    ".next-verify/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

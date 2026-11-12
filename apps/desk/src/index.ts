@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 
 import { DESK_ACCOUNTS, deskPolicy } from '@mosaec/config/desk';
@@ -7,10 +8,14 @@ import { runDesk } from './agent';
 import { NearDeskChain } from './chain';
 import { DeskService } from './desk-service';
 import { loadDeskEnv } from './env';
-import { serveMcp } from './mcp';
+import { InstantDesk } from './instant';
 import { OpenAiCompatibleModel } from './model';
 import { ReferencePrices } from './prices';
+import { QuoteSigner } from './quote-token';
+import { CARD_INTERVAL_MS, RateCards } from './rate-card';
 import { DeskRepository } from './repository';
+import { serveDesk } from './server';
+import { RealisedVolatility } from './volatility';
 
 function log(message: string, fields: Record<string, unknown> = {}): void {
   console.log(JSON.stringify({ level: 'info', message, ...fields }));
@@ -33,8 +38,11 @@ async function main(): Promise<void> {
   );
   const service = new DeskService(network, deskPolicy(network), chain, repository, prices);
   const model = new OpenAiCompatibleModel(env.LLM_BASE_URL, env.LLM_MODEL, env.LLM_API_KEY);
+  const cards = new RateCards(service, repository, new RealisedVolatility(), model);
+  const signer = new QuoteSigner(env.DESK_QUOTE_SECRET ?? randomBytes(32).toString('hex'));
+  const instant = new InstantDesk(service, repository, cards, signer);
 
-  serveMcp(service, env.DESK_MCP_PORT, env.DESK_MCP_TOKEN);
+  serveDesk(service, instant, env.DESK_MCP_PORT, env.DESK_MCP_TOKEN);
   log('desk started', {
     network,
     account: DESK_ACCOUNTS[network],
@@ -64,6 +72,26 @@ async function main(): Promise<void> {
       running = false;
     }
   };
+  const setCards = async () => {
+    try {
+      for (const card of await cards.refresh()) {
+        log('desk rate card', {
+          asset: card.asset,
+          monthlyBps: card.monthlyBps,
+          maxLtvBps: card.maxLtvBps,
+          source: card.source,
+          reason: card.reason,
+        });
+      }
+    } catch (cause) {
+      console.error(
+        JSON.stringify({ level: 'error', message: 'rate card failed', cause: String(cause) }),
+      );
+    }
+  };
+  await setCards();
+  setInterval(() => void setCards(), CARD_INTERVAL_MS);
+
   await tick();
   setInterval(() => void tick(), env.DESK_INTERVAL_SECONDS * 1_000);
 }

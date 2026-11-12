@@ -1,5 +1,5 @@
 /** CoinGecko ids of the coins the desk may take. */
-const COINGECKO_IDS = { ZEC: 'zcash', BTC: 'bitcoin', SOL: 'solana' } as const;
+export const COINGECKO_IDS = { ZEC: 'zcash', BTC: 'bitcoin', SOL: 'solana' } as const;
 
 export type DeskSymbol = keyof typeof COINGECKO_IDS;
 export type PriceMap = Readonly<Partial<Record<DeskSymbol, number>>>;

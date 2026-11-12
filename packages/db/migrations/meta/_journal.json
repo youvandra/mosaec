@@ -29,6 +29,13 @@
       "when": 1794439909019,
       "tag": "0003_desk_offer_key",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794444434464,
+      "tag": "0004_desk_core",
+      "breakpoints": true
     }
   ]
 }

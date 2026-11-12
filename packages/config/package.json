@@ -8,6 +8,7 @@
     "./desk": "./desk.ts",
     "./env": "./env.ts",
     "./networks": "./networks.ts",
+    "./rates": "./rates.ts",
     "./eslint": "./eslint.js",
     "./prettier": "./prettier.js",
     "./vitest": "./vitest.js",
