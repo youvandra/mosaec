@@ -78,6 +78,7 @@ export const ERROR_CATALOG = {
   VALIDATION: api(400, 'Some fields are invalid.'),
   UPSTREAM_RPC: api(502, 'The NEAR node is unreachable right now.', true),
   PRICE_UNAVAILABLE: api(503, 'Price unavailable.', true),
+  DESK_UNAVAILABLE: api(503, 'The House Desk is unreachable right now. Try the open market.', true),
   INTERNAL: api(500, 'Something failed on our side. Try again.', true),
 
   DESK_POLICY: desk('The lending desk policy declines this pawn.'),

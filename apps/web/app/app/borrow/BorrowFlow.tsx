@@ -13,12 +13,12 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ASSETS } from '@mosaec/config/assets';
-import { NETWORKS } from '@mosaec/config/networks';
+import { NETWORKS, explorerTxUrl } from '@mosaec/config/networks';
 import { parseUnits } from '@mosaec/domain';
 import { MINT_DEPOSIT_YOCTO, MosaecViews, aprBps, mosaecCalls } from '@mosaec/sdk';
-import { Button, ButtonLink, Segmented, cx, useConfirm } from '@mosaec/ui';
+import { Button, ButtonLink, Segmented, cx, useConfirm, useToast } from '@mosaec/ui';
 
-import { getPositions } from '../../../lib/api';
+import { ApiError, getPositions, requestInstantFill } from '../../../lib/api';
 import { ASSET_MARK } from '../../../lib/asset-marks';
 import { formatUnits, padCents } from '../../../lib/format';
 import { SIGN_FOOTNOTE } from '../../../lib/legal';
@@ -40,8 +40,11 @@ import { packPath } from '../_components/routes';
 import { WalletButton } from '../_components/WalletButton';
 
 import styles from './BorrowFlow.module.css';
+import { LoanChoice } from './LoanChoice';
+import { useInstantQuote } from './useInstantQuote';
 
-import type { Pack } from '../../../lib/api';
+import type { LoanRoute } from './LoanChoice';
+import type { InstantQuote, Pack } from '../../../lib/api';
 import type { TxState } from '../../../lib/near/useTransaction';
 import type { Asset, AssetSymbol } from '@mosaec/config/assets';
 import type { ReactNode } from 'react';
@@ -241,6 +244,9 @@ export function BorrowFlow() {
   const [repaymentEdited, setRepaymentEdited] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [assetMenu, setAssetMenu] = useState(false);
+  const [route, setRoute] = useState<LoanRoute>('instant');
+  const [instantFilling, setInstantFilling] = useState(false);
+  const toast = useToast();
 
   const confirm = useConfirm();
   const mintTx = useTransaction({ pending: 'Creating your pack', success: 'Pack created' });
@@ -424,6 +430,93 @@ export function BorrowFlow() {
     }
   };
 
+  /** Asks the desk to fill the offer just signed; on any refusal the offer stays on the market. */
+  const fillInstantly = async (pack: string, quote: InstantQuote) => {
+    setInstantFilling(true);
+    const id = toast.show({
+      tone: 'pending',
+      title: 'House Desk is lending',
+      body: 'The desk checks the offer and sends the USDC. It takes a few seconds.',
+    });
+    try {
+      const result = await requestInstantFill(network, pack, quote);
+      if (result.status === 'filled') {
+        track('instant_filled');
+        toast.update(id, {
+          tone: 'success',
+          title: 'USDC sent to your account',
+          action: { label: 'View transaction', href: explorerTxUrl(network, result.txHash) },
+        });
+      } else {
+        toast.update(id, {
+          tone: 'error',
+          title: 'The desk did not lend',
+          body: `${result.reason} Your offer stays open on the market.`,
+          duration: null,
+        });
+      }
+    } catch (cause) {
+      const reason = cause instanceof ApiError ? cause.message : 'The House Desk is unreachable.';
+      toast.update(id, {
+        tone: 'error',
+        title: 'The desk did not lend',
+        body: `${reason} Your offer stays open on the market.`,
+        duration: null,
+      });
+    } finally {
+      setInstantFilling(false);
+      refresh();
+    }
+  };
+
+  const sendInstant = async () => {
+    if (packId === null) return;
+    const current = await instantQuote.fresh();
+    if (current.status !== 'ready') {
+      toast.show({
+        tone: 'error',
+        title: 'No desk quote right now',
+        body: current.status === 'unavailable' ? current.reason : 'Try again in a moment.',
+      });
+      return;
+    }
+    const { quote } = current;
+    const principalUnits = BigInt(quote.principal);
+    const repaymentUnits = BigInt(quote.repayment);
+    const termNs = BigInt(quote.termNs);
+    const ok = await confirm({
+      footnote: SIGN_FOOTNOTE,
+      title: 'Take the House Desk loan?',
+      body: 'You sign the offer at the desk price; the desk fills it at once and takes the Title. You keep the Ticket.',
+      rows: [
+        ['You receive', `${cash(principalUnits)} USDC`],
+        ['You repay', `${cash(repaymentUnits)} USDC`],
+        ['Due by', dueDate(termNs)],
+        ['Locked', lockLabel],
+      ],
+      warning: 'Miss the date and the desk keeps the coins. No liquidation before then.',
+      confirmLabel: 'Sign And Get USDC',
+    });
+    if (!ok) return;
+    const sent = await offerTx.run(
+      [
+        calls.offer({
+          pack: packId,
+          tokenIds: [tokenId],
+          terms: { kToken: SETTLEMENT.tokenIds[network], kAmount: repaymentUnits, termNs },
+          payToken: SETTLEMENT.tokenIds[network],
+          price: principalUnits,
+          offerExpiresAtNs: BigInt(Date.now()) * NS_PER_MS + OFFER_OPEN_NS,
+        }),
+      ],
+      { pending: 'Signing the offer', success: 'Offer signed' },
+    );
+    if (sent === null) return;
+    setOffered(true);
+    track('offer_signed');
+    await fillInstantly(packId, quote);
+  };
+
   const hasPack = packId !== null;
   const deposited = hasPack && packBalance !== null && toDeposit === 0n;
   const stage: 'connect' | 'mint' | 'deposit' | 'offer' | 'done' =
@@ -444,6 +537,30 @@ export function BorrowFlow() {
     const mine = order.indexOf(step);
     return mine < at ? 'done' : mine === at ? 'current' : 'todo';
   };
+
+  const deskAsset =
+    collateral.symbol === 'ZEC' || collateral.symbol === 'BTC' || collateral.symbol === 'SOL'
+      ? collateral.symbol
+      : null;
+  const instantQuote = useInstantQuote(
+    network,
+    stage === 'offer' &&
+      accountId !== null &&
+      deskAsset !== null &&
+      packBalance !== null &&
+      packBalance > 0n &&
+      term !== undefined
+      ? {
+          asset: deskAsset,
+          amount: packBalance,
+          termNs: term.termNs,
+          principal: principal ?? undefined,
+          borrower: accountId,
+        }
+      : null,
+  );
+  /* A desk that cannot quote leaves the open market as the only way. */
+  const loanRoute: LoanRoute = instantQuote.state.status === 'ready' ? route : 'market';
 
   const pending = (state: TxState) => state.phase === 'pending';
   const lockLabel =
@@ -478,6 +595,17 @@ export function BorrowFlow() {
           : `Seal ${toDeposit === null ? '' : formatUnits(toDeposit, collateral.decimals, 4)} ${collateral.symbol}`}
       </Button>
     );
+  } else if (stage === 'offer' && loanRoute === 'instant') {
+    action = (
+      <Button
+        fullWidth
+        disabled={!agreed}
+        loading={pending(offerTx.state)}
+        onClick={() => void sendInstant()}
+      >
+        {pending(offerTx.state) ? 'Waiting for the Wallet' : 'Sign And Get USDC'}
+      </Button>
+    );
   } else if (stage === 'offer') {
     action = (
       <Button
@@ -487,6 +615,12 @@ export function BorrowFlow() {
         onClick={() => void sendOffer()}
       >
         {pending(offerTx.state) ? 'Waiting for the Wallet' : 'Sign the Offer'}
+      </Button>
+    );
+  } else if (instantFilling) {
+    action = (
+      <Button fullWidth loading disabled>
+        House Desk Is Lending
       </Button>
     );
   } else {
@@ -748,7 +882,11 @@ export function BorrowFlow() {
           <StepRow
             index={3}
             title="Sign the offer"
-            detail="Open to lenders for 3 days"
+            detail={
+              loanRoute === 'instant'
+                ? 'The House Desk lends at once'
+                : 'Open to lenders for 3 days'
+            }
             state={stepState('offer')}
           />
           <li className={styles.actionRow}>
@@ -773,6 +911,14 @@ export function BorrowFlow() {
               </div>
             )}
             {stage === 'offer' && (
+              <LoanChoice
+                route={loanRoute}
+                onRoute={setRoute}
+                quote={instantQuote.state}
+                termLabel={term?.label ?? ''}
+              />
+            )}
+            {stage === 'offer' && (
               <label className={actionStyles.check}>
                 <input
                   type="checkbox"
@@ -781,7 +927,9 @@ export function BorrowFlow() {
                     setAgreed(event.target.checked);
                   }}
                 />
-                If I miss the date, the lender keeps the coins.
+                {loanRoute === 'instant'
+                  ? 'If I miss the date, the House Desk keeps the coins.'
+                  : 'If I miss the date, the lender keeps the coins.'}
               </label>
             )}
             {overBalance && stage === 'deposit' && (

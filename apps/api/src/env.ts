@@ -8,6 +8,8 @@ const apiEnvSchema = baseEnvSchema.extend({
   ONECLICK_PARTNER_JWT: z.string().min(1).optional(),
   /** Key of `faucet.mosaec.testnet`, which holds only test tokens. Absent: no faucet. */
   FAUCET_SECRET_KEY: z.string().startsWith('ed25519:').optional(),
+  /** The house desk's loopback server, which quotes and fills instant loans. */
+  DESK_URL: z.url().default('http://127.0.0.1:8790'),
 });
 
 export type ApiEnv = z.output<typeof apiEnvSchema>;

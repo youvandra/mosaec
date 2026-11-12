@@ -296,3 +296,107 @@ export async function claimFaucet(accountId: string): Promise<FaucetGrant> {
   }
   return { accountId: body.accountId ?? accountId, txHash: body.txHash };
 }
+
+const instantQuoteSchema = z.object({
+  network: z.string(),
+  asset: z.enum(['ZEC', 'BTC', 'SOL']),
+  amount: z.string(),
+  principal: z.string(),
+  repayment: z.string(),
+  termNs: z.string(),
+  expiresAtMs: z.number().int(),
+  cardId: z.string(),
+  quoteId: z.string(),
+  aprBps: z.number().int(),
+  ltvBps: z.number().int(),
+  monthlyBps: z.number().int(),
+});
+
+const quoteAnswerSchema = z.discriminatedUnion('available', [
+  z.object({ available: z.literal(true), quote: instantQuoteSchema }),
+  z.object({ available: z.literal(false), code: z.string(), reason: z.string() }),
+]);
+
+const instantFillSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('filled'), txHash: z.string() }),
+  z.object({
+    status: z.enum(['refused', 'error']),
+    code: z.string(),
+    reason: z.string(),
+    txHash: z.string().optional(),
+  }),
+]);
+
+export type InstantQuote = z.output<typeof instantQuoteSchema>;
+export type InstantQuoteAnswer = z.output<typeof quoteAnswerSchema>;
+export type InstantFillResult = z.output<typeof instantFillSchema>;
+
+export interface InstantQuoteRequest {
+  readonly asset: 'ZEC' | 'BTC' | 'SOL';
+  readonly amount: bigint;
+  readonly termNs: bigint;
+  readonly principal?: bigint | undefined;
+  readonly borrower?: string | undefined;
+}
+
+/** Reads the API's error body into an `ApiError` carrying the catalog message. */
+async function apiFailure(response: Response, fallback: string): Promise<ApiError> {
+  const body = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
+  return new ApiError(body.error?.message ?? fallback, response.status);
+}
+
+/** A House Desk quote for coins about to be offered, valid for ten minutes. */
+export async function getInstantQuote(
+  network: NetworkId,
+  request: InstantQuoteRequest,
+): Promise<InstantQuoteAnswer> {
+  checkNetwork(network);
+  const query = new URLSearchParams({
+    network,
+    asset: request.asset,
+    amount: request.amount.toString(),
+    term: request.termNs.toString(),
+  });
+  if (request.principal !== undefined) query.set('principal', request.principal.toString());
+  if (request.borrower !== undefined) query.set('borrower', request.borrower);
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl()}/desk/quote?${query.toString()}`, { cache: 'no-store' });
+  } catch (cause) {
+    throw new ApiError('The Mosaec API is unreachable.', undefined, { cause });
+  }
+  if (!response.ok) throw await apiFailure(response, 'The House Desk is unavailable.');
+  return quoteAnswerSchema.parse(await response.json());
+}
+
+/** Asks the House Desk to fill `pack`, whose open offer carries the terms of `quote`. */
+export async function requestInstantFill(
+  network: NetworkId,
+  pack: string,
+  quote: InstantQuote,
+): Promise<InstantFillResult> {
+  checkNetwork(network);
+  const terms = {
+    network: quote.network,
+    asset: quote.asset,
+    amount: quote.amount,
+    principal: quote.principal,
+    repayment: quote.repayment,
+    termNs: quote.termNs,
+    expiresAtMs: quote.expiresAtMs,
+    cardId: quote.cardId,
+    quoteId: quote.quoteId,
+  };
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl()}/desk/instant-fill?network=${network}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...terms, pack }),
+    });
+  } catch (cause) {
+    throw new ApiError('The Mosaec API is unreachable.', undefined, { cause });
+  }
+  if (!response.ok) throw await apiFailure(response, 'The House Desk is unavailable.');
+  return instantFillSchema.parse(await response.json());
+}

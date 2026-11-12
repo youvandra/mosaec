@@ -63,6 +63,13 @@ anything Caddy forwards.
 
 One instant loan runs per borrower at a time.
 
+The Mosaec API exposes both publicly, validated with zod and passed to the desk with a 20 s
+timeout: `GET /desk/quote?network&asset&amount&term[&principal][&borrower]` (30 a minute per
+address) and `POST /desk/instant-fill?network` (5 a minute per address). A desk that is down or
+answers oddly gives `DESK_UNAVAILABLE`. In the app, Borrow step 3 offers the desk quote beside the
+open market; the borrower signs the normal offer at the quoted terms and the app asks for the fill.
+A refused fill leaves the offer open on the market.
+
 ## Kill switch
 
 `desk_controls` holds a pause flag per network. The desk reads it before every quote and every
