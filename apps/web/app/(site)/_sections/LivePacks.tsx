@@ -107,7 +107,7 @@ export function LivePacks() {
               Public Record
             </Tag>
           </Reveal>
-          <WordReveal className="t-h1" lines={['Every pack,', 'in plain sight.']} />
+          <WordReveal className="t-h1" lines={['Every pack,', 'receipts included.']} />
           <Reveal as="p" className="t-body-lg">
             Mosaec indexes every pack the registry creates, and your browser can double-check any of
             them against the chain.

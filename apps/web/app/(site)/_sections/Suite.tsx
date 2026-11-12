@@ -247,7 +247,7 @@ export function Suite() {
             label="Products"
           />
         }
-        title={['A full pawn desk,', 'built on one contract.']}
+        title={['Borrow, lend, verify.', 'One contract runs it all.']}
         lead="Borrowers, lenders and agents all meet at the same sealed pack. Start from any side."
       />
       <Bento>

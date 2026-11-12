@@ -238,7 +238,7 @@ export default async function MarketPage() {
                 shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
                 label="Live Book"
               />
-              <WordReveal className="t-h1" lines={['Read from NEAR,', 'every fifteen seconds.']} />
+              <WordReveal className="t-h1" lines={['Live from NEAR,', 'fresh every 15 seconds.']} />
               <p className="t-body-lg">
                 {featured === undefined
                   ? 'Every offer is filled right now. A new pawn appears the moment a borrower signs; this is what one looks like.'
@@ -279,7 +279,7 @@ export default async function MarketPage() {
               label="Two Ways to Fill"
             />
           }
-          title={['A quick answer,', 'or a better price.']}
+          title={['Fast cash,', 'or your own price.']}
           lead="Every pawn is the same contract either way: the loan arrives in one transaction and the coins stay sealed until the date."
         />
         <Checkerboard
@@ -390,7 +390,7 @@ export default async function MarketPage() {
                 label="Recent Pawns"
               />
             }
-            title={['How the latest', 'pawns ended.']}
+            title={['Fresh off the chain:', 'how pawns ended.']}
             lead="Straight from the chain, newest first. Each row links to its pack in the app."
           />
           <Reveal as="ul" className={styles.recent}>
