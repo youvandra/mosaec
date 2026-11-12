@@ -170,6 +170,5 @@ The desk's Intents quotes are quotes; nothing is sold. Retries such as `claim_pa
 
 ## Disclosures
 
-- The same team also entered **Oriova** ([github.com/youvandra/oriova](https://github.com/youvandra/oriova)), a separate project with no shared code.
 - AI use: Claude Code assisted with code, tests and docs. The mechanism, contracts design, trust model and every deploy were reviewed and run by the team, with each change gated by CI.
 - License: MIT, see [LICENSE](LICENSE).
