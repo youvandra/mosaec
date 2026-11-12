@@ -5,7 +5,7 @@ import { ASSETS } from '@mosaec/config/assets';
 import { NETWORKS } from '@mosaec/config/networks';
 import { AppIcon, Reveal, Section, SectionHeader, StatusPill, Tag, WordReveal } from '@mosaec/ui';
 
-import { ASSET_MARK, TICKER_MARKS } from '../../../lib/asset-marks';
+import { ASSET_MARK } from '../../../lib/asset-marks';
 import { formatUnits } from '../../../lib/format';
 
 import styles from './Assets.module.css';
@@ -21,18 +21,6 @@ function liveOnTestnet(symbol: AssetSymbol): boolean {
 export function Assets() {
   return (
     <Section id="assets" label="Assets">
-      <div className={styles.ticker} aria-hidden="true">
-        <div className={styles.tickerRow}>
-          {[...TICKER_MARKS, ...TICKER_MARKS].map((mark, index) => (
-            <span key={index} className={styles.tickerItem}>
-              <AppIcon color="light" size={40} mark>
-                <Image src={mark.src} alt="" width={26} height={26} />
-              </AppIcon>
-              {mark.symbol}
-            </span>
-          ))}
-        </div>
-      </div>
       <SectionHeader layout="split" className={styles.header}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <Reveal>

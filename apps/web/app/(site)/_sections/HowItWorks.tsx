@@ -34,7 +34,7 @@ const STEPS: readonly Step[] = [
     icon: <LockKeyIcon weight="fill" />,
     visual: <PackVisual />,
     lead: 'Seal your coins.',
-    body: 'Move ZEC into a new pack: an account with zero access keys that runs one published contract. You receive its Title.',
+    body: 'Move ZEC, BTC or SOL into a new pack: an account with zero access keys that runs one published contract. You receive its Title.',
   },
   {
     id: 'step-ask',
@@ -52,7 +52,7 @@ const STEPS: readonly Step[] = [
     icon: <ArrowsLeftRightIcon weight="bold" />,
     visual: <FillVisual />,
     lead: 'A lender pays.',
-    body: 'The lender sends USDC and takes the Title. The USDC and the Ticket reach you in the same receipt chain, and any mismatch refunds the lender in full.',
+    body: 'The House Desk fills a quoted offer within a minute, or any lender fills yours at your price: the lender sends USDC and takes the Title. The USDC and the Ticket reach you in the same receipt chain, and any mismatch refunds the lender in full.',
   },
   {
     id: 'step-redeem',
@@ -61,7 +61,7 @@ const STEPS: readonly Step[] = [
     icon: <CalendarCheckIcon weight="fill" />,
     visual: <RedeemVisual />,
     lead: 'Buy your coins back.',
-    body: 'Pay the repayment on any day before the date and the pack releases the ZEC to you.',
+    body: 'Pay the repayment on any day before the date and the pack releases the coins to you.',
   },
   {
     id: 'step-exit',

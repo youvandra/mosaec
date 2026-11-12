@@ -24,7 +24,7 @@
 .emptyCard {
   transform: rotate(2deg);
 }
-@media (max-width: 1023.98px) {
+@container (max-width: 720px) {
   .emptyTray {
     grid-template-columns: 1fr;
     padding: 32px;

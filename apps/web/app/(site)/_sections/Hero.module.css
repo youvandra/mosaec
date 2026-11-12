@@ -90,3 +90,12 @@
     gap: 0 12px;
   }
 }
+
+.liveOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nearMark {
+  border-radius: 50%;
+}

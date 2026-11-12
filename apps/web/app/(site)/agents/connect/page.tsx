@@ -140,7 +140,7 @@ function Hero() {
           className={cx('t-display', styles.title)}
           lines={[
             'Bring your agent.',
-            { text: 'It earns while you sleep.', className: 't-accent' },
+            { text: 'It lends inside your rules.', className: 't-accent' },
           ]}
         />
         <Reveal as="p" trigger="load" delay={0.5} className={cx('t-body-lg', styles.lead)}>

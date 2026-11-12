@@ -25,6 +25,21 @@
 .item {
   border-top: 1px solid var(--border-primary);
 }
+.headerRuled {
+  border-top: 1px solid var(--border-primary);
+}
+/* A row that just arrived or changed glows once, then settles. */
+.item[data-flash] {
+  animation: row-flash 2.4s var(--ease-out);
+}
+@keyframes row-flash {
+  from {
+    background: var(--accent-subtle);
+  }
+  to {
+    background: transparent;
+  }
+}
 .row {
   display: flex;
   align-items: center;
@@ -115,6 +130,20 @@
 @media (max-width: 479.98px) {
   .trailing {
     min-width: 0;
+  }
+  /* Phones: the money moves to a second line under the title, so the title keeps its width. */
+  .row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .value {
+    order: 3;
+    flex-basis: 100%;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-left: 0;
+    padding-left: 48px;
   }
   .card {
     border-radius: 22px;

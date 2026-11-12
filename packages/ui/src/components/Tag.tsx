@@ -8,7 +8,8 @@ export interface TagProps {
   readonly badge?: string;
   /** Small illustrative glyph after the badge text. */
   readonly shape?: ReactNode;
-  readonly children: string;
+  /** The label: plain text, or text with an inline mark such as a chain logo. */
+  readonly children: ReactNode;
   readonly tone?: 'default' | 'inverse';
   readonly className?: string | undefined;
 }

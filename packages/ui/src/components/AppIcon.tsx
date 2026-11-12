@@ -14,6 +14,11 @@ export interface AppIconProps {
   readonly children: ReactNode;
   /** Sizes the child as a full-colour mark instead of a glyph. */
   readonly mark?: boolean;
+  /**
+   * Solid tile colour for a round token mark, set to the mark's own disc colour so the disc
+   * melts into the tile and only the glyph shows.
+   */
+  readonly fill?: string | undefined;
   readonly className?: string | undefined;
   readonly label?: string;
 }
@@ -24,13 +29,23 @@ export function AppIcon({
   size = 88,
   children,
   mark,
+  fill,
   className,
   label,
 }: AppIconProps) {
-  const style = { '--size': `${size.toString()}px` } as CSSProperties;
+  const style = {
+    '--size': `${size.toString()}px`,
+    ...(fill === undefined ? {} : { background: fill }),
+  } as CSSProperties;
   return (
     <span
-      className={cx(styles.icon, styles[color], mark === true && styles.mark, className)}
+      className={cx(
+        styles.icon,
+        styles[color],
+        mark === true && styles.mark,
+        fill !== undefined && styles.filled,
+        className,
+      )}
       style={style}
       role={label === undefined ? undefined : 'img'}
       aria-label={label}

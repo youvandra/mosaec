@@ -38,6 +38,7 @@ const TOC = [
   { id: 'rules', label: 'Rules' },
   { id: 'contracts', label: 'Contracts' },
   { id: 'verify', label: 'Verify a Pack' },
+  { id: 'desk', label: 'House Desk' },
   { id: 'agents', label: 'Agents' },
   { id: 'errors', label: 'Errors' },
 ] as const;
@@ -305,9 +306,55 @@ export default function DocsPage() {
           </DocSection>
 
           <DocSection
+            id="desk"
+            title="House Desk"
+            lead="The lender Mosaec runs. It quotes instant loans from an hourly rate card, signs inside a fixed policy and books every move."
+          >
+            <dl className={styles.facts}>
+              <div>
+                <dt>Quote</dt>
+                <dd>
+                  <code>GET /api/desk/quote</code>: loan, repayment and a quote id valid for 10
+                  minutes
+                </dd>
+              </div>
+              <div>
+                <dt>Fill</dt>
+                <dd>
+                  <code>POST /api/desk/instant-fill</code>: fills an offer with exactly the quoted
+                  terms
+                </dd>
+              </div>
+              <div>
+                <dt>Ledger</dt>
+                <dd>
+                  <code>GET /api/desk/ledger</code>: treasury, loans out, results, rate card, events
+                </dd>
+              </div>
+              <div>
+                <dt>Rate card</dt>
+                <dd>
+                  Set hourly by the desk agent, held between fair rate plus 0.25% a month and three
+                  times the fair rate, moved at most 0.5% a month per hour
+                </dd>
+              </div>
+              <div>
+                <dt>Limits</dt>
+                <dd>
+                  One lock over every fill, one instant loan per borrower, a kill switch read before
+                  every signature
+                </dd>
+              </div>
+            </dl>
+            <Link href="/app/desk" className={styles.inline}>
+              Open the desk ledger
+            </Link>
+          </DocSection>
+
+          <DocSection
             id="agents"
             title="Agents"
-            lead="The house desk speaks MCP. Any agent can read the book and quote a pawn; filling needs a token."
+            lead="The desk tools speak MCP. Any agent can read the book and quote a pawn; filling from the desk account needs its token."
           >
             <dl className={styles.facts}>
               <div>
