@@ -28,6 +28,7 @@ export function Activity({
   title,
   aside,
   top,
+  compact = false,
 }: {
   readonly items: readonly ActivityItem[];
   /** Card title; defaults to the pawn count. */
@@ -36,6 +37,8 @@ export function Activity({
   readonly aside?: ReactNode;
   /** A band above the header, such as totals. */
   readonly top?: ReactNode;
+  /** Narrow column: coins as the title, the loan as the caption, no amount column. */
+  readonly compact?: boolean;
 }) {
   const settled = items.filter(
     (item) => item.deal.outcome === 'redeemed' || item.deal.outcome === 'forfeited',
@@ -61,12 +64,26 @@ export function Activity({
             rowKey={`${packId}:${deal.outcome}`}
             href={packPath(packId)}
             icon={<CoinTile symbol={lead?.symbol ?? null} />}
-            title={`Pack #${index} · ${lead === undefined ? 'empty' : amountText(lead)}`}
-            meta={[deal.termNs === null ? null : termText(deal.termNs), when(deal)]
-              .filter((part) => part !== null && part !== '')
-              .join(' · ')}
-            value={deal.principal === null ? '–' : cashText(deal.principal)}
-            valueNote={deal.repayment === null ? undefined : `Repays ${cashText(deal.repayment)}`}
+            title={
+              compact
+                ? lead === undefined
+                  ? `Pack #${index}`
+                  : amountText(lead)
+                : `Pack #${index} · ${lead === undefined ? 'empty' : amountText(lead)}`
+            }
+            meta={
+              compact
+                ? deal.principal === null
+                  ? `Pack #${index}`
+                  : `${cashText(deal.principal)} lent · #${index}`
+                : [deal.termNs === null ? null : termText(deal.termNs), when(deal)]
+                    .filter((part) => part !== null && part !== '')
+                    .join(' · ')
+            }
+            value={compact ? undefined : deal.principal === null ? '–' : cashText(deal.principal)}
+            valueNote={
+              compact || deal.repayment === null ? undefined : `Repays ${cashText(deal.repayment)}`
+            }
             trailing={
               <StatusPill tone={outcome.tone} icon={outcome.icon}>
                 {outcome.label}

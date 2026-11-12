@@ -1,67 +1,126 @@
+import { CoinsIcon, SealCheckIcon, StorefrontIcon } from '@phosphor-icons/react/dist/ssr';
+
 import { ASSETS } from '@mosaec/config/assets';
+import { AppIcon } from '@mosaec/ui';
 
 import { formatCompact, formatUnits, padCents } from '../../../lib/format';
 
 import { Activity } from './Activity';
+import { SoftPill } from './ListCard';
 import { LiveList } from './LiveList';
 import styles from './MarketSummary.module.css';
 
+import type { ActivityItem } from './Activity';
 import type { DealOutcome } from '../../../lib/deal';
 import type { MarketData } from '../../../lib/market';
+import type { AppIconColor } from '@mosaec/ui';
+import type { ReactNode } from 'react';
 
 const USDC = ASSETS.USDC;
-/** Pawns listed under the totals; the open book below stays the page's main list. */
-const RECENT = 4;
-/** Pawns a lender filled. Open offers are in the book below; empty or cancelled packs say nothing. */
+/** Pawns in the rail; the open book stays the page's main list. */
+const RECENT = 6;
+/** Pawns a lender filled. Open offers are in the book; empty or cancelled packs say nothing. */
 const FILLED: readonly DealOutcome[] = ['running', 'redeemed', 'forfeited'];
 
-/** Whole dollars until 10,000, then `12.5K` or `1M`. */
+/** Exact to the cent until 10,000, then `12.5K` or `1M`. */
 function cash(amount: bigint): string {
   if (amount / 10n ** BigInt(USDC.decimals) >= 10_000n) return formatCompact(amount, USDC.decimals);
   return padCents(formatUnits(amount, USDC.decimals, 2));
 }
 
-/**
- * One card: the book's totals as a row of figures (the design source's Stats row) over the latest
- * filled pawns. The list stays live and new rows glow once.
- */
-export function MarketSummary({ data }: { readonly data: MarketData }) {
+export interface MarketFigures {
+  readonly open: number;
+  readonly lent: bigint;
+  readonly repaid: number;
+  readonly settled: number;
+  readonly recent: readonly ActivityItem[];
+}
+
+/** The totals and the latest filled pawns, from the same read as the book. */
+export function marketFigures(data: MarketData): MarketFigures {
   const filled = data.activity.filter((item) => FILLED.includes(item.deal.outcome));
-  const lent = filled.reduce((sum, item) => sum + BigInt(item.deal.principal?.amount ?? '0'), 0n);
   const settled = filled.filter((item) => item.deal.outcome !== 'running');
-  const repaid = settled.filter((item) => item.deal.outcome === 'redeemed').length;
-  const recent = filled.slice(0, RECENT);
-  const stats = [
-    { value: data.offers.length.toString(), label: 'Open offers' },
-    { value: lent === 0n ? '–' : cash(lent), unit: 'USDC', label: 'Lent so far' },
-    {
-      value: settled.length === 0 ? '–' : `${repaid.toString()}/${settled.length.toString()}`,
-      label: 'Repaid on time',
-    },
-  ];
-  const band = (
-    <dl className={styles.stats}>
-      {stats.map((stat) => (
-        <div key={stat.label} className={styles.stat}>
-          <dt>{stat.label}</dt>
-          <dd>
-            {stat.value}
-            {stat.unit !== undefined && stat.value !== '–' && (
-              <span className={styles.unit}>{stat.unit}</span>
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
+  return {
+    open: data.offers.length,
+    lent: filled.reduce((sum, item) => sum + BigInt(item.deal.principal?.amount ?? '0'), 0n),
+    repaid: settled.filter((item) => item.deal.outcome === 'redeemed').length,
+    settled: settled.length,
+    recent: filled.slice(0, RECENT),
+  };
+}
+
+function Tile({
+  icon,
+  color,
+  label,
+  value,
+  unit,
+}: {
+  readonly icon: ReactNode;
+  readonly color: AppIconColor;
+  readonly label: string;
+  readonly value: string;
+  readonly unit?: string;
+}) {
   return (
-    <>
-      <LiveList keys={recent.map((item) => `${item.packId}:${item.deal.outcome}`)} />
-      {recent.length === 0 ? (
-        <section className={styles.solo}>{band}</section>
-      ) : (
-        <Activity items={recent} title="Recent pawns" aside={false} top={band} />
-      )}
-    </>
+    <div className={styles.tile}>
+      <AppIcon color={color} size={40}>
+        {icon}
+      </AppIcon>
+      <div className={styles.copy}>
+        <span className={styles.label}>{label}</span>
+        <span className={styles.value}>
+          {value}
+          {unit !== undefined && <span className={styles.unit}>{unit}</span>}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** One short row of the book's totals, in the stat cards' look. */
+export function MarketStrip({ figures }: { readonly figures: MarketFigures }) {
+  return (
+    <div className={styles.strip}>
+      <Tile
+        icon={<StorefrontIcon weight="fill" />}
+        color="blue"
+        label="Open offers"
+        value={figures.open.toString()}
+      />
+      <Tile
+        icon={<CoinsIcon weight="fill" />}
+        color="green"
+        label="Lent so far"
+        value={figures.lent === 0n ? '–' : cash(figures.lent)}
+        {...(figures.lent === 0n ? {} : { unit: 'USDC' })}
+      />
+      <Tile
+        icon={<SealCheckIcon weight="fill" />}
+        color="violet"
+        label="Repaid on time"
+        value={
+          figures.settled === 0
+            ? '–'
+            : `${figures.repaid.toString()} of ${figures.settled.toString()}`
+        }
+      />
+    </div>
+  );
+}
+
+/** The latest filled pawns as a live feed beside the book; new or changed rows glow once. */
+export function RecentRail({ figures }: { readonly figures: MarketFigures }) {
+  if (figures.recent.length === 0) return null;
+  return (
+    <aside className={styles.rail} aria-label="Recent pawns">
+      <LiveList keys={figures.recent.map((item) => `${item.packId}:${item.deal.outcome}`)} />
+      <Activity
+        items={figures.recent}
+        title="Recent pawns"
+        aside={<SoftPill tone="accent">Live</SoftPill>}
+        compact
+      />
+    </aside>
   );
 }

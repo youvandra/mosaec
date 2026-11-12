@@ -6,7 +6,7 @@ import { AppIcon, ButtonLink, ErrorState, Tag } from '@mosaec/ui';
 import { liveDealOf } from '../../lib/deal';
 import { exampleDeal, loadMarket } from '../../lib/market';
 
-import { MarketSummary } from './_components/MarketSummary';
+import { MarketStrip, RecentRail, marketFigures } from './_components/MarketSummary';
 import { OfferBook } from './_components/OfferBook';
 import { OfferCard } from './_components/OfferCard';
 import { PageHeader, SectionTitle } from './_components/PageHeader';
@@ -45,6 +45,7 @@ function EmptyBook() {
 
 export default async function MarketPage() {
   const data = await loadMarket();
+  const figures = data === null ? null : marketFigures(data);
 
   return (
     <>
@@ -58,7 +59,7 @@ export default async function MarketPage() {
           </ButtonLink>
         }
       />
-      {data === null ? (
+      {data === null || figures === null ? (
         <ErrorState
           title="The market is unavailable right now"
           icon={<WarningCircleIcon size={22} />}
@@ -68,29 +69,32 @@ export default async function MarketPage() {
         </ErrorState>
       ) : (
         <>
-          <MarketSummary data={data} />
-          <OfferBook
-            title={
-              <SectionTitle
-                title="Open offers"
-                tag={
-                  <Tag
-                    badge="1"
-                    shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
-                  >
-                    Lend
-                  </Tag>
-                }
-              />
-            }
-            empty={<EmptyBook />}
-            entries={data.offers.map((pack) => ({
-              packId: pack.id,
-              index: pack.index,
-              deal: liveDealOf(pack),
-              offerEndsNs: pack.offer?.expiresAtNs ?? null,
-            }))}
-          />
+          <MarketStrip figures={figures} />
+          <div className={styles.stage}>
+            <OfferBook
+              title={
+                <SectionTitle
+                  title="Open offers"
+                  tag={
+                    <Tag
+                      badge="1"
+                      shape={<StorefrontIcon weight="fill" size={16} color="var(--ill-orange)" />}
+                    >
+                      Lend
+                    </Tag>
+                  }
+                />
+              }
+              empty={<EmptyBook />}
+              entries={data.offers.map((pack) => ({
+                packId: pack.id,
+                index: pack.index,
+                deal: liveDealOf(pack),
+                offerEndsNs: pack.offer?.expiresAtNs ?? null,
+              }))}
+            />
+            <RecentRail figures={figures} />
+          </div>
         </>
       )}
     </>
