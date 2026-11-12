@@ -27,8 +27,8 @@ export default function TermsPage() {
           title: 'Testnet software',
           body: (
             <p>
-              Mosaec currently runs on NEAR testnet only. Test ZEC and test USDC have no value and
-              can be reset. Mainnet is not live.
+              Mosaec currently runs on NEAR testnet only. Test ZEC, BTC, SOL and USDC have no value
+              and can be reset. Mainnet is not live.
             </p>
           ),
         },

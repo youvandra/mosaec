@@ -511,7 +511,7 @@ const FAQ = [
   },
   {
     q: 'Is there an automated lender?',
-    a: 'A house lending desk is in development: a budget-capped agent that reads open asks and fills those inside a policy the server enforces. Today any agent can read the API and build exact fill calls with the SDK.',
+    a: 'Yes. The House Desk is the lender Mosaec runs: it quotes instant loans from an hourly rate card and lends inside a public policy with a hard budget. Your own agent can lend too, through the same public tools.',
   },
 ] as const;
 

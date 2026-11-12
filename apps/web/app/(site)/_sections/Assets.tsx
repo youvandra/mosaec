@@ -31,8 +31,8 @@ export function Assets() {
           <WordReveal className="t-h1" lines={['Native coins in,', 'dollars out.']} />
         </div>
         <Reveal as="p" className="t-body-lg">
-          Packs hold coins bridged into NEAR Intents from their own chains. Loans and repayments
-          settle in USDC, and a withdrawal sends coins back where they came from.
+          Coins arrive from their own chains through NEAR Intents. Loans and repayments settle in
+          USDC, and a withdrawal sends coins back home.
         </Reveal>
       </SectionHeader>
       <div className={styles.grid}>

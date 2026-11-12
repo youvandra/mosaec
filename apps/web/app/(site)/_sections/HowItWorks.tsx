@@ -34,7 +34,7 @@ const STEPS: readonly Step[] = [
     icon: <LockKeyIcon weight="fill" />,
     visual: <PackVisual />,
     lead: 'Seal your coins.',
-    body: 'Move ZEC, BTC or SOL into a new pack: an account with zero access keys that runs one published contract. You receive its Title.',
+    body: 'Move ZEC, BTC or SOL into a fresh pack, a NEAR account nobody holds a key to. You get its Title, the NFT that owns it.',
   },
   {
     id: 'step-ask',
@@ -43,7 +43,7 @@ const STEPS: readonly Step[] = [
     icon: <HandCoinsIcon weight="fill" />,
     visual: <AskVisual />,
     lead: 'Name the loan.',
-    body: 'Set the USDC you want today, the repayment and the term. The pack holds still while the offer stands.',
+    body: 'Pick the USDC you want today, what you will repay and by when. The pack stays frozen while your offer is up.',
   },
   {
     id: 'step-fill',
@@ -52,7 +52,7 @@ const STEPS: readonly Step[] = [
     icon: <ArrowsLeftRightIcon weight="bold" />,
     visual: <FillVisual />,
     lead: 'A lender pays.',
-    body: 'The House Desk fills a quoted offer within a minute, or any lender fills yours at your price: the lender sends USDC and takes the Title. The USDC and the Ticket reach you in the same receipt chain, and any mismatch refunds the lender in full.',
+    body: 'Take the House Desk quote and it lends within a minute, or let any lender take your price. You get the USDC and a Ticket in one go, the lender gets the Title, and anything off refunds the lender in full.',
   },
   {
     id: 'step-redeem',
@@ -61,7 +61,7 @@ const STEPS: readonly Step[] = [
     icon: <CalendarCheckIcon weight="fill" />,
     visual: <RedeemVisual />,
     lead: 'Buy your coins back.',
-    body: 'Pay the repayment on any day before the date and the pack releases the coins to you.',
+    body: 'Pay back on any day before the date and the pack hands your coins back. Day one or the last day, you pay the same.',
   },
   {
     id: 'step-exit',
@@ -70,7 +70,7 @@ const STEPS: readonly Step[] = [
     icon: <MapPinIcon weight="fill" />,
     visual: <ExitVisual />,
     lead: 'Take them home.',
-    body: 'The Title holder of a free pack withdraws to the home chain, ZEC to a Zcash address.',
+    body: 'Once the pack is free, the Title holder sends the coins back to their home chain, ZEC straight to a Zcash address.',
   },
 ];
 

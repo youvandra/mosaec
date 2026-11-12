@@ -83,7 +83,7 @@ const ROADMAP: readonly JourneyStep[] = [
   {
     stamp: 'Now',
     title: 'Live on NEAR testnet',
-    body: 'Borrow, lend, verify and the house desk run against the testnet registry.',
+    body: 'Borrow, lend, verify and the House Desk run against the testnet registry.',
     icon: <RocketLaunchIcon weight="fill" />,
     color: 'blue',
   },

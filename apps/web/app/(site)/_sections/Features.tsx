@@ -120,8 +120,8 @@ export function Features() {
             label="Primitive"
           />
         }
-        title={['Four Parts, One Pawn']}
-        lead="Every loan on Mosaec is built from these four pieces."
+        title={['Four parts, one pawn.']}
+        lead="Every Mosaec loan snaps together from these four pieces."
       />
       <div className={styles.grid}>
         {CARDS.map((card, index) => (
