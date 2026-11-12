@@ -1,6 +1,6 @@
 /**
- * Measured numbers shown on the landing. Each one carries the date it was measured; the
- * scripts that produce them are in the project's research notes.
+ * Measured numbers shown on the landing. Each one carries the date it was measured.
+ * `ROLLING_REPLAY` comes from `scripts/replay/rolling_replay.py`.
  */
 export const LIQUIDATION_REPLAY = {
   measuredOn: '10 Nov 2026',
