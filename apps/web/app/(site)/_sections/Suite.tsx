@@ -19,8 +19,8 @@ import type { ReactNode } from 'react';
 const RULES: readonly string[] = [
   'Zero oracle',
   'Zero liquidation',
-  'One receipt chain',
-  'Protocol fee 0',
+  'All-or-nothing fills',
+  'Zero protocol fee',
   '24 h grace',
 ];
 
@@ -211,7 +211,7 @@ const TILES: readonly {
   {
     href: '/lend',
     title: 'Collateral',
-    body: 'Native coins in NEAR Intents, capped per pack.',
+    body: 'Real ZEC, BTC and SOL, held through NEAR Intents.',
     visual: <LendVisual />,
   },
   {
@@ -229,7 +229,7 @@ const TILES: readonly {
   {
     href: '/agents/connect',
     title: 'Your Agent',
-    body: 'Rules simple enough for software to price.',
+    body: 'Rules simple enough for your agent to lend on.',
     size: 'wide',
     visual: <AgentVisual />,
   },
@@ -248,7 +248,7 @@ export function Suite() {
           />
         }
         title={['A full pawn desk,', 'built on one contract.']}
-        lead="Borrowers, lenders and agents meet the same sealed pack. Start with one side and add the rest when you need it."
+        lead="Borrowers, lenders and agents all meet at the same sealed pack. Start from any side."
       />
       <Bento>
         {TILES.map((tile) => (

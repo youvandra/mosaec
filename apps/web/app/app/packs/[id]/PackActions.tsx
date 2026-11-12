@@ -136,7 +136,7 @@ function FillCard({ pack }: { readonly pack: PackDetail }) {
           ['Your balance', balanceText(balance, offer.price)],
         ]}
       />
-      {short && <Callout tone="warning">Your verifier balance is below the loan amount.</Callout>}
+      {short && <Callout tone="warning">Your Mosaec balance is below the loan amount.</Callout>}
       <label className={styles.check}>
         <input
           type="checkbox"
@@ -210,7 +210,7 @@ function RedeemCard({ pack }: { readonly pack: PackDetail }) {
         ]}
       />
       {worth !== null && owed !== null && <ValueCheck side="borrower" worth={worth} owed={owed} />}
-      {short && <Callout tone="warning">Your verifier balance is below the repayment.</Callout>}
+      {short && <Callout tone="warning">Your Mosaec balance is below the repayment.</Callout>}
       {terms.expiresAtNs !== null && (
         <DueReminder
           reminder={{
@@ -357,12 +357,12 @@ export function PackActions({ pack }: { readonly pack: PackDetail }) {
           label={payout.label}
           success={
             payout.kind === 'own'
-              ? 'Withdrawn to your verifier balance.'
-              : `Collected ${contentsText} to your verifier balance.`
+              ? 'Withdrawn to your Mosaec balance.'
+              : `Collected ${contentsText} to your Mosaec balance.`
           }
           ask={{
             title: payout.kind === 'own' ? 'Withdraw the contents?' : `${payout.title}?`,
-            body: `Moves ${contentsText} from the pack to your verifier balance.`,
+            body: `Moves ${contentsText} from the pack to your Mosaec balance.`,
           }}
           call={() =>
             pack.contents.map((line) =>

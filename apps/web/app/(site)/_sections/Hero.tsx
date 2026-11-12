@@ -151,8 +151,9 @@ export function Hero() {
           lines={['Pawn Your Coins,', { text: 'Keep the Upside', className: 't-accent' }]}
         />
         <Reveal as="p" trigger="load" delay={0.55} className={cx('t-body-lg', styles.lead)}>
-          Borrow USDC against ZEC, BTC or SOL for a fixed repayment by a fixed date. The House Desk
-          answers in a minute, and the coins wait in a sealed account until you pay.
+          Get USDC for your ZEC, BTC or SOL. One fixed repayment, one fixed date, zero liquidation.
+          The House Desk answers in about a minute, and your coins wait in a sealed account until
+          you pay.
         </Reveal>
         <Reveal trigger="load" delay={0.8} className={styles.actions}>
           <ButtonLink href={`${SITE.appUrl}/borrow`} as={Link}>
@@ -177,7 +178,7 @@ export function Hero() {
 const FOLDERS = [
   {
     title: 'Borrow',
-    caption: 'USDC with no liquidation',
+    caption: 'USDC now, zero liquidation',
     dot: 'var(--accent)',
     icon: <HandCoinsIcon weight="bold" color="var(--accent)" />,
     photos: PHOTOS.borrow,
@@ -185,7 +186,7 @@ const FOLDERS = [
   },
   {
     title: 'Lend',
-    caption: 'A fixed repayment by a date',
+    caption: 'A fixed return, set upfront',
     dot: 'var(--ill-violet)',
     icon: <CalendarCheckIcon weight="bold" color="var(--ill-violet)" />,
     photos: PHOTOS.lend,
@@ -193,7 +194,7 @@ const FOLDERS = [
   },
   {
     title: 'House Desk',
-    caption: 'USDC in a minute, no liquidation',
+    caption: 'A loan in about a minute',
     dot: 'var(--ill-orange)',
     icon: <RobotIcon weight="bold" color="var(--ill-orange)" />,
     photos: PHOTOS.agents,
@@ -201,7 +202,7 @@ const FOLDERS = [
   },
   {
     title: 'Verify',
-    caption: 'Every check in your browser',
+    caption: 'Check any pack yourself',
     dot: 'var(--ill-green)',
     icon: <SealCheckIcon weight="bold" color="var(--ill-green)" />,
     photos: PHOTOS.verify,

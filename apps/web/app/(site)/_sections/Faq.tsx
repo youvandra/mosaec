@@ -9,11 +9,11 @@ import styles from './Faq.module.css';
 const QUESTIONS = [
   {
     q: 'What happens when the ZEC price falls?',
-    a: 'Nothing happens on chain. The pack reads only the date and the payment.',
+    a: 'Nothing. The pack reads the date and the payment, and that is all. Dips come and go while your loan stays put.',
   },
   {
     q: 'What if I miss the date?',
-    a: 'The Ticket expires and the Title holder owns the coins in the pack. The USDC you received stays yours, and you owe nothing further: the pack is the whole of the debt.',
+    a: 'The Ticket expires and the lender keeps the coins in the pack. The USDC stays yours and you owe nothing more. The pack is the whole debt, so nothing follows you afterwards.',
   },
   {
     q: 'Why would a lender fill a pawn?',
@@ -48,7 +48,7 @@ export function Faq() {
           </Reveal>
           <WordReveal className="t-h1" lines={['Questions,', 'answered.']} />
           <Reveal as="p" className="t-body-lg">
-            How a pawn behaves when prices move, dates pass or rights change hands.
+            What happens when prices dip, dates pass or rights change hands.
           </Reveal>
           <Reveal className={styles.help}>
             <span className="t-h5">Still curious?</span>

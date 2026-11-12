@@ -65,7 +65,7 @@ const LENDS: readonly Capability[] = [
   },
   {
     title: 'Term',
-    body: 'Thirty, sixty or ninety days. A fifteen-minute term runs on testnet for rehearsals.',
+    body: 'Thirty, sixty or ninety days. A fifteen-minute term runs on testnet for quick tests.',
     icon: <ClockIcon weight="fill" />,
     color: 'violet',
   },

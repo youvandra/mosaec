@@ -450,7 +450,7 @@ export function BorrowFlow() {
       } else {
         toast.update(id, {
           tone: 'error',
-          title: 'The desk did not lend',
+          title: 'The desk passed on this one',
           body: `${result.reason} Your offer stays open on the market.`,
           duration: null,
         });
@@ -459,7 +459,7 @@ export function BorrowFlow() {
       const reason = cause instanceof ApiError ? cause.message : 'The House Desk is unreachable.';
       toast.update(id, {
         tone: 'error',
-        title: 'The desk did not lend',
+        title: 'The desk passed on this one',
         body: `${reason} Your offer stays open on the market.`,
         duration: null,
       });
