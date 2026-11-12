@@ -6,6 +6,8 @@ import { actionCreators } from '@near-js/transactions';
 import { ASSETS } from '@mosaec/config/assets';
 import { MosaecViews, NearRpc, parseOutcome } from '@mosaec/sdk';
 
+import { Serial } from './serial';
+
 import type { OfferInput } from './policy';
 import type { NetworkId } from '@mosaec/config/assets';
 import type { ContractCall, Outcome } from '@mosaec/sdk';
@@ -29,7 +31,18 @@ export interface DeskChain {
   send(call: ContractCall): Promise<SentCall>;
 }
 
+/** The RPC refused a transaction because another one from the same key took its nonce. */
+export function isNonceClash(cause: unknown): boolean {
+  const text = cause instanceof Error ? cause.message : String(cause);
+  return /nonce/i.test(text) && /larger than/i.test(text);
+}
+
 export class NearDeskChain implements DeskChain {
+  /**
+   * Every transaction from the desk key goes through here one at a time: the loop's collects and
+   * an instant fill share one access key, and two in flight read the same nonce.
+   */
+  private readonly sends = new Serial();
   private readonly views: MosaecViews;
   private readonly rpc: NearRpc;
   private readonly account: Account | null;
@@ -84,7 +97,19 @@ export class NearDeskChain implements DeskChain {
     return lines.map((line) => ({ tokenId: line.token_id, amount: line.amount }));
   }
 
-  async send(call: ContractCall): Promise<SentCall> {
+  send(call: ContractCall): Promise<SentCall> {
+    return this.sends.run(async () => {
+      try {
+        return await this.sendNow(call);
+      } catch (cause) {
+        /* A key used elsewhere (the CLI, another process) can still take the nonce: read it again once. */
+        if (!isNonceClash(cause)) throw cause;
+        return this.sendNow(call);
+      }
+    });
+  }
+
+  private async sendNow(call: ContractCall): Promise<SentCall> {
     if (this.account === null) {
       throw new Error('the desk has no signing key; it runs read-only');
     }
