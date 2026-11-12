@@ -223,7 +223,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-head);
 }
 .sectionHead {
   display: flex;
@@ -239,7 +239,7 @@
 .rates {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-grid);
 }
 .rate {
   display: flex;
@@ -305,7 +305,7 @@
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
+  gap: 24px;
   align-items: start;
 }
 .agent {

@@ -84,6 +84,11 @@
   --container: 1136px;
   --gutter: 32px;
   --section-y: 128px;
+  /* App rhythm, from the source's App Panel main column scaled to a full page:
+     one gap between page blocks, one under a block title, one between cards. */
+  --space-block: 40px;
+  --space-head: 16px;
+  --space-grid: 16px;
 
   /* Motion */
   --ease-link: cubic-bezier(0.44, 0, 0.56, 1);
@@ -108,5 +113,6 @@
   :root {
     --gutter: 20px;
     --section-y: 72px;
+    --space-block: 32px;
   }
 }
