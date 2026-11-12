@@ -223,7 +223,7 @@ function Cost() {
       />
       <CompareBars
         rows={BARS}
-        footnote={`Hourly closes from Binance and Bitfinex: ZEC ${R.span}, BTC 2013 to 2026, SOL 2020 to 2026. Pawn at 3% a month; loan liquidated at 80% loan-to-value. Measured ${R.measuredOn}.`}
+        footnote={`Hourly closes from Binance and Bitfinex: ZEC ${R.span}, BTC 2013 to 2026, SOL 2020 to 2026. Pawn at ${R.pawnMonthlyRate} a month; loan liquidated at ${R.liquidationLtv} loan-to-value. Measured ${R.measuredOn}.`}
       />
     </Section>
   );
