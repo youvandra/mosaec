@@ -73,11 +73,6 @@ export default async function MarketPage() {
           <OfferBook
             title={
               <SectionTitle
-                title={
-                  data.offers.length === 0
-                    ? 'Nothing waits for a lender'
-                    : `${data.offers.length.toString()} ${data.offers.length === 1 ? 'pawn waits' : 'pawns wait'} for a lender`
-                }
                 tag={
                   <Tag
                     badge="1"

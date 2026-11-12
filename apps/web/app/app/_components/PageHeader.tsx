@@ -41,23 +41,27 @@ export function PageHeader({
 /** A section in the source's voice: numbered tag, heading on the left, lead or controls right. */
 export function PageSection({
   title,
+  label,
   tag,
   lead,
   aside,
   children,
 }: {
-  readonly title: string;
+  /** Heading under the tag; leave it out when the tag already names the section. */
+  readonly title?: string;
+  /** Accessible name of a section without a heading. */
+  readonly label?: string;
   readonly tag?: ReactNode;
   readonly lead?: ReactNode;
   readonly aside?: ReactNode;
   readonly children: ReactNode;
 }) {
   return (
-    <section className={styles.section}>
+    <section className={styles.section} aria-label={title === undefined ? label : undefined}>
       <div className={styles.sectionHead}>
         <div className={styles.sectionTitle}>
           {tag}
-          <h2 className="t-h2">{title}</h2>
+          {title !== undefined && <h2 className="t-h2">{title}</h2>}
         </div>
         {lead !== undefined && <p className={cx('t-body', styles.sectionLead)}>{lead}</p>}
         {aside}
@@ -68,11 +72,17 @@ export function PageSection({
 }
 
 /** The numbered tag and heading of a section, for sections that lay out their own head. */
-export function SectionTitle({ tag, title }: { readonly tag?: ReactNode; readonly title: string }) {
+export function SectionTitle({
+  tag,
+  title,
+}: {
+  readonly tag?: ReactNode;
+  readonly title?: string;
+}) {
   return (
     <div className={styles.sectionTitle}>
       {tag}
-      <h2 className="t-h2">{title}</h2>
+      {title !== undefined && <h2 className="t-h2">{title}</h2>}
     </div>
   );
 }

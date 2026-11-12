@@ -120,7 +120,7 @@ export function RecentPawns({ figures }: { readonly figures: MarketFigures }) {
   if (figures.recent.length === 0) return null;
   return (
     <PageSection
-      title="How the latest pawns ended"
+      label="Recent pawns"
       tag={
         <Tag
           badge="2"
