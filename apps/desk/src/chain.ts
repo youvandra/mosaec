@@ -71,6 +71,7 @@ export class NearDeskChain implements DeskChain {
       openUntilNs: stage.open_until_ns,
       contents: stage.contents.map((line) => ({ tokenId: line.token_id, amount: line.amount })),
       contentsHash: stage.contents_hash,
+      titleOwner: view.title_owner,
     };
   }
 

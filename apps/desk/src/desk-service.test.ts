@@ -34,6 +34,7 @@ function service(
   };
   const repository = {
     collectablePacks: () => Promise.resolve(Object.keys(collectable)),
+    control: () => Promise.resolve(null),
   } as unknown as DeskRepository;
   const prices = { current: () => Promise.resolve({}) } as unknown as ReferencePrices;
   return { desk: new DeskService('testnet', POLICY, chain, repository, prices), sent };
@@ -70,6 +71,27 @@ describe('DeskService.collect', () => {
     const { desk } = service({ '6.v0.mosaec.testnet': [{ tokenId: USDC, amount: 1n }] }, false);
     const [result] = await desk.collect();
     expect(result?.status).toBe('error');
+  });
+});
+
+describe('DeskService.collect while paused', () => {
+  it('signs nothing while the kill switch is on', async () => {
+    const sent: ContractCall[] = [];
+    const chain = {
+      collectable: () => Promise.resolve([{ tokenId: USDC, amount: 1n }]),
+      send: (call: ContractCall) => {
+        sent.push(call);
+        return Promise.reject(new Error('must not sign'));
+      },
+    } as unknown as DeskChain;
+    const repository = {
+      collectablePacks: () => Promise.resolve(['6.v0.mosaec.testnet']),
+      control: () => Promise.resolve({ paused: true, reason: 'incident', updatedAt: new Date() }),
+    } as unknown as DeskRepository;
+    const prices = { current: () => Promise.resolve({}) } as unknown as ReferencePrices;
+    const desk = new DeskService('testnet', POLICY, chain, repository, prices);
+    expect(await desk.collect()).toEqual([]);
+    expect(sent).toHaveLength(0);
   });
 });
 

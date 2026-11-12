@@ -18,7 +18,7 @@ const offer = (patch: Partial<OfferInput> = {}): OfferInput => ({
   payToken: USDC,
   price: 100_000_000n,
   kToken: USDC,
-  kAmount: 107_500_000n,
+  kAmount: 109_000_000n,
   termNs: 90n * DAY,
   openUntilNs: NOW + DAY,
   contents: [{ tokenId: ZEC, amount: 50_000_000n }],
@@ -35,6 +35,8 @@ const ctx = (patch: Partial<DeskContext> = {}): DeskContext => ({
   exposureUsdc: 0n,
   lentTodayUsdc: 0n,
   fillsLastHour: 0,
+  instantFillsLastHour: 0,
+  pausedReason: null,
   ...patch,
 });
 
@@ -43,8 +45,8 @@ describe('evaluate', () => {
     const verdict = evaluate(offer(), ctx());
     expect(verdict.ok).toBe(true);
     expect(verdict.quote?.ltvBps).toBe(2_000);
-    expect(verdict.quote?.aprBps).toBe(3_041);
-    expect(verdict.quote?.interest).toBe('7500000');
+    expect(verdict.quote?.aprBps).toBe(3_650);
+    expect(verdict.quote?.interest).toBe('9000000');
   });
 
   it.each([
@@ -73,6 +75,8 @@ describe('evaluate', () => {
     ['term too long', offer({ termNs: 180n * DAY }), ctx(), 'DESK_POLICY'],
     ['no interest', offer({ kAmount: 100_000_000n }), ctx(), 'DESK_POLICY'],
     ['rate too low', offer({ kAmount: 101_000_000n }), ctx(), 'DESK_POLICY'],
+    ['fair rate without the desk margin', offer({ kAmount: 107_500_000n }), ctx(), 'DESK_POLICY'],
+    ['kill switch on', offer(), ctx({ pausedReason: 'incident review' }), 'DESK_PAUSED'],
     ['no price', offer(), ctx({ pricesUsd: {} }), 'DESK_POLICY'],
     [
       'loan too large for the coins',
@@ -97,13 +101,41 @@ describe('evaluate', () => {
       'DESK_POLICY',
     ],
     ['balance too low', offer(), ctx({ deskBalanceUsdc: 99_000_000n }), 'DESK_BUDGET'],
-    ['daily budget spent', offer(), ctx({ lentTodayUsdc: 950_000_000n }), 'DESK_BUDGET'],
+    ['daily budget spent', offer(), ctx({ lentTodayUsdc: 4_950_000_000n }), 'DESK_BUDGET'],
     ['hourly fills spent', offer(), ctx({ fillsLastHour: 4 }), 'DESK_BUDGET'],
-    ['exposure cap', offer(), ctx({ exposureUsdc: 950_000_000n }), 'DESK_EXPOSURE'],
+    ['exposure cap', offer(), ctx({ exposureUsdc: 4_950_000_000n }), 'DESK_EXPOSURE'],
   ] as const)('refuses: %s', (_name, input, context, code) => {
     const verdict = evaluate(input, context);
     expect(verdict.ok).toBe(false);
     if (!verdict.ok) expect(verdict.code).toBe(code);
+  });
+});
+
+describe('evaluate options', () => {
+  it('counts instant fills against their own hourly quota', () => {
+    const busyLoop = ctx({ fillsLastHour: 4 });
+    expect(evaluate(offer(), busyLoop).ok).toBe(false);
+    expect(evaluate(offer(), busyLoop, { lane: 'instant' }).ok).toBe(true);
+    const busyInstant = ctx({ instantFillsLastHour: 20 });
+    expect(evaluate(offer(), busyInstant, { lane: 'instant' }).ok).toBe(false);
+    expect(evaluate(offer(), busyInstant).ok).toBe(true);
+  });
+
+  it('honours a quoted loan to value while the price moved or went missing', () => {
+    const crashed = ctx({ pricesUsd: { ZEC: 100 } });
+    expect(evaluate(offer(), crashed).ok).toBe(false);
+    expect(evaluate(offer(), crashed, { lane: 'instant', honourQuotedLtv: true }).ok).toBe(true);
+    const missing = ctx({ pricesUsd: {} });
+    expect(evaluate(offer(), missing, { lane: 'instant', honourQuotedLtv: true }).ok).toBe(true);
+  });
+
+  it('keeps the config pause as a floor the switch cannot lift', () => {
+    const verdict = evaluate(
+      offer(),
+      ctx({ policy: { ...deskPolicy('testnet'), paused: true }, pausedReason: null }),
+      { lane: 'instant', honourQuotedLtv: true },
+    );
+    expect(verdict.ok).toBe(false);
   });
 });
 

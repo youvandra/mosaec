@@ -6,21 +6,24 @@ holds only the desk budget. Every verdict is logged and served at `GET /desk/dec
 
 ## Policy
 
-The policy lives in `packages/config/desk.ts` and is validated with zod at start-up.
+The policy lives in `packages/config/desk.ts` and is validated with zod at start-up. Fair rates,
+the desk margin and the repayment formula live in `packages/config/rates.ts`, shared with the app.
 
-| Rule           | Testnet                          | Mainnet (paused until release) |
-| -------------- | -------------------------------- | ------------------------------ |
-| Collateral     | ZEC                              | ZEC, BTC, SOL                  |
-| Loan to value  | at most 50% of a reference price | at most 50%                    |
-| Rate           | at least 20% a year              | at least 20% a year            |
-| Term           | 10 minutes to 90 days            | 7 to 90 days                   |
-| Per pawn       | up to 250 USDC                   | up to 50 USDC                  |
-| Out at once    | up to 1,000 USDC                 | up to 200 USDC                 |
-| Per UTC day    | up to 1,000 USDC                 | up to 100 USDC                 |
-| Fills per hour | 4                                | 2                              |
+| Rule                   | Testnet                          | Mainnet (paused until release) |
+| ---------------------- | -------------------------------- | ------------------------------ |
+| Collateral             | ZEC, BTC, SOL                    | ZEC, BTC, SOL                  |
+| Loan to value          | at most 50% of a reference price | at most 50%                    |
+| Rate                   | fair rate + 0.25% a month        | fair rate + 0.25% a month      |
+| Term                   | 10 minutes to 90 days            | 7 to 90 days                   |
+| Per pawn               | 10 to 250 USDC                   | 10 to 50 USDC                  |
+| Out at once            | up to 5,000 USDC                 | up to 200 USDC                 |
+| Per UTC day            | up to 5,000 USDC                 | up to 100 USDC                 |
+| Fills per hour         | 4                                | 2                              |
+| Instant loans per hour | 20                               | 4                              |
 
-Reference prices come from CoinGecko and are used only for the loan-to-value rule; the contracts
-never read a price. A missing price refuses the fill.
+Fair monthly rates at 50% loan to value: ZEC 2.5%, BTC 1.0%, SOL 2.25%. Reference prices come
+from CoinGecko and are used only for the loan-to-value rule; the contracts never read a price. A
+missing or stale price refuses the fill.
 
 ## How a decision is made
 
@@ -31,6 +34,48 @@ never read a price. A missing price refuses the fill.
    OpenAI-compatible endpoint. It can only call `fill_offer` or `pass_offer`.
 4. `fill_offer` re-runs the policy on fresh chain data right before it signs, whatever the agent
    proposed. The registry then checks the contents hash and terms; any mismatch refunds the USDC.
+
+Every fill path (the loop, the MCP tool and instant loans) runs under one lock, so two fills
+cannot both pass a budget check that only one of them fits. The loop leaves an offer to the
+instant path for its first two minutes.
+
+## Rate card
+
+Once an hour the agent proposes a monthly rate and a loan-to-value limit per coin from 30-day
+realised volatility, the desk's utilisation, repaid and forfeited pawns and the previous card.
+The server keeps each card inside the shared bounds (fair rate plus margin up to three times the
+fair rate), moves it at most 0.5% a month per hour, and writes the fallback card (fair rate plus
+margin) whenever the model fails. Cards are stored in `desk_rate_cards` with a one-line reason.
+
+## Instant loans
+
+The desk quotes a loan on coins a borrower is about to seal and fills the matching offer at once,
+with no model in the path. Both routes listen on loopback for the Mosaec API and answer 404 to
+anything Caddy forwards.
+
+- `GET /instant/quote?asset&amount&term[&principal][&borrower]`: principal capped by the card's
+  loan to value, repayment from the current card, APR, and a `quoteId` valid for 10 minutes; or
+  `{ available: false, code, reason }`.
+- `POST /instant/fill`: the quote fields, its `quoteId` and the pack. The desk checks the id (an
+  HMAC over the terms) and the expiry, reads the offer live from the registry, requires the exact
+  quoted terms and a maker who holds the Title, re-runs the policy, and fills. The quoted loan to
+  value stands while the quote is valid. A second call for the same quote returns the first fill.
+
+One instant loan runs per borrower at a time.
+
+## Kill switch
+
+`desk_controls` holds a pause flag per network. The desk reads it before every quote and every
+signature, collects included. The config flag `paused` is a floor the switch cannot lift. On the
+server:
+
+```bash
+pnpm --filter @mosaec/desk control pause --reason "why"
+pnpm --filter @mosaec/desk control resume --reason "why"
+pnpm --filter @mosaec/desk control status
+```
+
+The CLI needs only `DATABASE_URL` and `MOSAEC_NETWORK`. There is no public admin endpoint.
 
 ## MCP endpoint
 
@@ -49,4 +94,6 @@ LLM_BASE_URL=http://127.0.0.1:11434/v1 LLM_MODEL=qwen2.5:3b \
 DESK_SECRET_KEY=ed25519:... pnpm --filter @mosaec/desk dev
 ```
 
-Without `DESK_SECRET_KEY` the desk runs read-only: the MCP tools work and the loop never signs.
+Without `DESK_SECRET_KEY` the desk runs read-only: the MCP tools and quotes work and nothing is
+signed. `DESK_QUOTE_SECRET` (32+ characters) signs quote ids; without it each start picks a random
+one, so open quotes end on a restart.

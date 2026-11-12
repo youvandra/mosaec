@@ -21,6 +21,8 @@ export interface OfferInput {
   readonly openUntilNs: bigint;
   readonly contents: readonly { readonly tokenId: string; readonly amount: bigint }[];
   readonly contentsHash: string;
+  /** Holder of the pack's Title, when the read included it. */
+  readonly titleOwner?: string | null;
 }
 
 /**
@@ -49,7 +51,30 @@ export interface DeskContext {
   readonly exposureUsdc: bigint;
   /** Principal lent since 00:00 UTC. */
   readonly lentTodayUsdc: bigint;
+  /** Fills by the agent loop and the MCP tool in the last hour. */
   readonly fillsLastHour: number;
+  /** Instant desk loans in the last hour; a separate quota. */
+  readonly instantFillsLastHour: number;
+  /** Why the kill switch holds the desk, or null when it is off. */
+  readonly pausedReason: string | null;
+}
+
+export interface EvaluateOptions {
+  /** Which hourly quota the fill counts against. */
+  readonly lane: 'loop' | 'instant';
+  /**
+   * Skip the reference-price loan-to-value check: an unexpired instant quote already priced the
+   * coins, and the desk honours its promise while the quote stands.
+   */
+  readonly honourQuotedLtv?: boolean;
+}
+
+const LOOP: EvaluateOptions = { lane: 'loop' };
+
+/** Why the desk is paused right now, or null. The config flag is a floor the switch cannot lift. */
+export function pauseReason(ctx: Pick<DeskContext, 'policy' | 'pausedReason'>): string | null {
+  if (ctx.policy.paused) return 'The desk is paused by the team.';
+  return ctx.pausedReason === null ? null : `The desk is paused: ${ctx.pausedReason}`;
 }
 
 export interface Quote {
@@ -93,7 +118,11 @@ export function collateralValueUsdc(amount: bigint, decimals: number, usd: numbe
  * Checks one offer against the desk policy and the desk's current book. Pure: the same inputs
  * always give the same verdict, so the agent, the MCP tools and the tests share one rule set.
  */
-export function evaluate(offer: OfferInput, ctx: DeskContext): Verdict {
+export function evaluate(
+  offer: OfferInput,
+  ctx: DeskContext,
+  options: EvaluateOptions = LOOP,
+): Verdict {
   const { policy } = ctx;
   const usdcId = ASSETS.USDC.tokenIds[ctx.network];
   const refuse = (
@@ -102,7 +131,8 @@ export function evaluate(offer: OfferInput, ctx: DeskContext): Verdict {
     quote: Quote | null = null,
   ): Verdict => ({ ok: false, code, reason, quote });
 
-  if (policy.paused) return refuse('DESK_PAUSED', 'The desk is paused by the team.');
+  const paused = pauseReason(ctx);
+  if (paused !== null) return refuse('DESK_PAUSED', paused);
   if (offer.makerId === policy.deskAccountId) {
     return refuse('DESK_POLICY', 'The desk never fills its own offer.');
   }
@@ -148,17 +178,18 @@ export function evaluate(offer: OfferInput, ctx: DeskContext): Verdict {
   if (offer.kAmount <= offer.price) {
     return refuse('DESK_POLICY', 'The repayment pays no interest.', quote);
   }
-  if (apr < BigInt(policy.minAprBps)) {
+  const minApr = policy.minAprBpsByAsset[asset.symbol];
+  if (apr < BigInt(minApr)) {
     return refuse(
       'DESK_POLICY',
-      `The rate is ${pct(apr)} a year; the desk asks at least ${pct(policy.minAprBps)}.`,
+      `The rate is ${pct(apr)} a year; the desk asks at least ${pct(minApr)} for ${asset.symbol}.`,
       quote,
     );
   }
-  if (usd === undefined) {
+  if (usd === undefined && options.honourQuotedLtv !== true) {
     return refuse('DESK_POLICY', `No reference price for ${asset.symbol} right now.`, quote);
   }
-  if (ltv > BigInt(policy.maxLtvBps)) {
+  if (ltv > BigInt(policy.maxLtvBps) && options.honourQuotedLtv !== true) {
     return refuse(
       'DESK_POLICY',
       `The loan is ${pct(ltv)} of the coins' value; the desk lends at most ${pct(policy.maxLtvBps)}.`,
@@ -189,7 +220,11 @@ export function evaluate(offer: OfferInput, ctx: DeskContext): Verdict {
       quote,
     );
   }
-  if (ctx.fillsLastHour >= policy.maxFillsPerHour) {
+  const [made, quota] =
+    options.lane === 'instant'
+      ? [ctx.instantFillsLastHour, policy.maxInstantFillsPerHour]
+      : [ctx.fillsLastHour, policy.maxFillsPerHour];
+  if (made >= quota) {
     return refuse('DESK_BUDGET', 'The desk has made its fills for this hour.', quote);
   }
   if (ctx.exposureUsdc + offer.price > policy.maxExposureUsdc) {

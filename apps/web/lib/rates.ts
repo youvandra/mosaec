@@ -1,52 +1,19 @@
+import { FAIR_MONTHLY_RATE_BPS, TERM_OPTIONS, repaymentFor } from '@mosaec/config/rates';
+
 import type { AssetSymbol } from '@mosaec/config/assets';
 
-/**
- * Suggested monthly rates at 50% LTV from the 11 Nov 2026 pricing run (lognormal model, full
- * hourly history). They are suggestions only: the borrower sets the repayment.
- */
-export const SUGGESTED_MONTHLY_RATE_BPS: Readonly<Partial<Record<AssetSymbol, number>>> = {
-  ZEC: 250,
-  BTC: 100,
-  SOL: 225,
-};
-
-const NS_PER_MINUTE = 60_000_000_000n;
-const NS_PER_DAY = 1_440n * NS_PER_MINUTE;
-const DAYS_PER_MONTH = 30n;
-const BPS = 10_000n;
-
-export interface TermOption {
-  readonly id: string;
-  readonly label: string;
-  readonly termNs: bigint;
-  /** Shown on testnet only, so a full loan fits into one sitting. */
-  readonly testnetOnly?: boolean;
-}
-
-export const TERM_OPTIONS: readonly TermOption[] = [
-  { id: 'q15', label: '15 minutes', termNs: 15n * NS_PER_MINUTE, testnetOnly: true },
-  { id: 'd30', label: '30 days', termNs: 30n * NS_PER_DAY },
-  { id: 'd60', label: '60 days', termNs: 60n * NS_PER_DAY },
-  { id: 'd90', label: '90 days', termNs: 90n * NS_PER_DAY },
-];
-
-/** One cent of USDC (6 decimals): repayments are suggested in whole cents. */
-const CENT = 10_000n;
+export type { TermOption } from '@mosaec/config/rates';
+export { TERM_OPTIONS };
 
 /**
- * Repayment for `principal` (USDC units) at a monthly rate over `termNs`. Interest rounds up to a
- * whole cent, so even a minutes-long rehearsal term suggests a readable amount.
+ * Suggested monthly rates at 50% LTV: the fair rates the desk also prices from. They are
+ * suggestions only: the borrower sets the repayment.
  */
-export function suggestedRepayment(
-  principal: bigint,
-  monthlyRateBps: number,
-  termNs: bigint,
-): bigint {
-  const monthNs = DAYS_PER_MONTH * NS_PER_DAY;
-  const numerator = principal * BigInt(monthlyRateBps) * termNs;
-  const denominator = BPS * monthNs * CENT;
-  return principal + ((numerator + denominator - 1n) / denominator) * CENT;
-}
+export const SUGGESTED_MONTHLY_RATE_BPS: Readonly<Partial<Record<AssetSymbol, number>>> =
+  FAIR_MONTHLY_RATE_BPS;
+
+/** Repayment the form suggests: the shared formula, interest rounded up to a whole cent. */
+export const suggestedRepayment = repaymentFor;
 
 /**
  * Suggested loan as a share of the coins' reference value. The research priced every default rate

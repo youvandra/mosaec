@@ -234,11 +234,43 @@ export const deskDecisions = pgTable(
     quote: jsonb('quote'),
     principal: u128('principal'),
     txHash: text('tx_hash'),
-    /** Model that proposed the action, or `policy` for checks without a model. */
+    /** Model that proposed the action, `policy` for checks without a model, `instant` for quotes. */
     actor: text('actor').notNull(),
+    /** Borrower who made the offer, for the one-open-instant-loan-per-borrower rule. */
+    makerId: text('maker_id'),
   },
   (t) => [index('desk_decisions_recent_idx').on(t.network, t.decidedAt)],
 );
+
+/**
+ * Monthly rate per coin the desk quotes instant loans at. The agent proposes one an hour; the
+ * server clamps it to the shared bounds, or writes the fallback card when the model fails.
+ */
+export const deskRateCards = pgTable(
+  'desk_rate_cards',
+  {
+    id: bigint('id', { mode: 'bigint' }).primaryKey().generatedAlwaysAsIdentity(),
+    network: network(),
+    asset: text('asset').notNull(),
+    monthlyBps: integer('monthly_bps').notNull(),
+    maxLtvBps: integer('max_ltv_bps').notNull(),
+    /** What the card was set from: volatility, utilisation, book results, previous card. */
+    inputs: jsonb('inputs').notNull(),
+    reason: text('reason').notNull(),
+    /** `model` when the agent's proposal stood (after clamping), `fallback` otherwise. */
+    source: text('source', { enum: ['model', 'fallback'] }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('desk_rate_cards_latest_idx').on(t.network, t.asset, t.createdAt)],
+);
+
+/** The desk's kill switch, one row per network, flipped by the control CLI on the server. */
+export const deskControls = pgTable('desk_controls', {
+  network: text('network').primaryKey(),
+  paused: boolean('paused').notNull(),
+  reason: text('reason').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 /** Testnet faucet grants: one per account per day. The API is the only writer. */
 export const faucetClaims = pgTable(

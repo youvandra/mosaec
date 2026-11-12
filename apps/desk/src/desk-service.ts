@@ -1,10 +1,11 @@
 import { mosaecCalls } from '@mosaec/sdk';
 
-import { evaluate, offerKey } from './policy';
+import { evaluate, offerKey, pauseReason } from './policy';
 import { utcMidnight } from './repository';
+import { Serial } from './serial';
 
 import type { DeskChain } from './chain';
-import type { DeskContext, OfferInput, Quote, Verdict } from './policy';
+import type { DeskContext, EvaluateOptions, OfferInput, Quote, Verdict } from './policy';
 import type { ReferencePrices } from './prices';
 import type { DeskRepository } from './repository';
 import type { NetworkId } from '@mosaec/config/assets';
@@ -13,10 +14,14 @@ import type { ContractCall } from '@mosaec/sdk';
 
 const NS_PER_MS = 1_000_000n;
 const HOUR_MS = 3_600_000;
+/** The loop leaves an offer this long to the instant path before it looks at it. */
+export const INSTANT_HEAD_START_MS = 2 * 60_000;
 
 export interface OfferReview {
   readonly offer: OfferInput;
   readonly verdict: Verdict;
+  /** Block time the offer was opened, when the indexer has it. */
+  readonly openedAtNs?: bigint | null;
 }
 
 export type FillResult =
@@ -38,10 +43,13 @@ export interface CollectResult {
 }
 
 /**
- * The desk's one rule set, shared by the agent loop and the MCP tools: every read re-checks the
- * chain, and every fill re-runs the policy on fresh data right before it signs.
+ * The desk's one rule set, shared by the agent loop, the MCP tools and instant loans: every read
+ * re-checks the chain, and every fill re-runs the policy on fresh data right before it signs.
  */
 export class DeskService {
+  /** One lock around every fill path, so budget and exposure checks cannot race. */
+  private readonly fills = new Serial();
+
   constructor(
     readonly network: NetworkId,
     readonly policy: DeskPolicy,
@@ -53,14 +61,24 @@ export class DeskService {
 
   async context(): Promise<DeskContext> {
     const now = this.now();
-    const [pricesUsd, deskBalanceUsdc, exposureUsdc, lentTodayUsdc, fillsLastHour] =
-      await Promise.all([
-        this.prices.current(),
-        this.chain.balanceUsdc(),
-        this.repository.exposure(this.network, this.policy.deskAccountId),
-        this.repository.lentSince(this.network, utcMidnight(now)),
-        this.repository.fillsSince(this.network, new Date(now.getTime() - HOUR_MS)),
-      ]);
+    const hourAgo = new Date(now.getTime() - HOUR_MS);
+    const [
+      pricesUsd,
+      deskBalanceUsdc,
+      exposureUsdc,
+      lentTodayUsdc,
+      fillsLastHour,
+      instantFillsLastHour,
+      control,
+    ] = await Promise.all([
+      this.prices.current(),
+      this.chain.balanceUsdc(),
+      this.repository.exposure(this.network, this.policy.deskAccountId),
+      this.repository.lentSince(this.network, utcMidnight(now)),
+      this.repository.fillsSince(this.network, hourAgo, 'loop'),
+      this.repository.fillsSince(this.network, hourAgo, 'instant'),
+      this.repository.control(this.network),
+    ]);
     return {
       network: this.network,
       policy: this.policy,
@@ -70,19 +88,33 @@ export class DeskService {
       exposureUsdc,
       lentTodayUsdc,
       fillsLastHour,
+      instantFillsLastHour,
+      pausedReason: control?.paused === true ? control.reason : null,
     };
   }
 
   /** Every open offer with the policy's verdict, read live from the registry. */
   async reviewOffers(): Promise<OfferReview[]> {
-    const [packIds, context] = await Promise.all([
+    const [offered, context] = await Promise.all([
       this.repository.offeredPacks(this.network),
       this.context(),
     ]);
-    const offers = await Promise.all(packIds.map((pack) => this.chain.liveOffer(pack)));
-    return offers
-      .filter((offer): offer is OfferInput => offer !== null)
-      .map((offer) => ({ offer, verdict: evaluate(offer, context) }));
+    const live = await Promise.all(
+      offered.map(async ({ packId, openedAtNs }) => ({
+        offer: await this.chain.liveOffer(packId),
+        openedAtNs,
+      })),
+    );
+    return live.flatMap(({ offer, openedAtNs }) =>
+      offer === null ? [] : [{ offer, openedAtNs, verdict: evaluate(offer, context) }],
+    );
+  }
+
+  /** True while an offer is too new for the loop: the instant path gets the first look. */
+  inHeadStart(review: OfferReview): boolean {
+    if (review.openedAtNs === undefined || review.openedAtNs === null) return false;
+    const ageNs = BigInt(this.now().getTime()) * NS_PER_MS - review.openedAtNs;
+    return ageNs < BigInt(INSTANT_HEAD_START_MS) * NS_PER_MS;
   }
 
   async quote(pack: string): Promise<OfferReview | null> {
@@ -97,38 +129,78 @@ export class DeskService {
     return this.fillCall(offer);
   }
 
+  /** The offer on `pack` as the registry holds it now (never the indexer). */
+  liveOffer(pack: string): Promise<OfferInput | null> {
+    return this.chain.liveOffer(pack);
+  }
+
+  /** Runs `task` while no other fill can start. */
+  exclusive<T>(task: () => Promise<T>): Promise<T> {
+    return this.fills.run(task);
+  }
+
   /** Fills `pack` from the desk account when the policy allows it now; records the verdict. */
-  async fill(pack: string, runId: string, actor: string, why: string): Promise<FillResult> {
-    const review = await this.quote(pack);
-    if (review === null) {
-      await this.repository.record({
-        network: this.network,
-        runId,
-        packId: pack,
-        offerKey: null,
-        verdict: 'refused',
-        code: 'DESK_POLICY',
-        reason: 'The pack is no longer offered.',
-        quote: null,
-        txHash: null,
-        actor,
-      });
-      return { status: 'refused', code: 'DESK_POLICY', reason: 'The pack is no longer offered.' };
-    }
-    const { offer, verdict } = review;
-    const key = offerKey(offer);
+  fill(pack: string, runId: string, actor: string, why: string): Promise<FillResult> {
+    return this.exclusive(async () => {
+      const review = await this.quote(pack);
+      if (review === null) {
+        const reason = 'The pack is no longer offered.';
+        await this.repository.record({
+          network: this.network,
+          runId,
+          packId: pack,
+          offerKey: null,
+          verdict: 'refused',
+          code: 'DESK_POLICY',
+          reason,
+          quote: null,
+          txHash: null,
+          actor,
+        });
+        return { status: 'refused', code: 'DESK_POLICY', reason };
+      }
+      return this.signChecked(review.offer, review.verdict, runId, actor, why);
+    });
+  }
+
+  /**
+   * Re-runs the policy on fresh data with `options` and signs when it passes. Callers hold the
+   * fill lock.
+   */
+  async fillChecked(
+    offer: OfferInput,
+    options: EvaluateOptions,
+    runId: string,
+    actor: string,
+    why: string,
+  ): Promise<FillResult> {
+    const verdict = evaluate(offer, await this.context(), options);
+    return this.signChecked(offer, verdict, runId, actor, why);
+  }
+
+  private async signChecked(
+    offer: OfferInput,
+    verdict: Verdict,
+    runId: string,
+    actor: string,
+    why: string,
+  ): Promise<FillResult> {
+    const base = {
+      network: this.network,
+      runId,
+      packId: offer.pack,
+      offerKey: offerKey(offer),
+      actor,
+      makerId: offer.makerId,
+    };
     if (!verdict.ok) {
       await this.repository.record({
-        network: this.network,
-        runId,
-        packId: pack,
-        offerKey: key,
+        ...base,
         verdict: 'refused',
         code: verdict.code,
         reason: verdict.reason,
         quote: verdict.quote,
         txHash: null,
-        actor,
       });
       return { status: 'refused', code: verdict.code, reason: verdict.reason };
     }
@@ -136,16 +208,12 @@ export class DeskService {
       const sent = await this.chain.send(this.fillCall(offer));
       const settled = sent.outcome.status === 'settled';
       await this.repository.record({
-        network: this.network,
-        runId,
-        packId: pack,
-        offerKey: key,
+        ...base,
         verdict: settled ? 'fill' : 'error',
         code: settled ? null : (sent.outcome.code ?? 'E_STATE'),
         reason: settled ? why : 'The registry declined the fill; the USDC came back.',
         quote: verdict.quote,
         txHash: sent.hash,
-        actor,
       });
       return settled
         ? { status: 'filled', txHash: sent.hash, quote: verdict.quote }
@@ -158,16 +226,12 @@ export class DeskService {
     } catch (cause) {
       const reason = cause instanceof Error ? cause.message : 'The fill could not be sent.';
       await this.repository.record({
-        network: this.network,
-        runId,
-        packId: pack,
-        offerKey: key,
+        ...base,
         verdict: 'error',
         code: 'UPSTREAM_RPC',
         reason,
         quote: verdict.quote,
         txHash: null,
-        actor,
       });
       return { status: 'error', code: 'UPSTREAM_RPC', reason };
     }
@@ -176,9 +240,16 @@ export class DeskService {
   /**
    * Moves what the desk is owed out of its packs into its own verifier balance: repayments of
    * redeemed pawns and coins kept after a forfeit. Each pack is re-read on chain before signing;
-   * one withdraw per token, in order, since a pack runs one command at a time.
+   * one withdraw per token, in order, since a pack runs one command at a time. A paused desk
+   * signs nothing, collects included.
    */
   async collect(): Promise<CollectResult[]> {
+    const control = await this.repository.control(this.network);
+    const paused = pauseReason({
+      policy: this.policy,
+      pausedReason: control?.paused === true ? control.reason : null,
+    });
+    if (paused !== null) return [];
     const calls = mosaecCalls(this.network);
     const packIds = await this.repository.collectablePacks(this.network, this.policy.deskAccountId);
     const results: CollectResult[] = [];
@@ -235,6 +306,7 @@ export class DeskService {
       quote,
       txHash: null,
       actor,
+      makerId: offer.makerId,
     });
   }
 
@@ -247,7 +319,7 @@ export class DeskService {
     if (last === null || last.verdict === 'error') return false;
     return !(
       last.verdict === 'refused' &&
-      (last.code === 'DESK_BUDGET' || last.code === 'DESK_EXPOSURE')
+      (last.code === 'DESK_BUDGET' || last.code === 'DESK_EXPOSURE' || last.code === 'DESK_PAUSED')
     );
   }
 
@@ -263,6 +335,7 @@ export class DeskService {
       quote: verdict.quote,
       txHash: null,
       actor: 'policy',
+      makerId: offer.makerId,
     });
   }
 
