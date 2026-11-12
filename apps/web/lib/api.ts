@@ -336,6 +336,7 @@ const deskLedgerSchema = z.object({
         principal: z.string(),
         markUsdc: z.string().nullable(),
         markSource: z.string(),
+        quotedAt: z.string().nullable().optional(),
       }),
     ),
     utilisationBps: z.number().int(),

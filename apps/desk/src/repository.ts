@@ -2,6 +2,7 @@ import { and, count, desc, eq, gte, inArray, isNotNull, ne, sum } from 'drizzle-
 
 import { schema } from '@mosaec/db';
 
+import type { IntentsMark } from './intents';
 import type { Quote } from './policy';
 import type { Db } from '@mosaec/db';
 
@@ -327,6 +328,7 @@ export class DeskRepository {
     packId: string,
     line: { readonly tokenId: string; readonly amount: bigint },
     txHash: string,
+    intents: IntentsMark | null = null,
   ): Promise<void> {
     await this.db.insert(deskDecisions).values({
       network,
@@ -336,7 +338,11 @@ export class DeskRepository {
       verdict: 'collect',
       code: null,
       reason: 'Collected into the desk balance.',
-      quote: { tokenId: line.tokenId, amount: line.amount.toString() },
+      quote: {
+        tokenId: line.tokenId,
+        amount: line.amount.toString(),
+        ...(intents === null ? {} : { intents }),
+      },
       principal: null,
       txHash,
       actor: 'desk',

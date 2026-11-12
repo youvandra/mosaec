@@ -279,7 +279,13 @@ export default async function DeskPage() {
           note={
             book.forfeited === 0
               ? 'Every borrower repaid so far'
-              : `${keptLabel} at the reference price`
+              : `${keptLabel} ${
+                  book.keptCoins.every((coin) => coin.markSource === 'near-intents')
+                    ? 'at a NEAR Intents quote, not executed'
+                    : book.keptCoins.some((coin) => coin.markSource === 'near-intents')
+                      ? 'at NEAR Intents quotes (not executed) and the reference price'
+                      : 'at the reference price'
+                }`
           }
         />
       </StatRow>

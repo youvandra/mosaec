@@ -18,6 +18,8 @@ const deskEnvSchema = baseEnvSchema.extend({
   LLM_BASE_URL: z.url(),
   LLM_MODEL: z.string().min(1),
   LLM_API_KEY: z.string().min(1).optional(),
+  /** 1Click partner token for NEAR Intents dry quotes. Absent: quotes still work, with the default fee. */
+  ONECLICK_PARTNER_JWT: z.string().min(16).optional(),
 });
 
 export type DeskEnv = z.output<typeof deskEnvSchema>;

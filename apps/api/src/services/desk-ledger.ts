@@ -125,6 +125,34 @@ function cardEvents(cards: readonly RateCardRecord[]): LedgerEvent[] {
   return events;
 }
 
+interface StoredIntentsMark {
+  readonly amountOutUsdc: string;
+  readonly quotedAt: string;
+}
+
+/**
+ * NEAR Intents dry quotes the desk stored when it collected kept coins, keyed `pack:symbol`.
+ * Quotes only: the desk never executed them.
+ */
+function intentsMarksByPack(network: NetworkId, collects: readonly DecisionRecord[]) {
+  const marks = new Map<string, StoredIntentsMark>();
+  for (const row of collects) {
+    const line = (row.quote ?? {}) as { tokenId?: string; intents?: Partial<StoredIntentsMark> };
+    const symbol = assetByTokenId(network, line.tokenId ?? '')?.symbol;
+    const out = line.intents?.amountOutUsdc;
+    if (row.packId === null || symbol === undefined) continue;
+    if (typeof out !== 'string' || !/^\d+$/.test(out)) continue;
+    marks.set(`${row.packId}:${symbol}`, {
+      amountOutUsdc: out,
+      quotedAt:
+        typeof line.intents?.quotedAt === 'string'
+          ? line.intents.quotedAt
+          : row.decidedAt.toISOString(),
+    });
+  }
+  return marks;
+}
+
 /**
  * The desk's books from its own records and the chain: what it holds, what is out, what it
  * earned, what it kept, how it prices and every move it made. Pure, so tests pin every number.
@@ -143,11 +171,14 @@ export function buildLedger(input: LedgerInput) {
   const budgetLeft = policy.dailyBudgetUsdc - lentToday;
   const priceOf = new Map(input.prices.map((p) => [p.symbol, Number(p.usd)]));
 
+  const intentsMarks = intentsMarksByPack(input.network, input.collects);
   const keptCoins = forfeited.flatMap((f) => {
     if (f.collateral === null || !isCollateral(f.collateral.symbol)) return [];
     const { decimals } = ASSETS[f.collateral.symbol];
+    const quoted = intentsMarks.get(`${f.packId}:${f.collateral.symbol}`);
     const usd = priceOf.get(f.collateral.symbol);
     const amount = BigInt(f.collateral.amount);
+    const reference = usd === undefined ? null : markUsdc(amount, decimals, usd).toString();
     return [
       {
         packId: f.packId,
@@ -155,8 +186,9 @@ export function buildLedger(input: LedgerInput) {
         amount: f.collateral.amount,
         decimals,
         principal: f.principal,
-        markUsdc: usd === undefined ? null : markUsdc(amount, decimals, usd).toString(),
-        markSource: 'reference' as const,
+        markUsdc: quoted?.amountOutUsdc ?? reference,
+        markSource: quoted === undefined ? ('reference' as const) : ('near-intents' as const),
+        quotedAt: quoted?.quotedAt ?? null,
       },
     ];
   });

@@ -9,6 +9,7 @@ import { NearDeskChain } from './chain';
 import { DeskService } from './desk-service';
 import { loadDeskEnv } from './env';
 import { InstantDesk } from './instant';
+import { IntentsQuotes } from './intents';
 import { OpenAiCompatibleModel } from './model';
 import { ReferencePrices } from './prices';
 import { QuoteSigner } from './quote-token';
@@ -39,7 +40,15 @@ async function main(): Promise<void> {
     env.NEAR_RPC_URL,
     env.DESK_SECRET_KEY,
   );
-  const service = new DeskService(network, deskPolicy(network), chain, repository, prices);
+  const service = new DeskService(
+    network,
+    deskPolicy(network),
+    chain,
+    repository,
+    prices,
+    () => new Date(),
+    new IntentsQuotes(env.ONECLICK_PARTNER_JWT),
+  );
   const model = new OpenAiCompatibleModel(env.LLM_BASE_URL, env.LLM_MODEL, env.LLM_API_KEY);
   const cards = new RateCards(service, repository, new RealisedVolatility(), model);
   const signer = new QuoteSigner(env.DESK_QUOTE_SECRET ?? randomBytes(32).toString('hex'));

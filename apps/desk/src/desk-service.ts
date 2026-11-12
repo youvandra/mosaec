@@ -1,12 +1,15 @@
+import { assetByTokenId } from '@mosaec/config/assets';
 import { mosaecCalls } from '@mosaec/sdk';
 
 import { evaluate, offerKey, pauseReason } from './policy';
+import { COINGECKO_IDS } from './prices';
 import { utcMidnight } from './repository';
 import { Serial } from './serial';
 
 import type { DeskChain } from './chain';
+import type { IntentsMark, IntentsQuotes } from './intents';
 import type { DeskContext, EvaluateOptions, OfferInput, Quote, Verdict } from './policy';
-import type { ReferencePrices } from './prices';
+import type { DeskSymbol, ReferencePrices } from './prices';
 import type { DeskRepository } from './repository';
 import type { NetworkId } from '@mosaec/config/assets';
 import type { DeskPolicy } from '@mosaec/config/desk';
@@ -38,6 +41,8 @@ export interface CollectResult {
   readonly tokenId: string;
   readonly amount: bigint;
   readonly status: 'collected' | 'error';
+  /** How kept coins are marked on the ledger; absent for USDC repayments. */
+  readonly mark?: 'near-intents' | 'reference';
   readonly txHash: string | null;
   readonly reason?: string;
 }
@@ -57,6 +62,8 @@ export class DeskService {
     private readonly repository: DeskRepository,
     private readonly prices: ReferencePrices,
     private readonly now: () => Date = () => new Date(),
+    /** Prices kept coins through a NEAR Intents dry quote at collect time. Null: reference only. */
+    private readonly intents: Pick<IntentsQuotes, 'toUsdc'> | null = null,
   ) {}
 
   async context(): Promise<DeskContext> {
@@ -267,13 +274,18 @@ export class DeskService {
             }),
           );
           const collected = sent.outcome.status === 'settled';
-          if (collected) await this.repository.recordCollect(this.network, pack, line, sent.hash);
+          const kept = collected ? this.keptSymbol(line.tokenId) : null;
+          const mark = kept === null ? null : await this.markKept(kept, line.amount);
+          if (collected) {
+            await this.repository.recordCollect(this.network, pack, line, sent.hash, mark);
+          }
           results.push({
             pack,
             tokenId: line.tokenId,
             amount: line.amount,
             status: collected ? 'collected' : 'error',
             txHash: sent.hash,
+            ...(kept === null ? {} : { mark: mark === null ? 'reference' : 'near-intents' }),
           });
         } catch (cause) {
           results.push({
@@ -288,6 +300,17 @@ export class DeskService {
       }
     }
     return results;
+  }
+
+  /** The coin a collected line holds when it is collateral the desk kept, else null (USDC). */
+  private keptSymbol(tokenId: string): DeskSymbol | null {
+    const symbol = assetByTokenId(this.network, tokenId)?.symbol;
+    return symbol !== undefined && symbol in COINGECKO_IDS ? (symbol as DeskSymbol) : null;
+  }
+
+  private async markKept(symbol: DeskSymbol, amount: bigint): Promise<IntentsMark | null> {
+    if (this.intents === null) return null;
+    return this.intents.toUsdc(symbol, amount).catch(() => null);
   }
 
   async recordPass(

@@ -73,10 +73,16 @@ A refused fill leaves the offer open on the market.
 ## Ledger
 
 `GET /desk/ledger?network` returns the desk's books: treasury (live verifier balances), principal
-lent now and its share of the exposure limit, interest from repaid pawns, coins kept from forfeits
-marked at the reference price, what is left of today's budget, the current rate card per coin and
-the last 24 hours of cards with their reasons, the policy, the kill switch state, and the latest
-events (loans, collects, card changes, pauses) with transaction hashes. `/app/desk` is built on it.
+lent now and its share of the exposure limit, interest from repaid pawns, coins kept from forfeits,
+what is left of today's budget, the current rate card per coin and the last 24 hours of cards with
+their reasons, the policy, the kill switch state, and the latest events (loans, collects, card
+changes, pauses) with transaction hashes. `/app/desk` is built on it.
+
+Kept coins are marked at a NEAR Intents quote. When the desk collects coins from a forfeited pack,
+it asks 1Click for a `dry: true` quote of the same amount of the mainnet coin into USDC (Intents
+has no testnet) and stores it with the collect. The ledger shows that quote, labelled as a quote
+that was never executed. If the quote fails, the coins are marked at the reference price. An
+optional `ONECLICK_PARTNER_JWT` in the desk env is sent with each quote.
 
 ## Kill switch
 

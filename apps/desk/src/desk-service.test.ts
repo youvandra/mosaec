@@ -5,6 +5,7 @@ import { DESK_POLICIES, deskPolicySchema } from '@mosaec/config/desk';
 import { DeskService } from './desk-service';
 
 import type { DeskChain, SentCall } from './chain';
+import type { IntentsMark } from './intents';
 import type { ReferencePrices } from './prices';
 import type { DeskRepository } from './repository';
 import type { ContractCall } from '@mosaec/sdk';
@@ -16,7 +17,9 @@ const BTC = 'nep141:btc.mosaec.testnet';
 function service(
   collectable: Record<string, readonly { tokenId: string; amount: bigint }[] | null>,
   settles = true,
+  intents: IntentsStub | null = null,
 ) {
+  const recorded: unknown[][] = [];
   const sent: ContractCall[] = [];
   const chain: DeskChain = {
     balanceUsdc: () => Promise.resolve(0n),
@@ -35,11 +38,27 @@ function service(
   const repository = {
     collectablePacks: () => Promise.resolve(Object.keys(collectable)),
     control: () => Promise.resolve(null),
-    recordCollect: () => Promise.resolve(),
+    recordCollect: (...args: unknown[]) => {
+      recorded.push(args);
+      return Promise.resolve();
+    },
   } as unknown as DeskRepository;
   const prices = { current: () => Promise.resolve({}) } as unknown as ReferencePrices;
-  return { desk: new DeskService('testnet', POLICY, chain, repository, prices), sent };
+  const desk = new DeskService('testnet', POLICY, chain, repository, prices, undefined, intents);
+  return { desk, sent, recorded };
 }
+
+interface IntentsStub {
+  toUsdc: (symbol: string, amount: bigint) => Promise<IntentsMark | null>;
+}
+
+const MARK: IntentsMark = {
+  source: 'near-intents',
+  dry: true,
+  amountOutUsdc: '736000000',
+  quotedAt: '2026-11-12T04:00:00.000Z',
+  correlationId: 'c1',
+};
 
 describe('DeskService.collect', () => {
   it('withdraws every token a free desk pack holds into the desk balance', async () => {
@@ -72,6 +91,40 @@ describe('DeskService.collect', () => {
     const { desk } = service({ '6.v0.mosaec.testnet': [{ tokenId: USDC, amount: 1n }] }, false);
     const [result] = await desk.collect();
     expect(result?.status).toBe('error');
+  });
+});
+
+describe('DeskService.collect marks kept coins', () => {
+  it('stores a NEAR Intents dry quote for kept coins and none for a USDC repayment', async () => {
+    const asked: [string, bigint][] = [];
+    const { desk, recorded } = service(
+      {
+        '6.v0.mosaec.testnet': [{ tokenId: USDC, amount: 200_010_000n }],
+        '7.v0.mosaec.testnet': [{ tokenId: BTC, amount: 1_000_000n }],
+      },
+      true,
+      {
+        toUsdc: (symbol, amount) => {
+          asked.push([symbol, amount]);
+          return Promise.resolve(MARK);
+        },
+      },
+    );
+    const results = await desk.collect();
+    expect(asked).toEqual([['BTC', 1_000_000n]]);
+    expect(results.map((r) => r.mark)).toEqual([undefined, 'near-intents']);
+    expect(recorded.map((args) => args[4])).toEqual([null, MARK]);
+  });
+
+  it('falls back to the reference price when the quote fails', async () => {
+    const { desk, recorded } = service(
+      { '7.v0.mosaec.testnet': [{ tokenId: BTC, amount: 1_000_000n }] },
+      true,
+      { toUsdc: () => Promise.reject(new Error('1Click down')) },
+    );
+    const [result] = await desk.collect();
+    expect(result).toMatchObject({ status: 'collected', mark: 'reference' });
+    expect(recorded[0]?.[4]).toBeNull();
   });
 });
 

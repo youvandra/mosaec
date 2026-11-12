@@ -5,7 +5,7 @@ import { deskPolicy } from '@mosaec/config/desk';
 import { buildLedger } from './desk-ledger';
 
 import type { LedgerInput } from './desk-ledger';
-import type { DeskFillRow, RateCardRecord } from '../repositories/desk-repository';
+import type { DecisionRecord, DeskFillRow, RateCardRecord } from '../repositories/desk-repository';
 
 const NOW = new Date('2026-11-12T12:00:00Z');
 const DESK = 'desk.mosaec.testnet';
@@ -77,7 +77,39 @@ describe('buildLedger', () => {
       budgetLeftTodayUsdc: '4800000000',
     });
     expect(book.keptCoins).toEqual([
-      expect.objectContaining({ symbol: 'ZEC', amount: '50000000', markUsdc: '500000000' }),
+      expect.objectContaining({
+        symbol: 'ZEC',
+        amount: '50000000',
+        markUsdc: '500000000',
+        markSource: 'reference',
+      }),
+    ]);
+  });
+
+  it('marks kept coins at the NEAR Intents dry quote stored at collect time', () => {
+    const { book } = buildLedger(
+      input({
+        collects: [
+          {
+            packId: '3.v0.mosaec.testnet',
+            decidedAt: new Date('2026-11-12T11:30:00Z'),
+            txHash: 'CollectTx',
+            actor: 'desk',
+            quote: {
+              tokenId: 'nep141:zec.mosaec.testnet',
+              amount: '50000000',
+              intents: { amountOutUsdc: '492410430', quotedAt: '2026-11-12T11:30:01.000Z' },
+            },
+          } as unknown as DecisionRecord,
+        ],
+      }),
+    );
+    expect(book.keptCoins).toEqual([
+      expect.objectContaining({
+        markUsdc: '492410430',
+        markSource: 'near-intents',
+        quotedAt: '2026-11-12T11:30:01.000Z',
+      }),
     ]);
   });
 
