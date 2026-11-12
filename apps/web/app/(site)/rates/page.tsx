@@ -14,7 +14,7 @@ import { ASSET_MARK, markFill } from '../../../lib/asset-marks';
 import { formatUnits, padCents } from '../../../lib/format';
 import { SUGGESTED_MONTHLY_RATE_BPS, TERM_OPTIONS, suggestedRepayment } from '../../../lib/rates';
 import { Eyebrow, FaqBlock, SectionIntro } from '../_blocks';
-import { EXAMPLE_PAWN as E } from '../_content/facts';
+import { EXAMPLE_PAWN as E, ROLLING_REPLAY as R } from '../_content/facts';
 
 import { RatePlans } from './RatePlans';
 import styles from './rates.module.css';
@@ -305,8 +305,8 @@ function PerAsset() {
             <tr>
               <th scope="col">Asset</th>
               <th scope="col">Suggested Rate</th>
-              <th scope="col">Pawn Below Repayment</th>
-              <th scope="col">Loan Liquidated</th>
+              <th scope="col">Pawn Lost at {R.pawnMonthlyRate} a Month</th>
+              <th scope="col">Loan Liquidated at {R.liquidationLtv} LTV</th>
               <th scope="col">Price History</th>
             </tr>
           </thead>
@@ -336,8 +336,10 @@ function PerAsset() {
         </table>
       </Reveal>
       <Reveal as="p" className={cx('t-caption', styles.footnote)}>
-        Hourly closes from Binance and Bitfinex, every 90-day start hour. Pawn at 3% a month; loan
-        liquidated at 80% loan-to-value. Measured 11 Nov 2026. Makers set their own terms.
+        Hourly closes from Binance and Bitfinex, every 90-day start hour. The replay prices every
+        pawn at {R.pawnMonthlyRate} a month, above each suggested rate, so a pawn at the suggested
+        rate loses its coins slightly less often. Measured {R.measuredOn}. Makers set their own
+        terms.
       </Reveal>
     </Section>
   );

@@ -21,7 +21,11 @@ export const ROLLING_REPLAY = {
   span: '2017 to 2026',
   ltv: '50%',
   termDays: 90,
+  /** The replay's pawn rate, above the suggested ZEC rate, so the forfeit share errs high. */
+  pawnMonthlyRate: '3%',
   pawnForfeit: '10.7%',
+  /** The liquidating loan in the replay is closed once its loan to value reaches this. */
+  liquidationLtv: '80%',
   liquidated: '34.6%',
 } as const;
 
