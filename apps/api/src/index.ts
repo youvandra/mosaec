@@ -45,6 +45,7 @@ serve({
         ? undefined
         : new NearFaucetSender('faucet.mosaec.testnet', env.FAUCET_SECRET_KEY),
     instantDesk: new HttpInstantDesk(env.DESK_URL),
+    livePacks: (network) => new MosaecViews(network, rpcFor(network)),
   }).fetch,
   port: env.API_PORT,
 });
