@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-import { Mark } from '@mosaec/ui';
+import { LobedMark } from '@mosaec/ui';
 
 import styles from './RouteCurtain.module.css';
 
@@ -85,7 +85,7 @@ export function RouteCurtain() {
   return (
     <div className={styles.curtain} data-phase={phase} aria-hidden="true">
       <span className={styles.mark}>
-        <Mark />
+        <LobedMark />
       </span>
       <span className={styles.track}>
         <span className={styles.progress} />
