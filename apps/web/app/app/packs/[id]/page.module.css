@@ -2,7 +2,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 20px;
   padding: 8px 14px 8px 10px;
   border-radius: var(--radius-pill);
   background: var(--bg-secondary);
@@ -23,7 +22,14 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 32px;
+  align-self: stretch;
+}
+/* Back link over the title: one block in the page rhythm. */
+.top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
 }
 .titleRow {
   display: flex;
@@ -262,7 +268,7 @@
 .rights {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-grid);
 }
 .right {
   display: flex;

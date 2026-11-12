@@ -519,41 +519,45 @@ export default async function PackPage({ params }: Props) {
 
   return (
     <>
-      <Link href={appPath()} className={styles.back}>
-        <ArrowLeftIcon size={16} weight="bold" />
-        Market
-      </Link>
-      <div className={styles.header}>
-        <div className={styles.titleRow}>
-          <h1 className="t-h1">Pack #{pack.index}</h1>
-          <StatusPill tone={outcome.tone} icon={outcome.icon} size="md">
-            {outcome.label}
-          </StatusPill>
-          <ConfirmingPill
-            pack={pack.id}
-            hashes={pack.history.flatMap((event) => (event.txHash === null ? [] : [event.txHash]))}
-          />
-        </div>
-        <div className={styles.headerActions}>
-          <a
-            className={styles.idChip}
-            href={explorerAccountUrl(DEFAULT_NETWORK, pack.id)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Image src={NEAR_MARK.src} alt="NEAR" width={18} height={18} />
-            {pack.id}
-            <ArrowSquareOutIcon size={14} weight="bold" />
-          </a>
-          <ButtonLink
-            href={`${appPath('/verify')}?pack=${encodeURIComponent(pack.id)}`}
-            as={Link}
-            variant="secondary"
-            size="sm"
-            icon={<SealCheckIcon size={16} weight="fill" />}
-          >
-            Verify This Pack
-          </ButtonLink>
+      <div className={styles.top}>
+        <Link href={appPath()} className={styles.back}>
+          <ArrowLeftIcon size={16} weight="bold" />
+          Market
+        </Link>
+        <div className={styles.header}>
+          <div className={styles.titleRow}>
+            <h1 className="t-h1">Pack #{pack.index}</h1>
+            <StatusPill tone={outcome.tone} icon={outcome.icon} size="md">
+              {outcome.label}
+            </StatusPill>
+            <ConfirmingPill
+              pack={pack.id}
+              hashes={pack.history.flatMap((event) =>
+                event.txHash === null ? [] : [event.txHash],
+              )}
+            />
+          </div>
+          <div className={styles.headerActions}>
+            <a
+              className={styles.idChip}
+              href={explorerAccountUrl(DEFAULT_NETWORK, pack.id)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Image src={NEAR_MARK.src} alt="NEAR" width={18} height={18} />
+              {pack.id}
+              <ArrowSquareOutIcon size={14} weight="bold" />
+            </a>
+            <ButtonLink
+              href={`${appPath('/verify')}?pack=${encodeURIComponent(pack.id)}`}
+              as={Link}
+              variant="secondary"
+              size="sm"
+              icon={<SealCheckIcon size={16} weight="fill" />}
+            >
+              Verify This Pack
+            </ButtonLink>
+          </div>
         </div>
       </div>
       <div className={styles.grid}>
