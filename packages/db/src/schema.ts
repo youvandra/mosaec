@@ -224,8 +224,11 @@ export const deskDecisions = pgTable(
     packId: text('pack_id'),
     /** Which offer on the pack the verdict is about; a re-offered pack gets a new key. */
     offerKey: text('offer_key'),
-    /** `fill` signed, `pass` declined by the agent, `refused` blocked by policy, `error` failed. */
-    verdict: text('verdict', { enum: ['fill', 'pass', 'refused', 'error'] }).notNull(),
+    /**
+     * `fill` signed, `pass` declined by the agent, `refused` blocked by policy, `error` failed,
+     * `collect` moved a repayment or kept coins out of a desk pack.
+     */
+    verdict: text('verdict', { enum: ['fill', 'pass', 'refused', 'error', 'collect'] }).notNull(),
     /** Catalog code for `refused` and `error` (`DESK_POLICY`, `DESK_BUDGET`, ...). */
     code: text('code'),
     /** Plain reason shown on the desk page. */

@@ -274,6 +274,92 @@ export async function getDeskDecisions(
   ).items;
 }
 
+const rateCardSchema = z.object({
+  asset: z.string(),
+  monthlyBps: z.number().int(),
+  maxLtvBps: z.number().int(),
+  fairMonthlyBps: z.number().int().nullable(),
+  minMonthlyBps: z.number().int().nullable(),
+  source: z.enum(['model', 'fallback']),
+  reason: z.string(),
+  createdAt: z.string(),
+});
+
+const ledgerEventSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.enum(['fill', 'collect']),
+    at: z.string(),
+    packId: z.string().nullable(),
+    symbol: z.string().nullable(),
+    amount: z.string(),
+    decimals: z.number().int().nullable(),
+    txHash: z.string().nullable(),
+    actor: z.string(),
+  }),
+  z.object({
+    kind: z.literal('card'),
+    at: z.string(),
+    asset: z.string(),
+    monthlyBps: z.number().int(),
+    previousBps: z.number().int().nullable(),
+    source: z.string(),
+    reason: z.string(),
+  }),
+  z.object({ kind: z.enum(['pause', 'resume']), at: z.string(), reason: z.string() }),
+]);
+
+const deskLedgerSchema = z.object({
+  network: z.enum(NETWORK_IDS),
+  accountId: z.string(),
+  generatedAt: z.string(),
+  status: z.object({
+    state: z.enum(['live', 'paused']),
+    by: z.enum(['config', 'switch']).nullable(),
+    reason: z.string().nullable(),
+    since: z.string().nullable(),
+  }),
+  treasury: z.object({ balances: z.array(deskBalanceSchema), usdc: z.string().nullable() }),
+  book: z.object({
+    fills: z.number().int(),
+    lentTotalUsdc: z.string(),
+    lentNowUsdc: z.string(),
+    running: z.number().int(),
+    repaid: z.number().int(),
+    realisedInterestUsdc: z.string(),
+    forfeited: z.number().int(),
+    keptCoins: z.array(
+      z.object({
+        packId: z.string(),
+        symbol: z.string(),
+        amount: z.string(),
+        decimals: z.number().int(),
+        principal: z.string(),
+        markUsdc: z.string().nullable(),
+        markSource: z.string(),
+      }),
+    ),
+    utilisationBps: z.number().int(),
+    lentTodayUsdc: z.string(),
+    budgetLeftTodayUsdc: z.string(),
+  }),
+  rateCard: z.object({ current: z.array(rateCardSchema), history: z.array(rateCardSchema) }),
+  policy: deskOverviewSchema.shape.policy.extend({
+    minAprBpsByAsset: z.record(z.string(), z.number().int()),
+    maxInstantFillsPerHour: z.number().int(),
+  }),
+  events: z.array(ledgerEventSchema),
+});
+
+export type DeskLedger = z.output<typeof deskLedgerSchema>;
+export type DeskRateCard = z.output<typeof rateCardSchema>;
+export type DeskLedgerEvent = z.output<typeof ledgerEventSchema>;
+
+/** The desk's books: treasury, loans out, results, rate card, rules and recent moves. */
+export async function getDeskLedger(network: NetworkId): Promise<DeskLedger> {
+  checkNetwork(network);
+  return getJson(`/desk/ledger?network=${network}`, deskLedgerSchema, true);
+}
+
 export interface FaucetGrant {
   readonly accountId: string;
   readonly txHash: string;

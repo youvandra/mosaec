@@ -31,6 +31,7 @@ export function routes(
     .get('/offers', packs.offers)
     .get('/desk', desk.overview)
     .get('/desk/decisions', desk.decisions)
+    .get('/desk/ledger', desk.ledger)
     .get('/desk/quote', limits.quote, instant.quote)
     .post('/desk/instant-fill', limits.fill, instant.fill)
     .post('/faucet', faucet.claim);

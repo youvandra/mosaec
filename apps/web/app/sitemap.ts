@@ -8,6 +8,7 @@ const PAGES: readonly { path: string; priority: number }[] = [
   { path: '/lend', priority: 0.8 },
   { path: '/market', priority: 0.8 },
   { path: '/agents', priority: 0.7 },
+  { path: '/agents/connect', priority: 0.6 },
   { path: '/rates', priority: 0.7 },
   { path: '/verify', priority: 0.6 },
   { path: '/docs', priority: 0.6 },

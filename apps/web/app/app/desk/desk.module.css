@@ -124,6 +124,85 @@
   line-height: 1.45;
   letter-spacing: -0.01em;
 }
+/* Rate card: one tile per coin. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.cardsNote {
+  grid-column: 1 / -1;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border-radius: var(--radius-panel);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-card);
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cardCoin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.cardRate {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.cardUnit {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.cardFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.cardFacts div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cardFacts dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.cardFacts dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cardReason {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.empty {
+  color: var(--text-secondary);
+}
+
 @media (max-width: 1023.98px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
