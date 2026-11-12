@@ -159,16 +159,18 @@ function intentsMarksByPack(network: NetworkId, collects: readonly DecisionRecor
  */
 export function buildLedger(input: LedgerInput) {
   const { policy, fills, now } = input;
-  const running = fills.filter((f) => f.state === 'written' && f.titleOwner === input.accountId);
-  const closed = fills.filter((f) => f.state !== 'written');
-  const repaid = closed.filter((f) => f.lastOutcome === 'Redeemed');
-  const forfeited = closed.filter((f) => f.lastOutcome === 'Forfeited');
+  const running = fills.filter((f) => f.outcome === 'running');
+  const repaid = fills.filter((f) => f.outcome === 'Redeemed');
+  const forfeited = fills.filter((f) => f.outcome === 'Forfeited');
   const lentNow = sum(running.map((f) => BigInt(f.principal)));
   const midnight = utcMidnight(now);
-  const lentToday = sum(
-    fills.filter((f) => f.decidedAt >= midnight).map((f) => BigInt(f.principal)),
+  const today = fills.filter((f) => f.decidedAt >= midnight);
+  const lentToday = sum(today.map((f) => BigInt(f.principal)));
+  /* The desk gives back the budget of a loan repaid the same day, so the ledger does too. */
+  const budgetUsed = sum(
+    today.filter((f) => f.outcome !== 'Redeemed').map((f) => BigInt(f.principal)),
   );
-  const budgetLeft = policy.dailyBudgetUsdc - lentToday;
+  const budgetLeft = policy.dailyBudgetUsdc - budgetUsed;
   const priceOf = new Map(input.prices.map((p) => [p.symbol, Number(p.usd)]));
 
   const intentsMarks = intentsMarksByPack(input.network, input.collects);
