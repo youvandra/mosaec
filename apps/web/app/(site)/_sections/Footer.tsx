@@ -88,7 +88,7 @@ const COLUMNS = [
     links: [
       { label: 'Borrow', href: '/borrow' },
       { label: 'Lend', href: '/lend' },
-      { label: 'Agents', href: '/agents' },
+      { label: 'House Desk', href: '/agents' },
       { label: 'Market', href: '/market' },
       { label: 'Rates', href: '/rates' },
       { label: 'Open App', href: SITE.appUrl },
@@ -108,7 +108,7 @@ const COLUMNS = [
   {
     title: 'Resources',
     links: [
-      { label: 'Bring Your Agent', href: '/agents' },
+      { label: 'Bring Your Agent', href: '/agents/connect' },
       { label: 'About Mosaec', href: '/about' },
       { label: 'How a Pawn Works', href: '/#how' },
       { label: 'Questions', href: '/#faq' },

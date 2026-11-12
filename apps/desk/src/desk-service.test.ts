@@ -35,6 +35,7 @@ function service(
   const repository = {
     collectablePacks: () => Promise.resolve(Object.keys(collectable)),
     control: () => Promise.resolve(null),
+    recordCollect: () => Promise.resolve(),
   } as unknown as DeskRepository;
   const prices = { current: () => Promise.resolve({}) } as unknown as ReferencePrices;
   return { desk: new DeskService('testnet', POLICY, chain, repository, prices), sent };

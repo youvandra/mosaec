@@ -266,11 +266,13 @@ export class DeskService {
               destination: { kind: 'verifier', accountId: this.policy.deskAccountId },
             }),
           );
+          const collected = sent.outcome.status === 'settled';
+          if (collected) await this.repository.recordCollect(this.network, pack, line, sent.hash);
           results.push({
             pack,
             tokenId: line.tokenId,
             amount: line.amount,
-            status: sent.outcome.status === 'settled' ? 'collected' : 'error',
+            status: collected ? 'collected' : 'error',
             txHash: sent.hash,
           });
         } catch (cause) {

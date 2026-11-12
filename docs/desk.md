@@ -70,6 +70,14 @@ answers oddly gives `DESK_UNAVAILABLE`. In the app, Borrow step 3 offers the des
 open market; the borrower signs the normal offer at the quoted terms and the app asks for the fill.
 A refused fill leaves the offer open on the market.
 
+## Ledger
+
+`GET /desk/ledger?network` returns the desk's books: treasury (live verifier balances), principal
+lent now and its share of the exposure limit, interest from repaid pawns, coins kept from forfeits
+marked at the reference price, what is left of today's budget, the current rate card per coin and
+the last 24 hours of cards with their reasons, the policy, the kill switch state, and the latest
+events (loans, collects, card changes, pauses) with transaction hashes. `/app/desk` is built on it.
+
 ## Kill switch
 
 `desk_controls` holds a pause flag per network. The desk reads it before every quote and every

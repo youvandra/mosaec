@@ -41,7 +41,7 @@ export const ROUTE_GROUPS: readonly {
     title: 'Agents',
     routes: [
       { label: 'House Desk', href: appPath('/desk'), icon: 'desk', badge: 'desk-status' },
-      { label: 'Connect Agent', href: appPath('/agents'), icon: 'agent' },
+      { label: 'Your Agent', href: appPath('/agents'), icon: 'agent' },
     ],
   },
 ];

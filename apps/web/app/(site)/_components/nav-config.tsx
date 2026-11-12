@@ -2,6 +2,8 @@ import {
   CalendarCheckIcon,
   ChartBarIcon,
   HandCoinsIcon,
+  PlugsConnectedIcon,
+  RobotIcon,
   SealCheckIcon,
 } from '@phosphor-icons/react/dist/ssr';
 
@@ -68,7 +70,34 @@ export const NAV_MENUS: readonly NavMenu[] = [
     },
   },
   { label: 'Market', href: '/market' },
-  { label: 'Agents', href: '/agents' },
+  {
+    label: 'Agents',
+    panel: {
+      eyebrow: 'Agents',
+      items: [
+        {
+          title: 'House Desk',
+          caption: 'USDC in a minute, priced by its agent',
+          href: '/agents',
+          icon: (
+            <AppIcon color="violet" size={TILE}>
+              <RobotIcon weight="fill" />
+            </AppIcon>
+          ),
+        },
+        {
+          title: 'Your Agent',
+          caption: 'Lend your USDC inside your rules',
+          href: '/agents/connect',
+          icon: (
+            <AppIcon color="ink" size={TILE}>
+              <PlugsConnectedIcon weight="fill" />
+            </AppIcon>
+          ),
+        },
+      ],
+    },
+  },
   { label: 'Docs', href: '/docs' },
   { label: 'About', href: '/about' },
 ];

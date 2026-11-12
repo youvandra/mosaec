@@ -7,7 +7,7 @@ import type { Db } from '@mosaec/db';
 
 const { deskControls, deskDecisions, deskRateCards, events, offers, packs, prices } = schema;
 
-export type DecisionVerdict = 'fill' | 'pass' | 'refused' | 'error';
+export type DecisionVerdict = 'fill' | 'pass' | 'refused' | 'error' | 'collect';
 
 /** Actor recorded on fills made through an instant quote. */
 export const INSTANT_ACTOR = 'instant';
@@ -318,6 +318,28 @@ export class DeskRepository {
       txHash: input.txHash,
       actor: input.actor,
       makerId: input.makerId ?? null,
+    });
+  }
+
+  /** One settled withdraw out of a desk pack, for the ledger's event list. */
+  async recordCollect(
+    network: string,
+    packId: string,
+    line: { readonly tokenId: string; readonly amount: bigint },
+    txHash: string,
+  ): Promise<void> {
+    await this.db.insert(deskDecisions).values({
+      network,
+      runId: 'collect',
+      packId,
+      offerKey: null,
+      verdict: 'collect',
+      code: null,
+      reason: 'Collected into the desk balance.',
+      quote: { tokenId: line.tokenId, amount: line.amount.toString() },
+      principal: null,
+      txHash,
+      actor: 'desk',
     });
   }
 
