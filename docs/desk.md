@@ -51,7 +51,8 @@ Once an hour the agent proposes a monthly rate and a loan-to-value limit per coi
 realised volatility, the desk's utilisation, repaid and forfeited pawns and the previous card.
 The server keeps each card inside the shared bounds (fair rate plus margin up to three times the
 fair rate), moves it at most 0.5% a month per hour, and writes the fallback card (fair rate plus
-margin) whenever the model fails. Cards are stored in `desk_rate_cards` with a one-line reason.
+margin) whenever the model fails. A coin the model skips in its reply is asked for again on its
+own before the fallback applies. Cards are stored in `desk_rate_cards` with a one-line reason.
 
 ## Instant loans
 

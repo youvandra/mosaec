@@ -70,7 +70,12 @@ describe('parseProposals', () => {
   );
 });
 
-function harness(reply: string | Error) {
+type Reply = string | Error;
+
+function harness(reply: Reply | readonly Reply[]) {
+  const replies: Reply[] | null =
+    typeof reply === 'string' || reply instanceof Error ? null : [...reply];
+  const asked: string[] = [];
   const saved: RateCardInput[] = [];
   const repository = {
     bookCounts: () => Promise.resolve({ repaid: 2, forfeited: 0 }),
@@ -88,14 +93,20 @@ function harness(reply: string | Error) {
   } as unknown as DeskService;
   const model: ChatModel = {
     id: 'test-model',
-    complete: () =>
-      reply instanceof Error
-        ? Promise.reject(reply)
-        : Promise.resolve({ role: 'assistant', content: reply }),
+    complete: (messages) => {
+      asked.push(messages.at(-1)?.content ?? '');
+      const next: Reply = replies === null ? (reply as Reply) : (replies.shift() ?? '');
+      return next instanceof Error
+        ? Promise.reject(next)
+        : Promise.resolve({ role: 'assistant', content: next });
+    },
   };
   const volatility = { of: () => Promise.resolve(8_000) } as unknown as RealisedVolatility;
-  return { cards: new RateCards(desk, repository, volatility, model), saved };
+  return { cards: new RateCards(desk, repository, volatility, model), saved, asked };
 }
+
+const card = (asset: string, monthlyBps: number) =>
+  `{"cards":[{"asset":"${asset}","monthly_bps":${monthlyBps.toString()},"max_ltv_bps":5000,"reason":"ok"}]}`;
 
 describe('RateCards.refresh', () => {
   it('writes the clamped model card and falls back for coins it skipped', async () => {
@@ -108,6 +119,29 @@ describe('RateCards.refresh', () => {
     const btc = written.find((card) => card.asset === 'BTC');
     expect(btc).toMatchObject({ monthlyBps: rateBounds('BTC').minMonthlyBps, source: 'fallback' });
     expect(saved).toHaveLength(POLICY.assets.length);
+  });
+
+  it('asks again for each coin the model skipped, one coin per call', async () => {
+    const { cards, asked } = harness([card('ZEC', 300), card('BTC', 150), card('SOL', 275)]);
+    const written = await cards.refresh();
+    expect(written.map((c) => [c.asset, c.source])).toEqual(
+      POLICY.assets.map((asset) => [asset, 'model']),
+    );
+    expect(asked).toHaveLength(POLICY.assets.length);
+    expect(asked[1]).toContain('"asset":"BTC"');
+    expect(asked[1]).not.toContain('"asset":"SOL"');
+  });
+
+  it('falls back only for a coin the retry also skipped', async () => {
+    const { cards } = harness([card('ZEC', 300), 'no json', card('SOL', 275)]);
+    const sources = Object.fromEntries((await cards.refresh()).map((c) => [c.asset, c.source]));
+    expect(sources).toEqual({ ZEC: 'model', BTC: 'fallback', SOL: 'model' });
+  });
+
+  it('does not retry when the model gave nothing', async () => {
+    const { cards, asked } = harness(['I think 3%']);
+    await cards.refresh();
+    expect(asked).toHaveLength(1);
   });
 
   it.each([

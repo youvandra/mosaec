@@ -19,7 +19,7 @@ const MAX_REASON = 280;
 const BPS = 10_000n;
 
 /* Kept short: a small model on a CPU host reads every token of it each hour. */
-const SYSTEM = `You set the monthly rate card of a USDC lending desk that lends against sealed coins with no liquidation; on a missed date it keeps the coins. Raise the rate when volatility, utilisation or forfeits rise; lower it toward the floor when calm. Tighten max_ltv_bps when volatility is high. Stay inside min and max. Reply with JSON only: {"cards":[{"asset":"ZEC","monthly_bps":275,"max_ltv_bps":5000,"reason":"one short sentence"}]}`;
+const SYSTEM = `You set the monthly rate card of a USDC lending desk that lends against sealed coins with no liquidation; on a missed date it keeps the coins. Raise the rate when volatility, utilisation or forfeits rise; lower it toward the floor when calm. Tighten max_ltv_bps when volatility is high. Stay inside min and max. Write one card for every asset in the inputs. Reply with JSON only: {"cards":[{"asset":"<asset>","monthly_bps":<number>,"max_ltv_bps":<number>,"reason":"one short sentence"}]}`;
 
 const proposalSchema = z.object({
   cards: z.array(
@@ -148,6 +148,18 @@ export class RateCards {
     }
 
     const proposals = await this.ask([...inputs.values()]);
+    /*
+     * A small model often answers only the first coin. When it answered at all, ask again for
+     * each skipped coin on its own, one call at a time so the CPU host is never asked twice at once.
+     */
+    if (proposals.size > 0) {
+      for (const asset of policy.assets) {
+        if (proposals.has(asset)) continue;
+        const retry = await this.ask([inputs.get(asset) ?? { asset }]);
+        const proposal = retry.get(asset);
+        if (proposal !== undefined) proposals.set(asset, proposal);
+      }
+    }
     const cards: RateCard[] = [];
     for (const asset of policy.assets) {
       const input = inputs.get(asset) ?? {};
