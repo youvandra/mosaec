@@ -257,6 +257,10 @@ export function BorrowFlow() {
   const [assetMenu, setAssetMenu] = useState(false);
   const [route, setRoute] = useState<LoanRoute>('instant');
   const [instantFilling, setInstantFilling] = useState(false);
+  /* The desk quote behind the signed offer: the page keeps its figures once the offer stage is over. */
+  const [signedQuote, setSignedQuote] = useState<InstantQuote | null>(null);
+  /* The desk refused the fill, so the signed offer waits on the open market. */
+  const [deskPassed, setDeskPassed] = useState(false);
   const resumed = useRef(false);
   const toast = useToast();
 
@@ -303,6 +307,8 @@ export function BorrowFlow() {
     setPackBalance(null);
     setOffered(false);
     setFunded(false);
+    setSignedQuote(null);
+    setDeskPassed(false);
   }, [packId, tokenId]);
 
   /* Re-read the pack after every chain change; what is on screen stays until the answer lands. */
@@ -453,6 +459,8 @@ export function BorrowFlow() {
 
   /** Asks the desk to fill the offer just signed; on any refusal the offer stays on the market. */
   const fillInstantly = async (pack: string, quote: InstantQuote) => {
+    setSignedQuote(quote);
+    setDeskPassed(false);
     setInstantFilling(true);
     const id = toast.show({
       tone: 'pending',
@@ -470,6 +478,7 @@ export function BorrowFlow() {
           action: { label: 'View transaction', href: explorerTxUrl(network, result.txHash) },
         });
       } else {
+        setDeskPassed(true);
         toast.update(id, {
           tone: 'error',
           title: 'The desk passed on this one',
@@ -478,6 +487,7 @@ export function BorrowFlow() {
         });
       }
     } catch (cause) {
+      setDeskPassed(true);
       const reason = cause instanceof ApiError ? cause.message : 'The House Desk is unreachable.';
       toast.update(id, {
         tone: 'error',
@@ -602,13 +612,23 @@ export function BorrowFlow() {
         }
       : null,
   );
+  /* After an instant offer is signed, the signed quote decides the route: the desk's loan, or the market if it passed. */
+  const signedDeskQuote = stage === 'done' ? signedQuote : null;
   /* A desk that cannot quote leaves the open market as the only way. */
-  const loanRoute: LoanRoute = instantQuote.state.status === 'ready' ? route : 'market';
+  const loanRoute: LoanRoute =
+    signedDeskQuote !== null
+      ? deskPassed
+        ? 'market'
+        : 'instant'
+      : instantQuote.state.status === 'ready'
+        ? route
+        : 'market';
   /* With Instant chosen, every figure on the page is the desk's price, so the ticket matches what is signed. */
   const deskQuote =
-    stage === 'offer' && loanRoute === 'instant' && instantQuote.state.status === 'ready'
+    signedDeskQuote ??
+    (stage === 'offer' && loanRoute === 'instant' && instantQuote.state.status === 'ready'
       ? instantQuote.state.quote
-      : null;
+      : null);
   const shownPrincipal = deskQuote === null ? principal : BigInt(deskQuote.principal);
   const shownRepayment = deskQuote === null ? repayment : BigInt(deskQuote.repayment);
   const shownMonthlyBps = deskQuote === null ? rateBps : deskQuote.monthlyBps;
@@ -867,11 +887,13 @@ export function BorrowFlow() {
           pill={<TokenPill symbol="USDC" />}
         />
         <p className={cx('t-caption', styles.hint, repaymentTooLow && styles.bad)}>
-          {deskQuote !== null
-            ? 'The House Desk price. Set Your Own Terms to change it.'
-            : repaymentTooLow
-              ? 'The repayment must be at least the loan.'
-              : 'The repayment is your price. Nothing moves it.'}
+          {signedDeskQuote !== null
+            ? 'The House Desk price you signed.'
+            : deskQuote !== null
+              ? 'The House Desk price. Set Your Own Terms to change it.'
+              : repaymentTooLow
+                ? 'The repayment must be at least the loan.'
+                : 'The repayment is your price. Nothing moves it.'}
         </p>
       </section>
 
@@ -911,7 +933,7 @@ export function BorrowFlow() {
             </span>
             <span className={styles.right}>
               <StampIcon size={16} weight="fill" />
-              {deskQuote === null
+              {loanRoute !== 'instant'
                 ? 'Miss it, the lender keeps the coins.'
                 : 'Miss it, the House Desk keeps the coins.'}
             </span>
