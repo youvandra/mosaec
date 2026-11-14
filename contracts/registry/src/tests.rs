@@ -425,6 +425,44 @@ fn sold_ticket_cannot_exercise() {
 }
 
 #[test]
+fn sold_title_keeps_the_ticket_and_the_payout() {
+    let mut r = written();
+    set_paying(&taker(), NearToken::from_yoctonear(1));
+    r.nft_transfer(acc("buyer.near"), "t0".into(), None, None);
+    let v = view(&r);
+    assert!(matches!(v.position.stage, Stage::Written { .. }));
+    assert_eq!(v.title_owner, Some(acc("buyer.near")));
+    assert_eq!(v.ticket_owner, Some(maker()));
+    assert_eq!(v.position.payout.unwrap().maker_id, maker());
+
+    let to = Destination::Verifier {
+        account_id: taker(),
+    };
+    set(&taker(), NOW);
+    assert_eq!(
+        r.try_withdraw(&pack(), ZEC, U128(1), &to).err(),
+        Some(MosaecError::Holder)
+    );
+    set(&acc("buyer.near"), NOW);
+    assert_eq!(
+        r.try_withdraw(&pack(), ZEC, U128(1), &to).err(),
+        Some(MosaecError::State)
+    );
+
+    set(&pack(), NOW);
+    r.begin_exercise(pack(), maker()).unwrap();
+    r.end_exercise(pack(), true).unwrap();
+    let v = view(&r);
+    assert_eq!(v.position.stage, Stage::Free);
+    assert_eq!(v.title_owner, Some(acc("buyer.near")));
+    set(&taker(), NOW);
+    assert_eq!(
+        r.try_withdraw(&pack(), USDC, U128(K), &to).err(),
+        Some(MosaecError::Holder)
+    );
+}
+
+#[test]
 fn ticket_transfer_refused_during_exercise() {
     let mut r = written();
     set(&pack(), NOW);
