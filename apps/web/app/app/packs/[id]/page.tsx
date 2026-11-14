@@ -202,10 +202,46 @@ function lineOf(event: PackEvent): Line | null {
   }
 }
 
+/**
+ * A Title or Ticket that changed hands outside a fill. The fill's own transfer shares its receipt
+ * with the `filled` event, which already names the lender, so it is left out.
+ */
+function transferLine(event: PackEvent, fillReceipts: ReadonlySet<string>): Line | null {
+  if (event.event !== 'nft_transfer' || fillReceipts.has(event.receiptId)) return null;
+  const entries = (Array.isArray(event.data) ? event.data : []) as readonly {
+    token_ids?: unknown;
+    old_owner_id?: unknown;
+    new_owner_id?: unknown;
+  }[];
+  const entry = entries[0];
+  const ids = Array.isArray(entry?.token_ids) ? (entry.token_ids as readonly unknown[]) : [];
+  const tokenId = ids[0];
+  if (typeof tokenId !== 'string') return null;
+  const title = tokenId.startsWith('t');
+  return {
+    title: title ? 'Title changed hands' : 'Ticket changed hands',
+    detail: `${short(entry?.old_owner_id)} to ${short(entry?.new_owner_id)}`,
+    icon: title ? <StampIcon weight="fill" /> : <TicketIcon weight="fill" />,
+    color: title ? 'blue' : 'violet',
+  };
+}
+
 function History({ events }: { readonly events: readonly PackEvent[] }) {
+  const fillReceipts = new Set(
+    events
+      .filter((event) => event.standard === 'mosaec' && event.event === 'filled')
+      .map((event) => event.receiptId),
+  );
   const lines = events
-    .filter((event) => event.standard === 'mosaec')
-    .map((event) => ({ event, line: lineOf(event) }))
+    .map((event) => ({
+      event,
+      line:
+        event.standard === 'mosaec'
+          ? lineOf(event)
+          : event.standard === 'nep171'
+            ? transferLine(event, fillReceipts)
+            : null,
+    }))
     .filter((item): item is { event: PackEvent; line: Line } => item.line !== null);
   return (
     <ListCard
@@ -224,7 +260,7 @@ function History({ events }: { readonly events: readonly PackEvent[] }) {
       ) : (
         lines.map(({ event, line }) => (
           <ListRow
-            key={event.receiptId}
+            key={`${event.receiptId}:${event.standard}:${event.event}`}
             icon={
               <AppIcon color={line.color} size={36}>
                 {line.icon}
