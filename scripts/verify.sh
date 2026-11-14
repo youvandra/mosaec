@@ -66,6 +66,13 @@ moved() {
       | select(.event == "nft_transfer") | .data[] | "\(.token_ids[0]) \(.old_owner_id) -> \(.new_owner_id)"] | join("; ")' 2>/dev/null
 }
 
+# refusal <hash> <signer>: the code and sender of the pack's refused event, and the refund memo.
+refusal() {
+  post "$ARCHIVAL_RPC" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tx\",\"params\":{\"tx_hash\":\"$1\",\"sender_account_id\":\"$2\",\"wait_until\":\"FINAL\"}}" |
+    jq -r '[.result.receipts_outcome[].outcome.logs[] | select(startswith("EVENT_JSON:")) | ltrimstr("EVENT_JSON:") | fromjson] as $e
+      | "\($e | map(select(.event == "refused"))[0].data | "\(.code) \(.sender_id)") \($e | map(select(.event == "mt_transfer"))[-1].data[0] | "\(.memo) \(.amounts[0])")"' 2>/dev/null
+}
+
 for tool in curl jq python3; do
   command -v "$tool" >/dev/null || { echo "missing tool: $tool"; exit 2; }
 done
@@ -119,6 +126,9 @@ check "the borrower sold the Ticket of pack 16 while the loan ran" \
 check "the lender sold the Title of pack 16 while the loan ran" \
   "$(moved 3DNFHfgt6M4TkDdPWENcNtKsU1qvZumNVs3KDxBvri3N helpmosaec.testnet)" \
   "t16 helpmosaec.testnet -> balabalabuna.testnet"
+check "the old Ticket holder then pays K and the pack refunds it (pack 16)" \
+  "$(refusal 2o8jKZeePzRZ83gZztp5qLKKuRdN95ak3gdrLEVTfxi2 kenkulus.testnet)" \
+  "E_HOLDER kenkulus.testnet refund 122400000"
 
 echo "== The replay"
 check "a 90-day pawn at 50% forfeits in 10.7% of ZEC windows, a liquidating loan in 34.6%" \
