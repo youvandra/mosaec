@@ -47,9 +47,25 @@ Simplified: the full machine (a verifier lock also opens Grace; a decided exerci
 `Releasing`) is in [`docs/architecture.md`](docs/architecture.md) §4.
 
 Both NFTs are transferable, so a lender can sell a running loan and a borrower can sell the right to
-redeem ([What Moves on Transfer](#what-moves-on-transfer)). The **House Desk** is a team-run lender that answers instant borrow requests in about a
-minute, prices from an hourly rate card its model proposes inside hard bounds, and publishes its books.
+redeem ([What Moves on Transfer](#what-moves-on-transfer)). The **House Desk** is a team-run lender that fills an instant request seconds after the
+borrower signs the offer (5 s on pack 7: offer
+[`FVVnQxWA…`](https://testnet.nearblocks.io/txns/FVVnQxWAYidU5twcSZ8rkjYnCrJKzUu1dCg4oC2Q7GyG), fill
+[`DyM91uFp…`](https://testnet.nearblocks.io/txns/DyM91uFpakCxn4TcWJoQm7M8LznCYfU46DCFRM2cvLoC)), prices from an hourly rate card its model proposes inside hard bounds, and publishes its books.
 Full design: [`docs/architecture.md`](docs/architecture.md). Desk: [`docs/desk.md`](docs/desk.md).
+
+### Where Your Coins Sit
+
+Every balance lives inside the NEAR Intents verifier, under the account that owns it.
+
+| Moment             | Coins                                                                    | USDC                                                                         |
+| ------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| After the faucet   | Your balance in the verifier                                             | Your balance in the verifier                                                 |
+| Seal               | The pack's balance in the verifier; the pack has no keys                 | Yours                                                                        |
+| Offer              | The pack, frozen at the amounts recorded in the offer                    | Yours                                                                        |
+| Fill               | The pack; they leave only for `K` paid by `T`, or to the Title after `T` | The lender's principal moves to your balance; Title to lender, Ticket to you |
+| Repay `K` by `T`   | Back to the Ticket holder's balance                                      | `K` waits in the pack for the Title holder to withdraw                       |
+| Date passes unpaid | Stay in the pack; the Title holder withdraws them                        | The principal stays with the borrower                                        |
+| Any refused call   | The verifier refunds the sender in the same transaction chain            | Same                                                                         |
 
 ## Verify It Yourself
 
@@ -69,6 +85,70 @@ PASS  a solver quotes 0.5 ZEC to USDC inside mainnet intents.near (dry, nothing 
 ...
 ALL CHECKS PASSED (20/20), 1 skipped
 ```
+
+<details>
+<summary>Full output from a fresh clone, 14 Nov 2026 15:53 UTC (14 s)</summary>
+
+```console
+== The verifier
+PASS  mainnet intents.near runs the published v0.4.5 code hash
+      BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk
+PASS  the testnet verifier intents.mosaec.testnet runs the same bytes
+      BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk
+== The pack
+PASS  pack 0.v0.mosaec.testnet has no access keys
+      []
+PASS  pack 0.v0.mosaec.testnet runs the one published pack code hash
+      4NVfLnVFYQxUPfsHRGpU6h8eKmp2AbQxNR2mYNx3Bwzc
+PASS  the registry pins that same pack code hash
+      4NVfLnVFYQxUPfsHRGpU6h8eKmp2AbQxNR2mYNx3Bwzc
+PASS  the deployed pack code names this repository as its source (NEP-330)
+      git+https://github.com/youvandra/mosaec
+SKIP  pack code cannot add a key, deploy code or delete itself
+      build the contracts first (README, Run Locally), then run this script again
+== A loan settles on a payment and a clock
+PASS  a payment one unit short of K is refunded (pack 0)
+      mt_transfer refused mt_transfer
+PASS  the full K returns the coins to the borrower (pack 0)
+      mt_transfer exercise_decided mt_transfer contents_released nft_burn
+PASS  the lender cannot take the coins before the date (pack 1)
+      Smart contract panicked: E_STATE: pack state refuses this call
+PASS  after the date the loan expires with no price read (pack 1)
+      encumbrance_synced nft_burn expired
+PASS  the lender then withdraws the kept coins (pack 1)
+      mt_transfer withdrawn
+== Both halves of a running loan change hands
+PASS  the borrower sold the Ticket of pack 16 while the loan ran
+      k16.1 kenkulus.testnet -> filoooc.testnet
+PASS  the lender sold the Title of pack 16 while the loan ran
+      t16 helpmosaec.testnet -> balabalabuna.testnet
+PASS  the old Ticket holder then pays K and the pack refunds it (pack 16)
+      E_HOLDER kenkulus.testnet refund 122400000
+== The replay
+PASS  a 90-day pawn at 50% forfeits in 10.7% of ZEC windows, a liquidating loan in 34.6%
+      90d 50% 84262 10.7% 34.6%
+== The House Desk
+PASS  the desk policy caps every loan at 50% loan to value
+      5000
+PASS  the desk publishes its book
+      fills = repaid + forfeited + running
+      now: {"fills":11,"repaid":10,"forfeited":1,"running":0}
+PASS  a 900 USDC ask against 0.5 ZEC is cut to the cap
+      ltvBps at or below 5000
+      now: {"principal":"219000000","repayment":"225030000","ltvBps":4984}
+PASS  outside agents get read and prepare tools, never a spend tool
+      desk_policy list_offers prepare_fill quote_offer
+== NEAR Intents on mainnet
+PASS  a solver quotes 0.5 ZEC to USDC inside mainnet intents.near (dry, nothing is sold)
+      dry quote returned
+      now: 0.5 ZEC -> 439.753467 USDC
+
+ALL CHECKS PASSED (20/20), 1 skipped
+```
+
+Lines marked `now:` read live state and change with every loan and every quote.
+
+</details>
 
 Each `PASS` prints the value it read. The skipped check inspects the pack wasm and runs once the
 contracts are built ([Run Locally](#run-locally)). The same checks one by one, with no wallet:
@@ -109,7 +189,32 @@ mt_transfer withdrawn
 Every pack in the app has a **Verify** page that re-runs the pack checks from your browser against
 public RPC: [mosaec.finance/app/verify](https://mosaec.finance/app/verify).
 
+## Check by Track
+
+| Track                  | What the track asks for                    | Where Mosaec shows it                                                                                                                                                          |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| NFTs That Do Something | NFTs as accounts                           | Each Title and Ticket points at one pack, a keyless sub-account `N.v0.mosaec.testnet` on one global contract. `scripts/verify.sh`, section "The pack"                          |
+|                        | How control passes on transfer             | [What Moves on Transfer](#what-moves-on-transfer): the rule, six sale cases with test names, both pack 16 sales on testnet. `scripts/verify.sh`, section "Both halves"         |
+|                        | A sale in the middle of a payment          | `cd contracts && cargo test -p mosaec-registry -- sale_mid_fill_refused ticket_transfer_refused_during_exercise`                                                               |
+|                        | History per NFT                            | [Pack 16 page](https://mosaec.finance/app/packs/16.v0.mosaec.testnet): every event, every Title and Ticket holder                                                              |
+|                        | Every way a seller could keep the money    | [`docs/architecture.md`](docs/architecture.md) §7, one row per threat with its test                                                                                            |
+| Unstoppable DeFi       | Lending that settles through NEAR Intents  | Coins and USDC move only as `mt_transfer_call` inside the verifier. `scripts/verify.sh`, section "The verifier"                                                                |
+|                        | Show where funds sit at every step         | [Where Your Coins Sit](#where-your-coins-sit)                                                                                                                                  |
+|                        | Try it with no funds                       | [No wallet](#try-it-in-two-minutes) below, the desk quote `curl` in the table above, and the mainnet 1Click `dry: true` quote in `scripts/verify.sh`                           |
+|                        | Show refunds                               | Pack 0: a payment one unit short of `K` is refunded; pack 16: the old Ticket holder's `K` is refunded with `E_HOLDER`                                                          |
+| Autonomous Business    | An agent working inside limits a human set | [`docs/desk.md`](docs/desk.md): the model proposes rates inside hard bounds, the policy re-runs before every signature, kill switch `pnpm --filter @mosaec/desk control pause` |
+|                        | A public ledger of every sale and payout   | [/app/desk](https://mosaec.finance/app/desk) and `curl -s https://mosaec.finance/api/desk/ledger`                                                                              |
+|                        | Other agents as customers                  | MCP at `https://mosaec.finance/mcp`: `desk_policy`, `list_offers`, `quote_offer`, `prepare_fill`                                                                               |
+
 ## Try It in Two Minutes
+
+No wallet, four pages:
+[Borrow](https://mosaec.finance/app/borrow) prices a pawn before any signature,
+[House Desk](https://mosaec.finance/app/desk) shows the book and every event with its transaction,
+[Pack 16](https://mosaec.finance/app/packs/16.v0.mosaec.testnet) shows a loan whose Title and Ticket both changed hands, and
+[Verify](https://mosaec.finance/app/verify) re-runs the pack checks from your browser.
+
+With a NEAR testnet wallet:
 
 1. Open [mosaec.finance/app/faucet](https://mosaec.finance/app/faucet), connect a NEAR testnet wallet and claim test ZEC, BTC, SOL and USDC.
 2. Go to **Borrow**, pick a coin and a term (15 minutes works for a quick run), choose **Instant**.
@@ -139,6 +244,8 @@ After selling the Ticket, the borrower sent the full `K` to the pack in
 pack answered `E_HOLDER` and the verifier refunded all 122.40 USDC.
 `scripts/verify.sh` reads all three transactions from archival RPC, and the
 [pack page](https://mosaec.finance/app/packs/16.v0.mosaec.testnet) lists them in its history.
+
+### Check Before You Buy
 
 Before buying a Title or Ticket, open its pack on [Verify](https://mosaec.finance/app/verify): zero
 access keys, the published code hash, the coins at the verifier and no verifier lock, read from
@@ -223,11 +330,20 @@ What you trust today:
 | NEP-171 NFTs                    | Title and Ticket, transferable rights over one pack                         | `contracts/registry/src/nft.rs`, public methods in `contracts/registry/src/lib.rs`                                                 |
 | 1Click (`dry: true`)            | Marks coins the desk keeps at a real solver quote                           | `apps/desk/src/intents.ts`                                                                                                         |
 
-## Limits
+## What Is Real Today
 
-Testnet only, unaudited. Home-chain withdrawals are closed until bridge minimums are measured.
-The desk's Intents quotes are quotes; nothing is sold. Retries such as `claim_payout` and
-`finalize_exercise` are open to anyone, and a keeper that sends them automatically is mainnet work.
+| Piece                         | Status                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contracts and every loan      | Live on NEAR testnet; every transaction above is public                                                                                                 |
+| The verifier                  | The mainnet `intents.near` v0.4.5 bytes, deployed by us on testnet because NEAR Intents has no testnet; same code hash, checked first above             |
+| Coins and USDC                | Test tokens from the [faucet](https://mosaec.finance/app/faucet)                                                                                        |
+| Mainnet                       | `intents.near` and a 1Click `dry: true` quote are read live; no pawn has run on mainnet yet                                                             |
+| Lenders                       | The House Desk (11 loans so far) and wallets the team runs (packs 16 and 22). Nine offers are open on testnet; any wallet with faucet USDC can fill one |
+| Kept coins on the desk ledger | Marked at the 1Click quote taken when the desk kept them; nothing is sold                                                                               |
+
+Unaudited. Home-chain withdrawals are closed until bridge minimums are measured. Retries such as
+`claim_payout` and `finalize_exercise` are open to anyone, and a keeper that sends them
+automatically is mainnet work.
 
 ## Prior Art
 
