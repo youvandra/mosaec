@@ -47,9 +47,28 @@ Simplified: the full machine (a verifier lock also opens Grace; a decided exerci
 `Releasing`) is in [`docs/architecture.md`](docs/architecture.md) §4.
 
 Both NFTs are transferable, so a lender can sell a running loan and a borrower can sell the right to
-redeem. The **House Desk** is a team-run lender that answers instant borrow requests in about a
+redeem ([What Moves on Transfer](#what-moves-on-transfer)). The **House Desk** is a team-run lender that answers instant borrow requests in about a
 minute, prices from an hourly rate card its model proposes inside hard bounds, and publishes its books.
 Full design: [`docs/architecture.md`](docs/architecture.md). Desk: [`docs/desk.md`](docs/desk.md).
+
+## What Moves on Transfer
+
+A pack has no keys. The registry reads the current owner of the Title or Ticket at the moment of
+every call, so control moves with the NFT and the seller is left with nothing to revoke.
+
+| Sale                           | Buyer gets                                      | Seller is stopped by                                                         | Test                                                                  |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Title of a free pack           | The pack and its coins                          | `withdraw` checks the current Title owner (`E_HOLDER`)                       | `withdraw_rules`                                                      |
+| Title while an offer is open   | The pack; the offer closes in the same receipt  | A lender's USDC can never reach the old owner                                | `title_transfer_cancels_offer`                                        |
+| Title while a loan runs        | `K` if the borrower repays, the coins after `T` | The Ticket and the principal payout stay with the borrower; withdraw refused | `sold_title_keeps_the_ticket_and_the_payout`                          |
+| Ticket while a loan runs       | The right to pay `K` and take the coins         | The holder is read at `begin_exercise`, so the seller's payment is refunded  | `sold_ticket_cannot_exercise`, `ticket_sold_moves_the_exercise_right` |
+| Any NFT mid fill or exercise   | Nothing yet: the token is `Pending`             | The transfer returns `E_PENDING` until the payment settles                   | `sale_mid_fill_refused`, `ticket_transfer_refused_during_exercise`    |
+| Any NFT by `nft_transfer_call` | The token once `nft_resolve_transfer` settles   | Exercise, withdraw and offer wait for the resolve step                       | `exercise_refused_during_nft_transfer_call`                           |
+
+Before buying a Title or Ticket, open its pack on [Verify](https://mosaec.finance/app/verify): zero
+access keys, the published code hash, the coins at the verifier and no verifier lock, read from
+public RPC. Each pack page lists every event in its life, including who held the Title and the
+Ticket. The full threat model is [`docs/architecture.md`](docs/architecture.md) §7.
 
 ## Verify It Yourself
 
