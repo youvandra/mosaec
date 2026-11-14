@@ -9,12 +9,12 @@ A pawn shop for native coins on NEAR: your coins wait in a sealed account until 
 
 ## Why
 
-- Why should a one-hour wick take coins from a borrower who would have repaid on time?
-- Why should BTC become a custodian's token before it can back a loan?
-- Why should a fixed-date deal depend on a price feed at all?
-- Why can't the loan itself be something either side can sell?
+A borrower who would have repaid on time can still lose the coins: one sharp price move triggers a
+liquidation and the coins are sold at the low. On Rhea, the lending market on NEAR that accepts ZEC,
+39 accounts lost **3,218 ZEC** in 1,337 liquidations between 27 Oct 2025 and 27 Oct 2026. Those coins
+sold for $951k; on 10 Nov 2026 they were worth $3.31M.
 
-Over every 90-day window of ZEC history from 2017 to 2026 at 50% loan to value, a liquidating loan
+A pawn settles on one payment and one date, so a price move alone takes nothing. Over every 90-day window of ZEC history from 2017 to 2026 at 50% loan to value, a liquidating loan
 lost the coins in **34.6%** of windows; a pawn lost them in **10.7%**. The numbers
 live in [`facts.ts`](<apps/web/app/(site)/_content/facts.ts>) and on [/rates](https://mosaec.finance/rates);
 [`scripts/replay`](scripts/replay) recomputes them from the hourly prices committed beside it.
@@ -51,28 +51,26 @@ redeem ([What Moves on Transfer](#what-moves-on-transfer)). The **House Desk** i
 minute, prices from an hourly rate card its model proposes inside hard bounds, and publishes its books.
 Full design: [`docs/architecture.md`](docs/architecture.md). Desk: [`docs/desk.md`](docs/desk.md).
 
-## What Moves on Transfer
-
-A pack has no keys. The registry reads the current owner of the Title or Ticket at the moment of
-every call, so control moves with the NFT and the seller is left with nothing to revoke.
-
-| Sale                           | Buyer gets                                      | Seller is stopped by                                                         | Test                                                                  |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Title of a free pack           | The pack and its coins                          | `withdraw` checks the current Title owner (`E_HOLDER`)                       | `withdraw_rules`                                                      |
-| Title while an offer is open   | The pack; the offer closes in the same receipt  | A lender's USDC can never reach the old owner                                | `title_transfer_cancels_offer`                                        |
-| Title while a loan runs        | `K` if the borrower repays, the coins after `T` | The Ticket and the principal payout stay with the borrower; withdraw refused | `sold_title_keeps_the_ticket_and_the_payout`                          |
-| Ticket while a loan runs       | The right to pay `K` and take the coins         | The holder is read at `begin_exercise`, so the seller's payment is refunded  | `sold_ticket_cannot_exercise`, `ticket_sold_moves_the_exercise_right` |
-| Any NFT mid fill or exercise   | Nothing yet: the token is `Pending`             | The transfer returns `E_PENDING` until the payment settles                   | `sale_mid_fill_refused`, `ticket_transfer_refused_during_exercise`    |
-| Any NFT by `nft_transfer_call` | The token once `nft_resolve_transfer` settles   | Exercise, withdraw and offer wait for the resolve step                       | `exercise_refused_during_nft_transfer_call`                           |
-
-Before buying a Title or Ticket, open its pack on [Verify](https://mosaec.finance/app/verify): zero
-access keys, the published code hash, the coins at the verifier and no verifier lock, read from
-public RPC. Each pack page lists every event in its life, including who held the Title and the
-Ticket. The full threat model is [`docs/architecture.md`](docs/architecture.md) §7.
-
 ## Verify It Yourself
 
-Each claim has a check you can run against NEAR testnet or the live API. No wallet needed.
+One command runs every check below that needs no build. It reads NEAR mainnet, NEAR testnet, the live API and
+NEAR Intents, signs nothing and needs only `curl`, `jq` and `python3`:
+
+```console
+$ git clone https://github.com/youvandra/mosaec.git && cd mosaec && scripts/verify.sh
+PASS  mainnet intents.near runs the published v0.4.5 code hash
+PASS  the testnet verifier intents.mosaec.testnet runs the same bytes
+PASS  pack 0.v0.mosaec.testnet has no access keys
+PASS  a payment one unit short of K is refunded (pack 0)
+PASS  the lender cannot take the coins before the date (pack 1)
+PASS  the lender sold the Title of pack 16 while the loan ran
+PASS  a solver quotes 0.5 ZEC to USDC inside mainnet intents.near (dry, nothing is sold)
+...
+ALL CHECKS PASSED (19/19), 1 skipped
+```
+
+Each `PASS` prints the value it read. The skipped check inspects the pack wasm and runs once the
+contracts are built ([Run Locally](#run-locally)). The same checks one by one, with no wallet:
 
 | Claim                                                                                  | Check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Expected                                                                                                                                                                                                                                      |
 | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -87,6 +85,7 @@ Each claim has a check you can run against NEAR testnet or the live API. No wall
 | The desk **quotes at most 50% loan to value**; a fill honours the quoted terms         | `curl -s 'https://mosaec.finance/api/desk/quote?asset=ZEC&amount=50000000&term=2592000000000000&principal=900000000' \| jq .quote.ltvBps`                                                                                                                                                                                                                                                                                                                                                           | a number at or below `5000` (the 900 USDC ask is cut to what 0.5 ZEC supports)                                                                                                                                                                |
 | The desk's books are **public**                                                        | `curl -s https://mosaec.finance/api/desk/ledger \| jq '{state: .status.state, usdc: .treasury.usdc, book: (.book \| {fills, repaid, forfeited})}'`                                                                                                                                                                                                                                                                                                                                                  | live state, treasury in USDC base units, fills and outcomes                                                                                                                                                                                   |
 | Kept coins are marked at a **NEAR Intents quote, never executed**                      | after `pnpm install`: `pnpm --filter @mosaec/desk exec vitest run src/intents.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                              | 4 tests pass against a recorded 1Click `dry: true` response                                                                                                                                                                                   |
+| A solver **quotes the collateral inside mainnet `intents.near`** today                 | `scripts/verify.sh`, last check: a live 1Click `dry: true` quote for 0.5 ZEC to USDC                                                                                                                                                                                                                                                                                                                                                                                                                | `dry quote returned` and the USDC amount; nothing is sold                                                                                                                                                                                     |
 | Outside agents can **read and prepare**, never spend                                   | `curl -s -X POST https://mosaec.finance/mcp -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \| grep -o '"name":"[a-z_]*"'`                                                                                                                                                                                                                                                                                 | `desk_policy`, `list_offers`, `quote_offer`, `prepare_fill`                                                                                                                                                                                   |
 
 NearBlocks turns away scripted clients. The transactions above read the same from archival RPC,
@@ -115,6 +114,32 @@ public RPC: [mosaec.finance/app/verify](https://mosaec.finance/app/verify).
 2. Go to **Borrow**, pick a coin and a term (15 minutes works for a quick run), choose **Instant**.
 3. Sign three times: create the pack, seal the coins, sign the offer. The House Desk fills it and USDC lands in your Mosaec balance.
 4. Open **Positions** to repay before the date, or let it pass and watch the desk collect the coins on its ledger.
+
+## What Moves on Transfer
+
+A pack has no keys. The registry reads the current owner of the Title or Ticket at the moment of
+every call, so control moves with the NFT and the seller is left with nothing to revoke.
+
+| Sale                           | Buyer gets                                      | Seller is stopped by                                                         | Test                                                                  |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Title of a free pack           | The pack and its coins                          | `withdraw` checks the current Title owner (`E_HOLDER`)                       | `withdraw_rules`                                                      |
+| Title while an offer is open   | The pack; the offer closes in the same receipt  | A lender's USDC can never reach the old owner                                | `title_transfer_cancels_offer`                                        |
+| Title while a loan runs        | `K` if the borrower repays, the coins after `T` | The Ticket and the principal payout stay with the borrower; withdraw refused | `sold_title_keeps_the_ticket_and_the_payout`                          |
+| Ticket while a loan runs       | The right to pay `K` and take the coins         | The holder is read at `begin_exercise`, so the seller's payment is refunded  | `sold_ticket_cannot_exercise`, `ticket_sold_moves_the_exercise_right` |
+| Any NFT mid fill or exercise   | Nothing yet: the token is `Pending`             | The transfer returns `E_PENDING` until the payment settles                   | `sale_mid_fill_refused`, `ticket_transfer_refused_during_exercise`    |
+| Any NFT by `nft_transfer_call` | The token once `nft_resolve_transfer` settles   | Exercise, withdraw and offer wait for the resolve step                       | `exercise_refused_during_nft_transfer_call`                           |
+
+Both sales have happened on testnet, on pack 16 while its loan ran. The borrower sold the Ticket in
+[`DbFSp7nB…`](https://testnet.nearblocks.io/txns/DbFSp7nBVQSomh2vpNPeGVLwogjESpWNuoG5xz2pFv75) and the
+lender sold the Title in
+[`3DNFHfgt…`](https://testnet.nearblocks.io/txns/3DNFHfgt6M4TkDdPWENcNtKsU1qvZumNVs3KDxBvri3N).
+`scripts/verify.sh` reads both transfers from archival RPC, and the
+[pack page](https://mosaec.finance/app/packs/16.v0.mosaec.testnet) lists them in its history.
+
+Before buying a Title or Ticket, open its pack on [Verify](https://mosaec.finance/app/verify): zero
+access keys, the published code hash, the coins at the verifier and no verifier lock, read from
+public RPC. Each pack page lists every event in its life, including who held the Title and the
+Ticket. The full threat model is [`docs/architecture.md`](docs/architecture.md) §7.
 
 ## Run Locally
 
