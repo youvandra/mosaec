@@ -158,7 +158,7 @@ $ pnpm test
 
 $ cd contracts && cargo test --workspace
 test result: ok. 34 passed   (pack)
-test result: ok. 49 passed   (registry)
+test result: ok. 50 passed   (registry)
 test result: ok. 23 passed   (shared)
 test result: ok. 9 passed    (deploy tool)
 
@@ -241,4 +241,17 @@ The desk's Intents quotes are quotes; nothing is sold. Retries such as `claim_pa
 ## Disclosures
 
 - AI use: Claude Code assisted with code, tests and docs. The mechanism, contracts design, trust model and every deploy were reviewed and run by the team, with each change gated by CI.
+- Baseline: Mosaec's own code was written during the hackathon; the first commit is dated 11 Nov 2026.
+  Third-party code: [`near/intents`](https://github.com/near/intents) as the `vendor/intents` submodule and
+  its v0.4.5 build in `contracts/res`.
+- Libraries: near-sdk, cargo-near, near-workspaces and near-sandbox for the contracts and their tests;
+  near-api-js, `@near-js/*` and NEAR Wallet Selector (Meteor, HOT, Intear, MyNearWallet) for chain access;
+  Next.js and React for the web app; Hono for the API; Drizzle ORM with postgres.js; Zod; the Model Context
+  Protocol SDK for the desk's MCP server; Vitest; Phosphor icons; Geist; Sentry. Versions are pinned in each
+  `package.json`, `pnpm-lock.yaml` and `contracts/Cargo.lock`.
+- Model: the House Desk agent calls a model served on the desk's own host behind an OpenAI-compatible
+  endpoint ([`docs/desk.md`](docs/desk.md)).
+- Template: the site's layout, type scale, colour and motion follow the "Saro" Framer template by Viyako
+  Designs, used under its licence. Photos and logos and their sources are listed in
+  [`apps/web/ASSETS.md`](apps/web/ASSETS.md).
 - License: MIT, see [LICENSE](LICENSE).
