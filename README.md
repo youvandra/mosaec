@@ -64,9 +64,10 @@ PASS  pack 0.v0.mosaec.testnet has no access keys
 PASS  a payment one unit short of K is refunded (pack 0)
 PASS  the lender cannot take the coins before the date (pack 1)
 PASS  the lender sold the Title of pack 16 while the loan ran
+PASS  the old Ticket holder then pays K and the pack refunds it (pack 16)
 PASS  a solver quotes 0.5 ZEC to USDC inside mainnet intents.near (dry, nothing is sold)
 ...
-ALL CHECKS PASSED (19/19), 1 skipped
+ALL CHECKS PASSED (20/20), 1 skipped
 ```
 
 Each `PASS` prints the value it read. The skipped check inspects the pack wasm and runs once the
@@ -133,7 +134,10 @@ Both sales have happened on testnet, on pack 16 while its loan ran. The borrower
 [`DbFSp7nB…`](https://testnet.nearblocks.io/txns/DbFSp7nBVQSomh2vpNPeGVLwogjESpWNuoG5xz2pFv75) and the
 lender sold the Title in
 [`3DNFHfgt…`](https://testnet.nearblocks.io/txns/3DNFHfgt6M4TkDdPWENcNtKsU1qvZumNVs3KDxBvri3N).
-`scripts/verify.sh` reads both transfers from archival RPC, and the
+After selling the Ticket, the borrower sent the full `K` to the pack in
+[`2o8jKZee…`](https://testnet.nearblocks.io/txns/2o8jKZeePzRZ83gZztp5qLKKuRdN95ak3gdrLEVTfxi2): the
+pack answered `E_HOLDER` and the verifier refunded all 122.40 USDC.
+`scripts/verify.sh` reads all three transactions from archival RPC, and the
 [pack page](https://mosaec.finance/app/packs/16.v0.mosaec.testnet) lists them in its history.
 
 Before buying a Title or Ticket, open its pack on [Verify](https://mosaec.finance/app/verify): zero
